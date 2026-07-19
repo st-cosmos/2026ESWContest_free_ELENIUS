@@ -1,0 +1,1909 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "vpass-main-dashboard",
+      "x": 40,
+      "y": 40,
+      "name": "Smart VPass - Main Dashboard",
+      "width": 1024,
+      "height": 680,
+      "fill": "#0A0B0E",
+      "stroke": "#1F232D",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "children": [
+        {
+          "type": "frame",
+          "id": "dashboard-sidebar",
+          "name": "Sidebar Navigation",
+          "width": 240,
+          "height": 680,
+          "fill": "#11131A",
+          "stroke": "#1F232D",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "padding": [
+            32,
+            24
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "sidebar-top",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "logo-text",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "content": "Smart VPass"
+                },
+                {
+                  "type": "text",
+                  "id": "logo-subtitle",
+                  "fill": "#6F768A",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal",
+                  "content": "출항 인원 관리 시스템"
+                },
+                {
+                  "type": "frame",
+                  "id": "nav-item-dashboard",
+                  "name": "Menu: Dashboard",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "#1F232D",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nav-dash-label",
+                      "fill": "#00FFA3",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "medium",
+                      "content": "📊  실시간 대시보드"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nav-item-history",
+                  "name": "Menu: History",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nav-history-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "📋  출항 기록지"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nav-item-users",
+                  "name": "Menu: Users",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nav-users-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "👥  등록 사용자 목록"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nav-item-jacket",
+                  "name": "Menu: Jacket",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nav-jacket-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "🦺  구명조끼 모니터"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sidebar-bottom",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sys-status-label",
+                  "fill": "#00FFA3",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal",
+                  "content": "● 시스템 활성화 상태"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "dashboard-main-content",
+          "name": "Main Panel",
+          "width": 784,
+          "height": 680,
+          "layout": "vertical",
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "content-header",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "header-title",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 22,
+                  "fontWeight": "bold",
+                  "content": "실시간 출항 스캔 모니터"
+                },
+                {
+                  "type": "text",
+                  "id": "header-time",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "2026-07-19 14:18:24"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "content-body",
+              "width": "fill_container",
+              "height": 520,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "camera-monitor-view",
+                  "name": "Live Camera Feed",
+                  "width": 460,
+                  "height": 520,
+                  "fill": "#11131A",
+                  "stroke": "#00FFA3",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "face-reticle",
+                      "width": 260,
+                      "height": 260,
+                      "stroke": "#00FFA3",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "reticle-status",
+                          "fill": "#00FFA3",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "bold",
+                          "content": "승선 확인: 홍길동 (94%)"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "cam-indicator",
+                      "fill": "#6F768A",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "content": "[LIVE] 0번 카메라 연결됨"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "realtime-status-panel",
+                  "name": "Realtime Boarding Log",
+                  "width": 236,
+                  "height": 520,
+                  "fill": "#11131A",
+                  "stroke": "#1F232D",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "padding": [
+                    20,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "log-title",
+                      "fill": "#FFFFFF",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "bold",
+                      "content": "실시간 승선 완료 인원"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "log-card-1",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "#1F232D",
+                      "layout": "vertical",
+                      "padding": [
+                        10,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "card1-name",
+                          "fill": "#00FFA3",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "bold",
+                          "content": "홍길동 (선장)"
+                        },
+                        {
+                          "type": "text",
+                          "id": "card1-time",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal",
+                          "content": "14:15:10 승선 완료"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "log-card-2",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "#151821",
+                      "layout": "vertical",
+                      "padding": [
+                        10,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "card2-name",
+                          "fill": "#FFFFFF",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "content": "이순신 (승객)"
+                        },
+                        {
+                          "type": "text",
+                          "id": "card2-time",
+                          "fill": "#6F768A",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal",
+                          "content": "14:12:05 승선 완료"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vpass-history-page",
+      "x": 40,
+      "y": 760,
+      "name": "Smart VPass - Boarding History",
+      "width": 1024,
+      "height": 680,
+      "fill": "#0A0B0E",
+      "stroke": "#1F232D",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "children": [
+        {
+          "type": "frame",
+          "id": "history-sidebar",
+          "name": "Sidebar Navigation",
+          "width": 240,
+          "height": 680,
+          "fill": "#11131A",
+          "stroke": "#1F232D",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "padding": [
+            32,
+            24
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "history-sidebar-top",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "history-logo-text",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "content": "Smart VPass"
+                },
+                {
+                  "type": "text",
+                  "id": "history-logo-subtitle",
+                  "fill": "#6F768A",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal",
+                  "content": "출항 인원 관리 시스템"
+                },
+                {
+                  "type": "frame",
+                  "id": "history-nav-item-dashboard",
+                  "name": "Menu: Dashboard",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "history-nav-dash-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "📊  실시간 대시보드"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "history-nav-item-history",
+                  "name": "Menu: History",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "#1F232D",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "history-nav-history-label",
+                      "fill": "#00FFA3",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "medium",
+                      "content": "📋  출항 기록지"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "history-nav-item-users",
+                  "name": "Menu: Users",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "history-nav-users-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "👥  등록 사용자 목록"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "history-nav-item-jacket",
+                  "name": "Menu: Jacket",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "history-nav-jacket-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "🦺  구명조끼 모니터"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "history-sidebar-bottom",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "history-sys-status-label",
+                  "fill": "#00FFA3",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal",
+                  "content": "● 시스템 활성화 상태"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "history-main-content",
+          "name": "Main Panel",
+          "width": 784,
+          "height": 680,
+          "layout": "vertical",
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "history-content-header",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "history-header-title",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 22,
+                  "fontWeight": "bold",
+                  "content": "출항 승선 기록 일지"
+                },
+                {
+                  "type": "text",
+                  "id": "history-header-time",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "2026-07-19 14:18:24"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "history-content-body",
+              "width": "fill_container",
+              "height": 520,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "history-section-header",
+                  "width": "fill_container",
+                  "height": 50,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "history-section-title",
+                      "fill": "#FFFFFF",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "content": "전체 누적 출항 인원 기록지"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "history-btn-clear",
+                      "width": 160,
+                      "height": 36,
+                      "fill": "#FF3B30",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "history-btn-clear-text",
+                          "fill": "#FFFFFF",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "bold",
+                          "content": "🗑️ 기록 일지 전체 삭제"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "history-list-container",
+                  "width": "fill_container",
+                  "height": 450,
+                  "fill": "#11131A",
+                  "stroke": "#1F232D",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "history-date-group-1",
+                      "fill": "#00FFA3",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "bold",
+                      "content": "📅 2026-07-19"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "history-item-1",
+                      "width": "fill_container",
+                      "height": 50,
+                      "fill": "#1F232D",
+                      "layout": "horizontal",
+                      "alignItems": "center",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "history-item-1-name",
+                          "fill": "#FFFFFF",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "bold",
+                          "content": "홍길동"
+                        },
+                        {
+                          "type": "text",
+                          "id": "history-item-1-phone",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "content": "010-1234-5678"
+                        },
+                        {
+                          "type": "text",
+                          "id": "history-item-1-time",
+                          "fill": "#6F768A",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal",
+                          "content": "14:15:10 승선 확인 완료"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "history-item-2",
+                      "width": "fill_container",
+                      "height": 50,
+                      "fill": "#1F232D",
+                      "layout": "horizontal",
+                      "alignItems": "center",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "history-item-2-name",
+                          "fill": "#FFFFFF",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "bold",
+                          "content": "이순신"
+                        },
+                        {
+                          "type": "text",
+                          "id": "history-item-2-phone",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "content": "010-5678-1234"
+                        },
+                        {
+                          "type": "text",
+                          "id": "history-item-2-time",
+                          "fill": "#6F768A",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal",
+                          "content": "14:12:05 승선 확인 완료"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vpass-users-page",
+      "x": 1096,
+      "y": 760,
+      "name": "Smart VPass - User Management",
+      "width": 1024,
+      "height": 680,
+      "fill": "#0A0B0E",
+      "stroke": "#1F232D",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "children": [
+        {
+          "type": "frame",
+          "id": "users-sidebar",
+          "name": "Sidebar Navigation",
+          "width": 240,
+          "height": 680,
+          "fill": "#11131A",
+          "stroke": "#1F232D",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "padding": [
+            32,
+            24
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "users-sidebar-top",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "users-logo-text",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "content": "Smart VPass"
+                },
+                {
+                  "type": "text",
+                  "id": "users-logo-subtitle",
+                  "fill": "#6F768A",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal",
+                  "content": "출항 인원 관리 시스템"
+                },
+                {
+                  "type": "frame",
+                  "id": "users-nav-item-dashboard",
+                  "name": "Menu: Dashboard",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "users-nav-dash-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "📊  실시간 대시보드"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "users-nav-item-history",
+                  "name": "Menu: History",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "users-nav-history-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "📋  출항 기록지"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "users-nav-item-users",
+                  "name": "Menu: Users",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "#1F232D",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "users-nav-users-label",
+                      "fill": "#00FFA3",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "medium",
+                      "content": "👥  등록 사용자 목록"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "users-nav-item-jacket",
+                  "name": "Menu: Jacket",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "users-nav-jacket-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "🦺  구명조끼 모니터"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "users-sidebar-bottom",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "users-sys-status-label",
+                  "fill": "#00FFA3",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal",
+                  "content": "● 시스템 활성화 상태"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "users-main-content",
+          "name": "Main Panel",
+          "width": 784,
+          "height": 680,
+          "layout": "vertical",
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "users-content-header",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "users-header-title",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 22,
+                  "fontWeight": "bold",
+                  "content": "등록 사용자 관리 대장"
+                },
+                {
+                  "type": "text",
+                  "id": "users-header-time",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "2026-07-19 14:18:24"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "users-content-body",
+              "width": "fill_container",
+              "height": 520,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "users-section-header",
+                  "width": "fill_container",
+                  "height": 50,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "users-section-title",
+                      "fill": "#FFFFFF",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "content": "시스템 등록 사용자 대장"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "users-btn-register",
+                      "width": 180,
+                      "height": 36,
+                      "fill": "#00FFA3",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "users-btn-register-text",
+                          "fill": "#0A0B0E",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "bold",
+                          "content": "👤 + 신규 사용자 등록"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "users-grid-container",
+                  "width": "fill_container",
+                  "height": 450,
+                  "layout": "grid",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "users-card-1",
+                      "width": 230,
+                      "height": 180,
+                      "fill": "#11131A",
+                      "stroke": "#1F232D",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 16,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "users-card-1-avatar",
+                          "width": 64,
+                          "height": 64,
+                          "fill": "#1F232D",
+                          "stroke": "#00FFA3",
+                          "strokeWidth": 2,
+                          "children": []
+                        },
+                        {
+                          "type": "text",
+                          "id": "users-card-1-name",
+                          "fill": "#FFFFFF",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "bold",
+                          "content": "홍길동"
+                        },
+                        {
+                          "type": "text",
+                          "id": "users-card-1-phone",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal",
+                          "content": "010-1234-5678"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "users-card-1-btn-edit",
+                          "width": 80,
+                          "height": 26,
+                          "fill": "#1F232D",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "users-card-1-btn-edit-text",
+                              "fill": "#A0AEC0",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal",
+                              "content": "⚙️ 수정하기"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "users-card-2",
+                      "width": 230,
+                      "height": 180,
+                      "fill": "#11131A",
+                      "stroke": "#1F232D",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 16,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "users-card-2-avatar",
+                          "width": 64,
+                          "height": 64,
+                          "fill": "#1F232D",
+                          "stroke": "#6F768A",
+                          "strokeWidth": 1,
+                          "children": []
+                        },
+                        {
+                          "type": "text",
+                          "id": "users-card-2-name",
+                          "fill": "#FFFFFF",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "bold",
+                          "content": "이순신"
+                        },
+                        {
+                          "type": "text",
+                          "id": "users-card-2-phone",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal",
+                          "content": "010-5678-1234"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "users-card-2-btn-edit",
+                          "width": 80,
+                          "height": 26,
+                          "fill": "#1F232D",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "users-card-2-btn-edit-text",
+                              "fill": "#A0AEC0",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal",
+                              "content": "⚙️ 수정하기"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vpass-jacket-page",
+      "x": 40,
+      "y": 1480,
+      "name": "Smart VPass - Lifejacket Monitor",
+      "width": 1024,
+      "height": 680,
+      "fill": "#0A0B0E",
+      "stroke": "#1F232D",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "children": [
+        {
+          "type": "frame",
+          "id": "jacket-sidebar",
+          "name": "Sidebar Navigation",
+          "width": 240,
+          "height": 680,
+          "fill": "#11131A",
+          "stroke": "#1F232D",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "padding": [
+            32,
+            24
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "jacket-sidebar-top",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jacket-logo-text",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "content": "Smart VPass"
+                },
+                {
+                  "type": "text",
+                  "id": "jacket-logo-subtitle",
+                  "fill": "#6F768A",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal",
+                  "content": "출항 인원 관리 시스템"
+                },
+                {
+                  "type": "frame",
+                  "id": "jacket-nav-item-dashboard",
+                  "name": "Menu: Dashboard",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jacket-nav-dash-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "📊  실시간 대시보드"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jacket-nav-item-history",
+                  "name": "Menu: History",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jacket-nav-history-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "📋  출항 기록지"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jacket-nav-item-users",
+                  "name": "Menu: Users",
+                  "width": "fill_container",
+                  "height": 40,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jacket-nav-users-label",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "👥  등록 사용자 목록"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jacket-nav-item-jacket",
+                  "name": "Menu: Jacket",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "#1F232D",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jacket-nav-jacket-label",
+                      "fill": "#00FFA3",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "medium",
+                      "content": "🦺  구명조끼 모니터"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "jacket-sidebar-bottom",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jacket-sys-status-label",
+                  "fill": "#00FFA3",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal",
+                  "content": "● 시스템 활성화 상태"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "jacket-main-content",
+          "name": "Main Panel",
+          "width": 784,
+          "height": 680,
+          "layout": "vertical",
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "jacket-content-header",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jacket-header-title",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 22,
+                  "fontWeight": "bold",
+                  "content": "구명조끼 실시간 모니터링 (디버그)"
+                },
+                {
+                  "type": "text",
+                  "id": "jacket-header-time",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "2026-07-19 14:18:24"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "jacket-content-body",
+              "width": "fill_container",
+              "height": 520,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "jacket-banner",
+                  "width": "fill_container",
+                  "height": 60,
+                  "fill": "#1A1D26",
+                  "stroke": "#1F232D",
+                  "strokeWidth": 1,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jacket-banner-text",
+                      "fill": "#A0AEC0",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "content": "구명조끼(ESP8266)가 송신하는 착용 상태, 생존 신호(Ping) 및 낙상 감지를 실시간으로 모니터링합니다. 낙상 발생 후 5초 이내에 Ping이 유실되는 경우 비상 호출(SOS) 알림이 발생합니다."
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jacket-devices-container",
+                  "width": "fill_container",
+                  "height": 420,
+                  "layout": "grid",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jacket-device-card-1",
+                      "width": 230,
+                      "height": 180,
+                      "fill": "#11131A",
+                      "stroke": "#00FFA3",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jacket-1-id",
+                          "fill": "#FFFFFF",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "bold",
+                          "content": "📡 jacket-1"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jacket-1-wear",
+                          "fill": "#00FFA3",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "content": "착용 상태: 착용 완료 (홀센서 ON)"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jacket-1-user",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "content": "배정 선원: 홍길동"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jacket-1-ping",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "content": "신호(Ping): 정상 (1초 전 수신)"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jacket-1-battery",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "content": "배터리 잔량: 85%"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jacket-device-card-2",
+                      "width": 230,
+                      "height": 180,
+                      "fill": "#11131A",
+                      "stroke": "#FF3B30",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jacket-2-id",
+                          "fill": "#FFFFFF",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "bold",
+                          "content": "📡 jacket-2"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jacket-2-wear",
+                          "fill": "#FF3B30",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "content": "착용 상태: 미착용 (홀센서 OFF)"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jacket-2-user",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "content": "배정 선원: 이순신"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jacket-2-ping",
+                          "fill": "#FF3B30",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "content": "신호(Ping): 25초째 신호 없음"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jacket-2-battery",
+                          "fill": "#A0AEC0",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "content": "배터리 잔량: 92%"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vpass-register-modal",
+      "x": 1096,
+      "y": 40,
+      "name": "Smart VPass - 사용자 등록 대화상자",
+      "width": 480,
+      "height": 380,
+      "fill": "#11131A",
+      "stroke": "#00F0FF",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "layout": "vertical",
+      "padding": 28,
+      "children": [
+        {
+          "type": "text",
+          "id": "register-title",
+          "fill": "#FFFFFF",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "bold",
+          "content": "사용자 신규 등록"
+        },
+        {
+          "type": "text",
+          "id": "register-desc",
+          "fill": "#6F768A",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal",
+          "content": "신규 선원 및 승객의 이름과 연락처를 입력 후 얼굴을 등록해 주세요."
+        },
+        {
+          "type": "frame",
+          "id": "input-fields-group",
+          "width": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "name-input-group",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "name-label",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "이름"
+                },
+                {
+                  "type": "frame",
+                  "id": "name-input-box",
+                  "width": 360,
+                  "height": 36,
+                  "fill": "#1F232D",
+                  "stroke": "#3E4452",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "name-placeholder",
+                      "fill": "#6F768A",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "예: 홍길동"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "phone-input-group",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "phone-label",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "연락처"
+                },
+                {
+                  "type": "frame",
+                  "id": "phone-input-box",
+                  "width": 360,
+                  "height": 36,
+                  "fill": "#1F232D",
+                  "stroke": "#3E4452",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "phone-placeholder",
+                      "fill": "#6F768A",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "예: 010-1234-5678"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "register-actions",
+          "width": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "btn-cancel",
+              "width": 100,
+              "height": 38,
+              "fill": "#1F232D",
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "btn-cancel-text",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "취소"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "btn-confirm",
+              "width": 140,
+              "height": 38,
+              "fill": "#00FFA3",
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "btn-confirm-text",
+                  "fill": "#0A0B0E",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "bold",
+                  "content": "얼굴 촬영 & 등록"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vpass-edit-modal",
+      "x": 1096,
+      "y": 1480,
+      "name": "Smart VPass - 사용자 정보 수정 대화상자",
+      "width": 480,
+      "height": 460,
+      "fill": "#11131A",
+      "stroke": "#00F0FF",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "layout": "vertical",
+      "padding": 28,
+      "children": [
+        {
+          "type": "text",
+          "id": "edit-title",
+          "fill": "#FFFFFF",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "bold",
+          "content": "사용자 정보 수정"
+        },
+        {
+          "type": "text",
+          "id": "edit-desc",
+          "fill": "#6F768A",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal",
+          "content": "기존 사용자의 정보를 수정하거나 얼굴 사진을 재촬영할 수 있습니다."
+        },
+        {
+          "type": "frame",
+          "id": "edit-fields-group",
+          "width": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "edit-name-group",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "edit-name-label",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "이름"
+                },
+                {
+                  "type": "frame",
+                  "id": "edit-name-input-box",
+                  "width": 360,
+                  "height": 36,
+                  "fill": "#1F232D",
+                  "stroke": "#3E4452",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "edit-name-value",
+                      "fill": "#FFFFFF",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "홍길동"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "edit-phone-group",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "edit-phone-label",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "연락처"
+                },
+                {
+                  "type": "frame",
+                  "id": "edit-phone-input-box",
+                  "width": 360,
+                  "height": 36,
+                  "fill": "#1F232D",
+                  "stroke": "#3E4452",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "edit-phone-value",
+                      "fill": "#FFFFFF",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "content": "010-1234-5678"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "edit-toggle-camera-group",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "edit-toggle-label",
+                  "fill": "#FFFFFF",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "얼굴 사진 재촬영하기 (토글 활성화)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "edit-actions",
+          "width": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "edit-btn-cancel",
+              "width": 100,
+              "height": 38,
+              "fill": "#1F232D",
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "edit-btn-cancel-text",
+                  "fill": "#A0AEC0",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "content": "취소"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "edit-btn-confirm",
+              "width": 140,
+              "height": 38,
+              "fill": "#00FFA3",
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "edit-btn-confirm-text",
+                  "fill": "#0A0B0E",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "bold",
+                  "content": "💾 정보 저장"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vpass-emergency-modal",
+      "x": 1600,
+      "y": 40,
+      "name": "Smart VPass - 구명조끼 응급 알림",
+      "width": 480,
+      "height": 320,
+      "fill": "#1A0F11",
+      "stroke": "#FF3B30",
+      "strokeWidth": 2,
+      "strokeAlignment": "inner",
+      "layout": "vertical",
+      "padding": 28,
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "text",
+          "id": "emergency-icon",
+          "fill": "#FF3B30",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "content": "🚨"
+        },
+        {
+          "type": "text",
+          "id": "emergency-title",
+          "fill": "#FF3B30",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": "bold",
+          "content": "EMERGENCY WARNING"
+        },
+        {
+          "type": "text",
+          "id": "emergency-subtitle",
+          "fill": "#FFFFFF",
+          "fontFamily": "Inter",
+          "fontSize": 16,
+          "fontWeight": "bold",
+          "content": "응급 상황 감지!"
+        },
+        {
+          "type": "text",
+          "id": "emergency-desc",
+          "fill": "#E53E3E",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "normal",
+          "content": "디바이스 [jacket-1] 에서 낙상이 감지된 후 생존 신호가 5초 이상 중단되었습니다. 신속한 확인 및 조치가 필요합니다."
+        },
+        {
+          "type": "frame",
+          "id": "emergency-btn-ack",
+          "width": 240,
+          "height": 40,
+          "fill": "#FF3B30",
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "emergency-btn-ack-text",
+              "fill": "#FFFFFF",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "content": "상황 확인 및 알림 해제"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "fileToken": "79d6962b-eabe-4a52-9911-6370767a55c7"
+}

@@ -1,0 +1,27 @@
+# ── Docs / 프롬프트 ──────────────────────────────────
+docs/*
+!docs/project_plan.md
+
+# ── Python ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# ── vpass-application 특정 ──────────────────────────
+vpass-application/faces/
+vpass-application/users.json
+vpass-application/boarding_logs.json
+
+# ── PlatformIO / 임베디드 빌드 산출물 ────────────────
+.pio/
+firmware/.pio/
+firmware/include/config.h
+
+# ── OS / 에디터 ──────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.log
