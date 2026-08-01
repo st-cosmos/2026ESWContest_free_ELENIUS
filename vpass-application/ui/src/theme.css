@@ -599,6 +599,182 @@ input::placeholder {
   box-shadow: 0 20px 50px 0 #00000099;
 }
 
+/* ── 운항 기록지 (아코디언) ─────────────────────────────────────────── */
+.rec-list {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.rec-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff03;
+}
+
+.rec-item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  border-radius: 10px;
+}
+
+.rec-item.open {
+  flex: 1 1 auto;
+  min-height: 280px;
+  background: var(--panel);
+  border-color: var(--accent-border);
+}
+
+.rec-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.rec-date {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.rec-date.on {
+  color: var(--accent);
+}
+
+.rec-range {
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.rec-crew {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--cell-bg);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.rec-body {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.rec-body-loading {
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.rec-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--deep);
+  overflow: hidden;
+}
+
+.rec-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.rec-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rec-panel-meta {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.rec-table {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+}
+
+.rec-thead {
+  display: flex;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.rec-row {
+  display: flex;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.rec-empty {
+  padding: 14px 12px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.t-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.t-dim {
+  color: var(--text-3);
+}
+
+.t-soft {
+  color: var(--text-2);
+}
+
+.t-accent {
+  color: var(--accent);
+}
+
 /* ── 스크롤바 ───────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;

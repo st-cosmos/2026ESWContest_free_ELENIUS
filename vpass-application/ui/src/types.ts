@@ -35,12 +35,18 @@ export interface EngineState {
   gpio: boolean;
 }
 
-export interface BoardingEntry {
+export interface CrewEntry {
   user_id: string;
   name: string;
   phone: string;
   time: string;
   lifejacket: boolean | null;
+}
+
+export interface BoardingSummary {
+  total: number;
+  lifejacket_confirmed: number;
+  crew: CrewEntry[];
 }
 
 export interface DeviceState {
@@ -93,10 +99,19 @@ export interface VoyageSummary {
   departed_at: string;
   arrived_at: string | null;
   status: "active" | "done";
-  point_count?: number;
+  crew_count: number;
+  point_count: number;
 }
 
-export interface VoyageDetail extends VoyageSummary {
+export interface VoyageDetail {
+  id: string;
+  date: string;
+  departed_at: string;
+  arrived_at: string | null;
+  status: "active" | "done";
+  departure_reported: boolean;
+  arrival_reported: boolean;
+  crew: CrewEntry[];
   points: { ts: string; coord: string }[];
 }
 
@@ -108,13 +123,13 @@ export interface AppState {
   camera_ok: boolean;
   camera_mode: string;
   overlay: { text: string; color: string };
-  boarding: { count: number; session: BoardingEntry[] };
+  boarding: { count: number; session: CrewEntry[] };
   lifejacket: { devices: DeviceState[]; worn_count: number; mob_alarm: boolean };
   voyage: {
     active: boolean;
     current_id: string | null;
     departed_at: string | null;
-    latest: VoyageSummary | null;
+    latest: { id: string; date: string; departed_at: string; arrived_at: string | null; status: string } | null;
     last_report: { type: string; time: string; message: string } | null;
   };
   sos: SosReport | null;
@@ -129,12 +144,4 @@ export interface User {
   device_id: string | null;
   photo: string | null;
   registered_at: string;
-}
-
-export interface BoardingLogsResponse {
-  latest_voyage: VoyageSummary | null;
-  days: {
-    date: string;
-    entries: { date: string; name: string; phone: string; time: string }[];
-  }[];
 }

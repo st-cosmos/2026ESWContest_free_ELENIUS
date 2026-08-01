@@ -24,11 +24,12 @@ from .config import (
 
 class VoyageManager:
     def __init__(self, store, telemetry, engine, overlay,
-                 on_depart=None, on_arrive=None):
+                 crew_provider=None, on_depart=None, on_arrive=None):
         self._store = store
         self._telemetry = telemetry
         self._engine = engine
         self._overlay = overlay
+        self._crew_provider = crew_provider
         self._on_depart = on_depart
         self._on_arrive = on_arrive
 
@@ -131,8 +132,10 @@ class VoyageManager:
                 "arrived_at": None,
                 "status": "active",
                 "auto_departure": auto,
-                "departure_reported": True,  # V-PASS 자동 출항 신고
+                "departure_reported": True,  # V-PASS 출항 신고
                 "arrival_reported": False,
+                # 출항 시점의 승선 명단을 운항 기록에 함께 보관한다
+                "crew": self._crew_snapshot(),
                 "points": [
                     {"ts": now.strftime("%Y-%m-%d %H:%M:%S"),
                      "coord": tel["position_compact"]}
@@ -142,12 +145,17 @@ class VoyageManager:
             self._active_started_ts = time.time()
             self._last_track_ts = time.time()
 
+        message = (
+            "출항 신고가 해양경찰청에 자동 접수되었습니다"
+            if auto
+            else "출항 확정 · 시동 잠금 해제 · 해양경찰청 출항 신고 접수"
+        )
         self.last_report = {
             "type": "departure",
             "time": voyage["departed_at"],
-            "message": "출항 신고가 해양경찰청에 자동 접수되었습니다",
+            "message": message,
         }
-        self._overlay.set("출항 신고가 해양경찰청에 자동 접수되었습니다", "#00FFA3")
+        self._overlay.set(message, "#00FFA3")
         if self._on_depart:
             self._on_depart(voyage)
         return voyage
@@ -176,12 +184,17 @@ class VoyageManager:
             self._store.update(_update)
             self._active_started_ts = None
 
+        message = (
+            "입항 신고가 해양경찰청에 자동 접수되었습니다"
+            if auto
+            else "입항 확정 · 해양경찰청 입항 신고 접수"
+        )
         self.last_report = {
             "type": "arrival",
             "time": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "message": "입항 신고가 해양경찰청에 자동 접수되었습니다",
+            "message": message,
         }
-        self._overlay.set("입항 신고가 해양경찰청에 자동 접수되었습니다", "#00FFA3")
+        self._overlay.set(message, "#00FFA3")
         if self._on_arrive:
             self._on_arrive(active)
         return active
@@ -202,41 +215,29 @@ class VoyageManager:
 
         self._store.update(_update)
 
-    # ── 수동(더미) 좌표 입력 — 어선운항정보 기록 화면의 개발용 입력 ───────
-    def add_manual_point(self, ts: str, coord: str) -> dict:
+    # ── 승선 명단 ────────────────────────────────────────────────────────
+    def _crew_snapshot(self) -> list[dict]:
+        if self._crew_provider is None:
+            return []
+        try:
+            return list(self._crew_provider())
+        except Exception:
+            return []
+
+    def sync_active_crew(self) -> None:
+        """운항 중 추가 승선이 있으면 해당 운항의 명단을 최신화한다."""
         active = self._find_active()
-        voyages = self._store.load()
-        target_id = None
-        if active is not None:
-            target_id = active["id"]
-        elif voyages:
-            target_id = sorted(voyages, key=lambda v: v["departed_at"])[-1]["id"]
+        if active is None:
+            return
+        crew = self._crew_snapshot()
 
-        if target_id is None:
-            # 기록이 하나도 없으면 해당 시각의 완료된 운항을 새로 만든다
-            voyage = {
-                "id": uuid.uuid4().hex[:12],
-                "date": ts.split(" ")[0],
-                "departed_at": ts,
-                "arrived_at": ts,
-                "status": "done",
-                "auto_departure": False,
-                "departure_reported": False,
-                "arrival_reported": False,
-                "points": [{"ts": ts, "coord": coord}],
-            }
-            self._store.update(lambda vs: vs + [voyage])
-            return voyage
-
-        def _update(vs):
-            for v in vs:
-                if v["id"] == target_id:
-                    v["points"].append({"ts": ts, "coord": coord})
-                    v["points"].sort(key=lambda p: p["ts"])
-            return vs
+        def _update(voyages):
+            for v in voyages:
+                if v["id"] == active["id"]:
+                    v["crew"] = crew
+            return voyages
 
         self._store.update(_update)
-        return next(v for v in self._store.load() if v["id"] == target_id)
 
     # ── 조회 ────────────────────────────────────────────────────────────
     def list_voyages(self) -> list[dict]:
@@ -249,6 +250,7 @@ class VoyageManager:
                 "departed_at": v["departed_at"],
                 "arrived_at": v.get("arrived_at"),
                 "status": v.get("status"),
+                "crew_count": len(v.get("crew", [])),
                 "point_count": len(v.get("points", [])),
             })
         return result

@@ -96,10 +96,12 @@ class Runtime:
         self.boarding = BoardingManager(
             self.users_store, self.boarding_logs_store,
             self.devices, self.engine, self.overlay,
+            on_board=lambda crew: self.voyage.sync_active_crew(),
         )
         self.camera = CameraManager(self.users_store, self.boarding, config.APP_DIR)
         self.voyage = VoyageManager(
             self.voyages_store, self.telemetry, self.engine, self.overlay,
+            crew_provider=self.boarding.session,
             on_arrive=self._handle_arrival,
         )
 
@@ -146,6 +148,33 @@ class Runtime:
     def _handle_arrival(self, voyage: dict) -> None:
         """입항: 시동 재잠금 + 승선 세션 초기화."""
         self.boarding.reset_session(relock=True)
+
+    # ── 출항 / 입항 확정 ────────────────────────────────────────────────
+    def confirm_departure(self) -> dict:
+        """선장이 승선 인원을 확인하고 출항을 확정한다.
+
+        이 시점에만 시동 잠금이 해제되고 해양경찰청 출항 신고가 접수된다.
+        """
+        session = self.boarding.session()
+        if not session:
+            raise ValueError("승선한 선원이 없습니다. 얼굴 인식으로 승선을 먼저 진행해 주세요.")
+        if self.engine.snapshot()["killed"]:
+            raise ValueError("비상 정지 상태입니다. SOS 상황 확인 후 다시 시도해 주세요.")
+        if self.voyage.active_voyage() is not None:
+            raise ValueError("이미 운항 중입니다.")
+
+        self.engine.unlock()  # 엔진 상태 변경 → 항해 시작
+        return self.voyage.start_voyage(auto=False)
+
+    def confirm_arrival(self) -> dict:
+        """입항을 확정한다. 시동 재잠금과 승선 세션 초기화가 뒤따른다."""
+        if self.voyage.active_voyage() is None:
+            raise ValueError("진행 중인 운항이 없습니다.")
+        self.telemetry.set_cruising(False)
+        voyage = self.voyage.end_voyage(auto=False)
+        if voyage is None:
+            raise ValueError("입항 처리에 실패했습니다.")
+        return voyage
 
     # ── SOS ─────────────────────────────────────────────────────────────
     def trigger_sos_manual(self) -> dict:
