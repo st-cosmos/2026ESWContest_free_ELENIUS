@@ -135,7 +135,6 @@ export function StatusBar() {
       <div style={{ flex: 1 }} />
       <ConnChip label="통신" ok={connected && (tel?.comm_ok ?? false)} />
       <ConnChip label={gpsLabel} ok={connected && (tel?.gps_ok ?? false)} />
-      <ConnChip label="지자계" ok={connected && (tel?.heading_ok ?? false)} />
       <button
         className="sos-button"
         onClick={() => setConfirming(true)}

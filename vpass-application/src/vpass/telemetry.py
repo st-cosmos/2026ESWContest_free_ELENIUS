@@ -126,7 +126,6 @@ class SimulatedTelemetry:
                 "satellites": None,
                 "gps_updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "gps_ok": self.gps_ok,
-                "heading_ok": True,
                 "comm_ok": self.comm_ok,
             }
 
@@ -217,7 +216,6 @@ class HardwareTelemetry:
             "satellites": gps["satellites"],
             "gps_updated_at": gps["updated_at"],
             "gps_ok": gps["fresh"],
-            "heading_ok": bool(compass["fresh"] or gps["course_deg"] is not None),
             "comm_ok": bool(gps["connected"] or compass["connected"]),
             "gps_error": gps["error"],
             "compass_error": compass["error"],

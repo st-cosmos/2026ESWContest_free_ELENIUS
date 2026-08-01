@@ -12,7 +12,6 @@ export interface Telemetry {
   satellites: number | null;
   gps_updated_at: string | null;
   gps_ok: boolean;
-  heading_ok: boolean;
   comm_ok: boolean;
   gps_error?: string | null;
   compass_error?: string | null;

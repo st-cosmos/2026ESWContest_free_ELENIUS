@@ -91,7 +91,7 @@ POST /api/fall    {"device": "jacket-1", "magnitude": 3.2}
 - 지자계: QMC5883L, I2C 주소 `0x0D`
 - 라즈베리파이에서는 `VPASS_TELEMETRY_PROVIDER=auto` 기본값으로 실제 하드웨어 사용
 - 개발 PC에서는 같은 기본값으로 기존 통영 해상 시뮬레이터 사용
-- 상태바에는 GPS 좌표, 속도, 지자계/GPS 기반 침로, 위성 수, GPS/지자계 연결 상태가 표시됩니다.
+- 상태바에는 GPS 좌표, 속도, 지자계/GPS 기반 침로, 위성 수, GPS 연결 상태가 표시됩니다.
 
 라즈베리파이 배선 예:
 
