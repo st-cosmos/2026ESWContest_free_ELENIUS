@@ -38,6 +38,9 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  /* 키오스크 터치: 더블탭 확대 방지(스크롤은 유지), 탭 하이라이트 제거 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
