@@ -42,6 +42,11 @@ def is_raspberry_pi() -> bool:
 
 IS_RASPBERRY_PI = is_raspberry_pi()
 
+# ── 데모 관제 서버 연동 (선택) ──────────────────────────────────────────
+# 설정 시 텔레메트리/신고/출입항을 데모 관제 서버로 전송하고 관할 기상을 받아온다.
+# 미설정 시 V-PASS 는 기존과 동일하게 독립 동작한다.
+DEMO_SERVER_URL = os.environ.get("VPASS_DEMO_SERVER_URL", "").strip() or None
+
 # ── 카메라 ──────────────────────────────────────────────────────────────
 CAMERA_INDEX = int(os.environ.get("VPASS_CAMERA_INDEX", "0"))
 

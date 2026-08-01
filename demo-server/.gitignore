@@ -1,0 +1,16 @@
+# 런타임 데이터
+/data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+*.egg-info/
+
+# uv
+uv.lock
+
+# UI
+/ui/node_modules/
+/ui/dist/

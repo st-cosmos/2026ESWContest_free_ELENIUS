@@ -10,6 +10,7 @@ from datetime import datetime
 from . import config
 from .boarding import COLOR_DANGER, BoardingManager, Overlay
 from .camera import CameraManager
+from .demo_bridge import DemoBridge
 from .facerec import detect_largest_face, imwrite_unicode, safe_filename
 from .killswitch import EngineController
 from .lifejacket import DeviceRegistry
@@ -102,11 +103,17 @@ class Runtime:
         self.voyage = VoyageManager(
             self.voyages_store, self.telemetry, self.engine, self.overlay,
             crew_provider=self.boarding.session,
+            on_depart=self._handle_departure,
             on_arrive=self._handle_arrival,
         )
 
         # 시뮬레이터 (개발/시연용)
         self.sim_jackets: dict[str, SimJacket] = {}
+
+        # 데모 관제 서버 연동 (선택)
+        self.demo: DemoBridge | None = None
+        if config.DEMO_SERVER_URL:
+            self.demo = DemoBridge(config.DEMO_SERVER_URL, self._demo_vessel_payload)
 
         # 엔진이 차단되면 배는 반드시 멈춘다
         self.engine.on_change(self._on_engine_change)
@@ -117,8 +124,12 @@ class Runtime:
         self.devices.start()
         self.camera.start()
         self.voyage.start()
+        if self.demo:
+            self.demo.start()
 
     def stop(self) -> None:
+        if self.demo:
+            self.demo.stop()
         self.voyage.stop()
         self.camera.stop()
         self.devices.stop()
@@ -141,13 +152,51 @@ class Runtime:
             "낙상 후 신호 두절" if device_snap["mob_cause"] == "fall" else "무선 신호 두절"
         )
         self.engine.kill(f"익수 감지 — {who} ({cause_txt})")
-        self.sos.trigger("mob", detail=f"{who} 익수 의심 ({cause_txt})")
+        report = self.sos.trigger("mob", detail=f"{who} 익수 의심 ({cause_txt})")
+        self._report_to_demo(report)
         self.overlay.set(f"⚠ 익수 감지! {who} — 엔진 비상 정지", COLOR_DANGER)
         print(f"[MOB] {who} 익수 감지 → 킬 스위치 작동 + SOS 발보")
 
+    def _handle_departure(self, voyage: dict) -> None:
+        """출항: 데모 관제 서버에 출항 이벤트 전송."""
+        self._port_to_demo("departure", voyage["departed_at"])
+
     def _handle_arrival(self, voyage: dict) -> None:
-        """입항: 시동 재잠금 + 승선 세션 초기화."""
+        """입항: 시동 재잠금 + 승선 세션 초기화 + 데모 관제 서버 통보."""
         self.boarding.reset_session(relock=True)
+        self._port_to_demo("arrival", voyage.get("arrived_at") or "")
+
+    # ── 데모 관제 서버 전송 헬퍼 ────────────────────────────────────────
+    def _demo_vessel_payload(self) -> dict | None:
+        vessel = self.vessel_store.load()
+        if not vessel:
+            return None
+        tel = self.telemetry.snapshot()
+        active = self.voyage.active_voyage() is not None
+        return {
+            "vessel_id": vessel.get("vessel_id", "-"),
+            "name": vessel.get("name", "V-PASS 선박"),
+            "region": vessel.get("region"),
+            "lat": tel["lat"],
+            "lon": tel["lon"],
+            "course": tel["course"],
+            "speed_kn": tel["speed_kn"],
+            "crew": len(self.boarding.session()),
+            "status": "departed" if active else "docked",
+        }
+
+    def _report_to_demo(self, report: dict) -> None:
+        if self.demo:
+            vessel = self.vessel_store.load() or {}
+            self.demo.push_report(report, region=vessel.get("region"))
+
+    def _port_to_demo(self, kind: str, time_str: str) -> None:
+        if self.demo:
+            vessel = self.vessel_store.load() or {}
+            self.demo.push_port(
+                kind, vessel.get("name", "V-PASS 선박"),
+                vessel.get("vessel_id", "-"), time_str,
+            )
 
     # ── 출항 / 입항 확정 ────────────────────────────────────────────────
     def confirm_departure(self) -> dict:
@@ -178,7 +227,9 @@ class Runtime:
 
     # ── SOS ─────────────────────────────────────────────────────────────
     def trigger_sos_manual(self) -> dict:
-        return self.sos.trigger("manual", detail="선내 SOS 버튼")
+        report = self.sos.trigger("manual", detail="선내 SOS 버튼")
+        self._report_to_demo(report)
+        return report
 
     def ack_sos(self) -> None:
         """상황 확인: SOS 해제 + 익수 래치 해제 + 엔진 복구."""
@@ -297,8 +348,24 @@ class Runtime:
                 "last_report": self.voyage.last_report,
             },
             "sos": self.sos.active(),
-            "weather": get_weather(),
+            "weather": self._weather_snapshot(),
             "platform": {
                 "raspberry_pi": config.IS_RASPBERRY_PI,
             },
         }
+
+    def _weather_snapshot(self) -> dict:
+        """기본 시뮬레이션 기상에 데모 관제 서버의 관할 기상을 덮어쓴다.
+
+        데모 서버에서 관할 기상을 '흐림' 등으로 바꾸면 V-PASS 에도 자동 반영된다.
+        """
+        weather = get_weather()
+        if self.demo:
+            demo = self.demo.cached_weather()
+            if demo and demo.get("condition"):
+                weather["condition"] = demo["condition"]
+                for key in ("temp_c", "wind", "wave_height_m", "water_temp_c", "advisory"):
+                    if demo.get(key) is not None:
+                        weather[key] = demo[key]
+                weather["source"] = "데모 관제 서버"
+        return weather
