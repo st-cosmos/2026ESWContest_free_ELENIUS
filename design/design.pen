@@ -785,14 +785,14 @@
                   "id": "OEO1M",
                   "type": "ref",
                   "ref": "KixIp",
-                  "name": "nav-출항 기록지",
+                  "name": "nav-운항 기록지",
                   "width": "fill_container",
                   "descendants": {
                     "AE4Sv": {
                       "icon": "clipboard-list"
                     },
                     "vwCua": {
-                      "content": "출항 기록지"
+                      "content": "운항 기록지"
                     }
                   }
                 },
@@ -838,21 +838,6 @@
                     },
                     "vwCua": {
                       "content": "어선 정보"
-                    }
-                  }
-                },
-                {
-                  "id": "yk3wz",
-                  "type": "ref",
-                  "ref": "KixIp",
-                  "name": "nav-어선운항정보 기록",
-                  "width": "fill_container",
-                  "descendants": {
-                    "AE4Sv": {
-                      "icon": "route"
-                    },
-                    "vwCua": {
-                      "content": "어선운항정보 기록"
                     }
                   }
                 }
@@ -992,7 +977,9 @@
                           "id": "utxYT",
                           "name": "page-desc",
                           "fill": "$text-3",
-                          "content": "등록된 선원의 얼굴을 인식하면 승선 처리되고 시동 잠금이 해제됩니다.",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "선원 얼굴을 인식해 승선 목록을 만든 뒤, 출항 확정 버튼을 눌러야 시동 잠금이 해제됩니다.",
                           "fontFamily": "$font-body",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -1130,7 +1117,7 @@
                                   "id": "tUE4V",
                                   "name": "pill-text",
                                   "fill": "$accent",
-                                  "content": "홍길동 님 승선 완료 · 시동 잠금 해제",
+                                  "content": "홍길동 님 승선 확인 · 목록에 추가되었습니다",
                                   "fontFamily": "$font-body",
                                   "fontSize": 13,
                                   "fontWeight": "700"
@@ -1171,7 +1158,7 @@
                               "id": "Fyfge",
                               "name": "cam-hint",
                               "fill": "$text-3",
-                              "content": "얼굴 영역만 인식합니다 · 미등록 선원은 등록 사용자 목록에서 등록을 진행하세요",
+                              "content": "얼굴 영역만 인식합니다 · 승선이 끝나면 우측에서 출항을 확정하세요",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
                               "fontWeight": "normal"
@@ -1216,7 +1203,7 @@
                                   "id": "UhhNr",
                                   "name": "boarding-title",
                                   "fill": "$text-1",
-                                  "content": "실시간 승선 완료 인원",
+                                  "content": "승선 인식 인원",
                                   "fontFamily": "$font-body",
                                   "fontSize": 15,
                                   "fontWeight": "600"
@@ -1463,68 +1450,100 @@
                         },
                         {
                           "type": "frame",
-                          "id": "QkaJI",
-                          "name": "engine-card",
+                          "id": "uLgUw",
+                          "name": "depart-card",
                           "width": "fill_container",
                           "fill": "$panel",
                           "cornerRadius": 10,
-                          "stroke": "$accent-border",
+                          "stroke": "$border",
                           "strokeWidth": 1,
+                          "layout": "vertical",
                           "gap": 12,
                           "padding": 16,
-                          "alignItems": "center",
                           "children": [
                             {
                               "type": "frame",
-                              "id": "sgDRQ",
-                              "name": "engine-tile",
-                              "width": 40,
-                              "height": 40,
-                              "fill": "$accent-soft",
-                              "cornerRadius": 10,
-                              "justifyContent": "center",
+                              "id": "a3VQRs",
+                              "name": "engine-row",
+                              "width": "fill_container",
+                              "gap": 12,
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "icon",
-                                  "id": "QGDhb",
-                                  "name": "engine-icon",
-                                  "width": 20,
-                                  "height": 20,
-                                  "icon": "key-round",
-                                  "library": "lucide",
-                                  "fill": "$accent"
+                                  "type": "frame",
+                                  "id": "lLVxs",
+                                  "name": "engine-tile",
+                                  "width": 40,
+                                  "height": 40,
+                                  "fill": "$panel-2",
+                                  "cornerRadius": 10,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "zlUQT",
+                                      "name": "engine-icon",
+                                      "width": 20,
+                                      "height": 20,
+                                      "icon": "lock",
+                                      "library": "lucide",
+                                      "fill": "$text-3"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "L4LHAq",
+                                  "name": "engine-text",
+                                  "layout": "vertical",
+                                  "gap": 2,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "jJ71V",
+                                      "name": "engine-title",
+                                      "fill": "$text-1",
+                                      "content": "시동 잠금 중",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "yb0sE",
+                                      "name": "engine-desc",
+                                      "fill": "$text-2",
+                                      "content": "승선 인원 확인 후 출항을 확정하세요",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
-                              "type": "frame",
-                              "id": "HsVPf",
-                              "name": "engine-text",
-                              "layout": "vertical",
-                              "gap": 2,
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "bxTYF",
-                                  "name": "engine-title",
-                                  "fill": "$text-1",
-                                  "content": "시동 잠금 해제됨",
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 14,
-                                  "fontWeight": "700"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "zIQY8",
-                                  "name": "engine-desc",
-                                  "fill": "$text-2",
-                                  "content": "등록 선원 얼굴 인식 완료",
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 11,
-                                  "fontWeight": "normal"
+                              "id": "CvQLw",
+                              "type": "ref",
+                              "ref": "httnX",
+                              "name": "btn-depart-confirm",
+                              "width": "fill_container",
+                              "descendants": {
+                                "I2taWq": {
+                                  "content": "승선 확인 · 출항 확정"
                                 }
-                              ]
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "hpIfq",
+                              "name": "depart-hint",
+                              "fill": "$text-3",
+                              "content": "출항 확정 시 시동 잠금 해제 · 해양경찰청 자동 신고",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -3056,7 +3075,7 @@
       "id": "TdF7W",
       "x": 4200,
       "y": 1250,
-      "name": "vpass-user-register",
+      "name": "vpass-user-register-step1",
       "clip": true,
       "width": 1280,
       "height": 800,
@@ -3118,7 +3137,7 @@
                       "id": "SJAQ3",
                       "name": "modal-desc",
                       "fill": "$text-2",
-                      "content": "이름과 연락처 입력 후 얼굴을 등록해 주세요.",
+                      "content": "1단계 · 선원의 이름과 연락처를 입력해 주세요.",
                       "fontFamily": "$font-body",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -3134,6 +3153,124 @@
                   "icon": "x",
                   "library": "lucide",
                   "fill": "$text-3"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "g7qXYn",
+              "name": "stepper",
+              "width": "fill_container",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "h29oB",
+                  "name": "step-1",
+                  "fill": "$accent-soft",
+                  "cornerRadius": 8,
+                  "stroke": "$accent",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "YmsHh",
+                      "name": "step-num",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "$accent",
+                      "cornerRadius": 9,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FpHz4",
+                          "name": "step-num-label",
+                          "fill": "#0A0C11",
+                          "content": "1",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 10,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "T1bJO7",
+                      "name": "step-label",
+                      "fill": "$accent",
+                      "content": "정보 입력",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "K7sAsr",
+                  "name": "step-connector",
+                  "fill": "$border",
+                  "width": 20,
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "Df75Z",
+                  "name": "step-2",
+                  "fill": "$input-bg",
+                  "cornerRadius": 8,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wTDin",
+                      "name": "step-num",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "$panel-2",
+                      "cornerRadius": 9,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "dJuVL",
+                          "name": "step-num-label",
+                          "fill": "$text-3",
+                          "content": "2",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 10,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "vzKJJ",
+                      "name": "step-label",
+                      "fill": "$text-3",
+                      "content": "얼굴 등록",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
                 }
               ]
             },
@@ -3176,41 +3313,23 @@
               }
             },
             {
-              "type": "frame",
-              "id": "g5gsO",
-              "name": "register-cam",
-              "clip": true,
+              "id": "g5Iw7i",
+              "type": "ref",
+              "ref": "FcdQq",
+              "name": "input-device",
               "width": "fill_container",
-              "height": 210,
-              "fill": "#05070B",
-              "cornerRadius": 8,
-              "stroke": "$border",
-              "strokeWidth": 1,
-              "layout": "vertical",
-              "gap": 10,
-              "justifyContent": "center",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "ellipse",
-                  "id": "fzSNF",
-                  "name": "guide-oval",
-                  "width": 110,
-                  "height": 134,
-                  "stroke": "$accent",
-                  "strokeWidth": 2
+              "descendants": {
+                "TsIg9": {
+                  "content": "구명조끼 장치 ID (선택)"
                 },
-                {
-                  "type": "text",
-                  "id": "ENHq3",
-                  "name": "cam-caption",
-                  "fill": "$text-3",
-                  "content": "얼굴 영역만 인식합니다",
-                  "fontFamily": "$font-body",
-                  "fontSize": 11,
-                  "fontWeight": "normal"
+                "QPWJB": {
+                  "width": "fill_container"
+                },
+                "XXHMm": {
+                  "content": "예: jacket-1",
+                  "fill": "$text-3"
                 }
-              ]
+              }
             },
             {
               "type": "frame",
@@ -3227,7 +3346,7 @@
                   "width": "fill_container",
                   "descendants": {
                     "I2taWq": {
-                      "content": "얼굴 촬영 & 등록"
+                      "content": "다음 단계"
                     }
                   }
                 },
@@ -4103,15 +4222,15 @@
               "name": "sidebar",
               "height": "fill_container",
               "descendants": {
-                "yk3wz": {
+                "OEO1M": {
                   "fill": "$panel-2",
                   "stroke": "$accent-border",
                   "strokeWidth": 1
                 },
-                "yk3wz/AE4Sv": {
+                "OEO1M/AE4Sv": {
                   "fill": "$accent"
                 },
-                "yk3wz/vwCua": {
+                "OEO1M/vwCua": {
                   "fill": "$accent",
                   "fontWeight": "700"
                 }
@@ -7212,6 +7331,2211 @@
                           "icon": "chevron-right",
                           "library": "lucide",
                           "fill": "$text-3"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "hqN4K",
+      "x": 11200,
+      "y": 1250,
+      "name": "vpass-departure-confirm",
+      "clip": true,
+      "width": 1280,
+      "height": 800,
+      "fill": "#07090ECC",
+      "layout": "vertical",
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "d35bUD",
+          "name": "confirm-modal",
+          "width": 460,
+          "fill": "$bg-elevated",
+          "cornerRadius": 14,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000099",
+            "offset": {
+              "x": 0,
+              "y": 20
+            },
+            "blur": 50
+          },
+          "layout": "vertical",
+          "gap": 14,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "dYpSA",
+              "name": "modal-head",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "D8eG1x",
+                  "name": "modal-head-text",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rBVIS",
+                      "name": "modal-title",
+                      "fill": "$text-1",
+                      "content": "출항 확정",
+                      "fontFamily": "$font-body",
+                      "fontSize": 18,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KVvqB",
+                      "name": "modal-desc",
+                      "fill": "$text-2",
+                      "content": "아래 승선 인원으로 출항합니다.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "icon",
+                  "id": "WXqMG",
+                  "name": "modal-close",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "x",
+                  "library": "lucide",
+                  "fill": "$text-3"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "NMlED",
+              "name": "crew-summary",
+              "width": "fill_container",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "UXSbM",
+                  "name": "summary-label",
+                  "fill": "$text-2",
+                  "content": "승선 인원",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "S1rdx",
+                  "name": "summary-spacer",
+                  "width": "fill_container",
+                  "height": 2
+                },
+                {
+                  "type": "text",
+                  "id": "J8RFKt",
+                  "name": "summary-value",
+                  "fill": "$accent",
+                  "content": "3명 · 구명조끼 착용 3명",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GP23U",
+              "name": "crew-list",
+              "width": "fill_container",
+              "fill": "#0B0E15",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JElxc",
+                  "name": "crew-홍길동",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF08",
+                  "cornerRadius": 10,
+                  "stroke": "#FFFFFF0F",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "HBLSp",
+                      "name": "crew-name",
+                      "fill": "$accent",
+                      "content": "홍길동",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "id": "H9L6F",
+                      "type": "ref",
+                      "ref": "E5sHb",
+                      "name": "crew-badge",
+                      "descendants": {
+                        "wxyUK": {
+                          "content": "구명조끼 착용"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "g7zdY",
+                      "name": "crew-spacer",
+                      "width": "fill_container",
+                      "height": 2
+                    },
+                    {
+                      "type": "text",
+                      "id": "d3g8Lw",
+                      "name": "crew-time",
+                      "fill": "$text-3",
+                      "content": "07:42:15",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b6x5H",
+                  "name": "crew-김철수",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF08",
+                  "cornerRadius": 10,
+                  "stroke": "#FFFFFF0F",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "r8yH10",
+                      "name": "crew-name",
+                      "fill": "$accent",
+                      "content": "김철수",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "id": "wAQrc",
+                      "type": "ref",
+                      "ref": "E5sHb",
+                      "name": "crew-badge",
+                      "descendants": {
+                        "wxyUK": {
+                          "content": "구명조끼 착용"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s1CGb",
+                      "name": "crew-spacer",
+                      "width": "fill_container",
+                      "height": 2
+                    },
+                    {
+                      "type": "text",
+                      "id": "OMWfU",
+                      "name": "crew-time",
+                      "fill": "$text-3",
+                      "content": "07:43:02",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XotBc",
+                  "name": "crew-이영희",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF08",
+                  "cornerRadius": 10,
+                  "stroke": "#FFFFFF0F",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XM3tK",
+                      "name": "crew-name",
+                      "fill": "$accent",
+                      "content": "이영희",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "id": "M9CaGo",
+                      "type": "ref",
+                      "ref": "E5sHb",
+                      "name": "crew-badge",
+                      "descendants": {
+                        "wxyUK": {
+                          "content": "구명조끼 착용"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ODzeW",
+                      "name": "crew-spacer",
+                      "width": "fill_container",
+                      "height": 2
+                    },
+                    {
+                      "type": "text",
+                      "id": "SNAwU",
+                      "name": "crew-time",
+                      "fill": "$text-3",
+                      "content": "07:45:38",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GTStc",
+              "name": "notice-strip",
+              "width": "fill_container",
+              "fill": "$accent-soft",
+              "cornerRadius": 10,
+              "stroke": "$accent-border",
+              "strokeWidth": 1,
+              "gap": 8,
+              "padding": [
+                10,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "ePQLk",
+                  "name": "notice-icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "shield-check",
+                  "library": "lucide",
+                  "fill": "$accent"
+                },
+                {
+                  "type": "text",
+                  "id": "g8G1i",
+                  "name": "notice-text",
+                  "fill": "$accent",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "확정 시 시동 잠금 해제 · 해양경찰청 출항 신고 자동 접수",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "M4kjxH",
+              "name": "modal-actions",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "id": "UMnBB",
+                  "type": "ref",
+                  "ref": "httnX",
+                  "name": "btn-confirm",
+                  "width": "fill_container",
+                  "descendants": {
+                    "I2taWq": {
+                      "content": "출항 확정"
+                    }
+                  }
+                },
+                {
+                  "id": "FX2eP",
+                  "type": "ref",
+                  "ref": "HpCp2",
+                  "name": "btn-cancel",
+                  "descendants": {
+                    "KtxQn": {
+                      "content": "취소"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "f5lYS",
+      "x": 12600,
+      "y": 1250,
+      "name": "vpass-user-register-step2",
+      "clip": true,
+      "width": 1280,
+      "height": 800,
+      "fill": "#07090ECC",
+      "layout": "vertical",
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "m15IKM",
+          "name": "register-modal",
+          "width": 460,
+          "fill": "$bg-elevated",
+          "cornerRadius": 14,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000099",
+            "offset": {
+              "x": 0,
+              "y": 20
+            },
+            "blur": 50
+          },
+          "layout": "vertical",
+          "gap": 14,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "q3JiP",
+              "name": "modal-head",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "N9zgGx",
+                  "name": "modal-head-text",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "IbYsY",
+                      "name": "modal-title",
+                      "fill": "$text-1",
+                      "content": "사용자 신규 등록",
+                      "fontFamily": "$font-body",
+                      "fontSize": 18,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Ui3YJ",
+                      "name": "modal-desc",
+                      "fill": "$text-2",
+                      "content": "2단계 · 카메라를 보고 얼굴을 등록해 주세요.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "icon",
+                  "id": "Y1wPXe",
+                  "name": "modal-close",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "x",
+                  "library": "lucide",
+                  "fill": "$text-3"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "HzkIs",
+              "name": "stepper",
+              "width": "fill_container",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "i45z7i",
+                  "name": "step-1",
+                  "fill": "$accent-soft",
+                  "cornerRadius": 8,
+                  "stroke": "$accent-border",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "z9mWV",
+                      "name": "step-num",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "$accent",
+                      "cornerRadius": 9,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "dRYSG",
+                          "name": "step-check",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "#0A0C11"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "OB3WB",
+                      "name": "step-label",
+                      "fill": "$accent",
+                      "content": "정보 입력",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "QCypX",
+                  "name": "step-connector",
+                  "fill": "$accent-border",
+                  "width": 20,
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "qqk7F",
+                  "name": "step-2",
+                  "fill": "$accent-soft",
+                  "cornerRadius": 8,
+                  "stroke": "$accent",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "y0Ttx",
+                      "name": "step-num",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "$accent",
+                      "cornerRadius": 9,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "d7BM4N",
+                          "name": "step-num-label",
+                          "fill": "#0A0C11",
+                          "content": "2",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 10,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "DT9oO",
+                      "name": "step-label",
+                      "fill": "$accent",
+                      "content": "얼굴 등록",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "PX7hE",
+              "name": "entered-info",
+              "width": "fill_container",
+              "fill": "$input-bg",
+              "cornerRadius": 8,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                10,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "pm5p4",
+                  "name": "info-icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "user-round",
+                  "library": "lucide",
+                  "fill": "$text-3"
+                },
+                {
+                  "type": "text",
+                  "id": "s2Cd4j",
+                  "name": "info-name",
+                  "fill": "$text-1",
+                  "content": "홍길동",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "x5jy6w",
+                  "name": "info-phone",
+                  "fill": "$text-2",
+                  "content": "010-1234-5678",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "OpVFW",
+                  "name": "info-spacer",
+                  "width": "fill_container",
+                  "height": 2
+                },
+                {
+                  "type": "text",
+                  "id": "c0qcH",
+                  "name": "info-edit",
+                  "fill": "$accent",
+                  "content": "수정",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YoRnf",
+              "name": "register-cam",
+              "clip": true,
+              "width": "fill_container",
+              "height": 240,
+              "fill": "#05070B",
+              "cornerRadius": 8,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 10,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "R9W7v",
+                  "name": "guide-oval",
+                  "width": 130,
+                  "height": 158,
+                  "stroke": "$accent",
+                  "strokeWidth": 2
+                },
+                {
+                  "type": "text",
+                  "id": "qILMv",
+                  "name": "cam-caption",
+                  "fill": "$text-3",
+                  "content": "얼굴 영역만 인식합니다",
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "g0ZtDw",
+              "name": "modal-actions",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "id": "k2c9k",
+                  "type": "ref",
+                  "ref": "HpCp2",
+                  "name": "btn-prev",
+                  "descendants": {
+                    "KtxQn": {
+                      "content": "이전"
+                    }
+                  }
+                },
+                {
+                  "id": "zentL",
+                  "type": "ref",
+                  "ref": "httnX",
+                  "name": "btn-capture",
+                  "width": "fill_container",
+                  "descendants": {
+                    "I2taWq": {
+                      "content": "얼굴 촬영 & 등록"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "kifV3",
+      "x": 14000,
+      "y": 1250,
+      "name": "vpass-voyage-record",
+      "clip": true,
+      "width": 1280,
+      "height": 800,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "qCsJG",
+          "type": "ref",
+          "ref": "QYQ2J",
+          "name": "status-bar",
+          "width": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "YQP3p",
+          "name": "body",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "id": "TjjCg",
+              "type": "ref",
+              "ref": "fzuBr",
+              "name": "sidebar",
+              "height": "fill_container",
+              "descendants": {
+                "OEO1M": {
+                  "fill": "$panel-2",
+                  "stroke": "$accent-border",
+                  "strokeWidth": 1
+                },
+                "OEO1M/AE4Sv": {
+                  "fill": "$accent"
+                },
+                "OEO1M/vwCua": {
+                  "fill": "$accent",
+                  "fontWeight": "700"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "rto97",
+              "name": "content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zQEJa",
+                  "name": "page-head",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "I1aMzC",
+                      "name": "head-text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KCsYS",
+                          "name": "page-title",
+                          "fill": "$text-1",
+                          "content": "운항 기록지",
+                          "fontFamily": "$font-body",
+                          "fontSize": 19,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "H5E8JE",
+                          "name": "page-desc",
+                          "fill": "$text-3",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "출항부터 입항까지를 하나의 기록으로 관리합니다. 기록을 펼치면 승선 로그와 1분 간격 운항 상세를 함께 확인할 수 있습니다.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HfXaf",
+                      "name": "keep-chip",
+                      "fill": "$panel",
+                      "cornerRadius": 8,
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        5,
+                        10
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "rp0PR",
+                          "name": "keep-icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "archive",
+                          "library": "lucide",
+                          "fill": "$text-2"
+                        },
+                        {
+                          "type": "text",
+                          "id": "rtqHk",
+                          "name": "keep-label",
+                          "fill": "$text-2",
+                          "content": "로그 보관 기간 1년",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pAstb",
+                  "name": "record-list",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "udjWw",
+                      "name": "record-2026-07-23",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF08",
+                      "cornerRadius": 10,
+                      "stroke": "#FFFFFF0F",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "AMa8Z",
+                          "name": "row-head",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "zBGqG",
+                              "name": "chevron",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevron-right",
+                              "library": "lucide",
+                              "fill": "$text-3"
+                            },
+                            {
+                              "type": "text",
+                              "id": "DOmSD",
+                              "name": "rec-date",
+                              "fill": "$text-1",
+                              "content": "2026-07-23",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "jZpR2",
+                              "name": "rec-range",
+                              "fill": "$text-2",
+                              "content": "06:12 출항 → 입항 대기",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "e6L1P",
+                              "name": "rec-spacer",
+                              "width": "fill_container",
+                              "height": 2
+                            },
+                            {
+                              "type": "frame",
+                              "id": "e59AP",
+                              "name": "crew-chip",
+                              "fill": "#FFFFFF08",
+                              "cornerRadius": 6,
+                              "gap": 6,
+                              "padding": [
+                                4,
+                                9
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "B5Wv8",
+                                  "name": "crew-icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "users",
+                                  "library": "lucide",
+                                  "fill": "$text-2"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "iYn8h",
+                                  "name": "crew-count",
+                                  "fill": "$text-2",
+                                  "content": "승선 3명",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "i7Ckp",
+                              "type": "ref",
+                              "ref": "E5sHb",
+                              "name": "rec-badge",
+                              "fill": "#FF9F0A1F",
+                              "stroke": "#FF9F0A3D",
+                              "descendants": {
+                                "S2Fvh": {
+                                  "fill": "$orange"
+                                },
+                                "wxyUK": {
+                                  "content": "운항 중",
+                                  "fill": "$orange"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Erlhx",
+                      "name": "record-2026-07-22",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$panel",
+                      "cornerRadius": 10,
+                      "stroke": "$accent-border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Avzqt",
+                          "name": "row-head",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "BJ6Ev",
+                              "name": "chevron",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevron-down",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "U21am",
+                              "name": "rec-date",
+                              "fill": "$accent",
+                              "content": "2026-07-22",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "PBJZz",
+                              "name": "rec-range",
+                              "fill": "$text-2",
+                              "content": "06:10 출항 → 17:45 입항",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HjowE",
+                              "name": "rec-spacer",
+                              "width": "fill_container",
+                              "height": 2
+                            },
+                            {
+                              "type": "frame",
+                              "id": "g62dF6",
+                              "name": "crew-chip",
+                              "fill": "#FFFFFF08",
+                              "cornerRadius": 6,
+                              "gap": 6,
+                              "padding": [
+                                4,
+                                9
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "EZNtv",
+                                  "name": "crew-icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "users",
+                                  "library": "lucide",
+                                  "fill": "$text-2"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "N1VpW",
+                                  "name": "crew-count",
+                                  "fill": "$text-2",
+                                  "content": "승선 3명",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "IJ4pX",
+                              "type": "ref",
+                              "ref": "E5sHb",
+                              "name": "rec-badge",
+                              "descendants": {
+                                "wxyUK": {
+                                  "content": "운항 완료"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "D7MHmp",
+                          "name": "record-body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "gap": 12,
+                          "padding": [
+                            0,
+                            14,
+                            14,
+                            14
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "beJWt",
+                              "name": "crew-panel",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#0B0E15",
+                              "cornerRadius": 8,
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": 14,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "q0djJ",
+                                  "name": "panel-head",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "KydE1",
+                                      "name": "ph-icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "users",
+                                      "library": "lucide",
+                                      "fill": "$accent"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "MGLmJ",
+                                      "name": "ph-title",
+                                      "fill": "$text-1",
+                                      "content": "승선 로그",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 13,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "C5j8r",
+                                      "name": "ph-spacer",
+                                      "width": "fill_container",
+                                      "height": 2
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "eFU5W",
+                                      "name": "ph-meta",
+                                      "fill": "$text-3",
+                                      "content": "얼굴 인식 승선 3명",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "kQl4c",
+                                  "name": "crew-table",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "jLHgc",
+                                      "name": "table-header",
+                                      "width": "fill_container",
+                                      "padding": [
+                                        4,
+                                        12
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "ERdlg",
+                                          "name": "cell",
+                                          "width": 36,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "xPEqk",
+                                              "name": "h-label",
+                                              "fill": "$text-3",
+                                              "content": "No.",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 11,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "Vf7kD",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "ltpqs",
+                                              "name": "h-label",
+                                              "fill": "$text-3",
+                                              "content": "이름",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 11,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "Pvq6d",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "Pco99",
+                                              "name": "h-label",
+                                              "fill": "$text-3",
+                                              "content": "전화번호",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 11,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "HHetk",
+                                          "name": "cell",
+                                          "width": 74,
+                                          "justifyContent": "end",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "K5Ffhc",
+                                              "name": "h-label",
+                                              "fill": "$text-3",
+                                              "content": "승선 시간",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 11,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "wp5Gm",
+                                      "name": "crew-row-01",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "T4Mtfy",
+                                          "name": "cell",
+                                          "width": 36,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "iKWVh",
+                                              "name": "cell-text",
+                                              "fill": "$text-3",
+                                              "content": "01",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "vrMii",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "EK3Zn",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "홍길동",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 13,
+                                              "fontWeight": "700"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "dKuaN",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "f45NE4",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "010-1234-5678",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "k3Fma",
+                                          "name": "cell",
+                                          "width": 74,
+                                          "justifyContent": "end",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "kyrDk",
+                                              "name": "cell-text",
+                                              "fill": "$accent",
+                                              "content": "07:42:15",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "ZzkbO",
+                                      "name": "crew-row-02",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "sixQk",
+                                          "name": "cell",
+                                          "width": 36,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "CRnWp",
+                                              "name": "cell-text",
+                                              "fill": "$text-3",
+                                              "content": "02",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "Wd2IK",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "ejMUS",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "김철수",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 13,
+                                              "fontWeight": "700"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "dNbzt",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "yDbuo",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "010-2345-6789",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "K2Updy",
+                                          "name": "cell",
+                                          "width": 74,
+                                          "justifyContent": "end",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "a86G5s",
+                                              "name": "cell-text",
+                                              "fill": "$accent",
+                                              "content": "07:43:02",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "k9kESR",
+                                      "name": "crew-row-03",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "u90tgD",
+                                          "name": "cell",
+                                          "width": 36,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "DeYee",
+                                              "name": "cell-text",
+                                              "fill": "$text-3",
+                                              "content": "03",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "y7NvRj",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "f3X17",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "이영희",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 13,
+                                              "fontWeight": "700"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "N8hbH9",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "x2gTN",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "010-3456-7890",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "WqlPl",
+                                          "name": "cell",
+                                          "width": 74,
+                                          "justifyContent": "end",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "XzrLN",
+                                              "name": "cell-text",
+                                              "fill": "$accent",
+                                              "content": "07:45:38",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "f7qVS",
+                              "name": "track-panel",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#0B0E15",
+                              "cornerRadius": 8,
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": 14,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "CoTVi",
+                                  "name": "panel-head",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "L6Y2a",
+                                      "name": "ph-icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "route",
+                                      "library": "lucide",
+                                      "fill": "$accent"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "U7vEe",
+                                      "name": "ph-title",
+                                      "fill": "$text-1",
+                                      "content": "운항 상세",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 13,
+                                      "fontWeight": "700"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "sO2an",
+                                      "name": "ph-spacer",
+                                      "width": "fill_container",
+                                      "height": 2
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "RtTgQ",
+                                      "name": "ph-meta",
+                                      "fill": "$text-3",
+                                      "content": "1분 간격 · 총 695건",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "B3VJ9H",
+                                  "name": "track-table",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 5,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "a4xyie",
+                                      "name": "table-header",
+                                      "width": "fill_container",
+                                      "padding": [
+                                        4,
+                                        12
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "ApBeZ",
+                                          "name": "cell",
+                                          "width": 150,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "q1Jhj",
+                                              "name": "h-label",
+                                              "fill": "$text-3",
+                                              "content": "시간",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 11,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "VBIHT",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "hznpr",
+                                              "name": "h-label",
+                                              "fill": "$text-3",
+                                              "content": "좌표",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 11,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "E0n4m",
+                                      "name": "track-row-06:10:00",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "G3yh4",
+                                          "name": "cell",
+                                          "width": 150,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "NxHau",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "2026-07-22 06:10:00",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "C2EAcn",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "mnp8Q",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "N34°48.125' E128°25.402'",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "ww7PP",
+                                      "name": "track-row-06:11:00",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "B5UiJ",
+                                          "name": "cell",
+                                          "width": 150,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "x91djf",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "2026-07-22 06:11:00",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "c72uo",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "Z5u8Rv",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "N34°48.190' E128°25.371'",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Dyd7C",
+                                      "name": "track-row-06:12:00",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "h1XPXr",
+                                          "name": "cell",
+                                          "width": 150,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "FGIJs",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "2026-07-22 06:12:00",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "E1AG4",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "VHuIA",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "N34°48.257' E128°25.340'",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "wMue0",
+                                      "name": "track-row-06:13:00",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "Xlw2w",
+                                          "name": "cell",
+                                          "width": 150,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "OjVfo",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "2026-07-22 06:13:00",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "wGYtt",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "gyQzE",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "N34°48.322' E128°25.308'",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "q3q9l",
+                                      "name": "track-row-06:14:00",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "DbZbU",
+                                          "name": "cell",
+                                          "width": 150,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "d19Pw",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "2026-07-22 06:14:00",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "u2T38h",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "okaYo",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "N34°48.390' E128°25.276'",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "adH3U",
+                                      "name": "track-row-06:15:00",
+                                      "width": "fill_container",
+                                      "fill": "#FFFFFF08",
+                                      "cornerRadius": 8,
+                                      "stroke": "#FFFFFF0F",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        9,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "d27BOl",
+                                          "name": "cell",
+                                          "width": 150,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "Q7a2gK",
+                                              "name": "cell-text",
+                                              "fill": "$text-2",
+                                              "content": "2026-07-22 06:15:00",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "cmC4S",
+                                          "name": "cell",
+                                          "width": "fill_container",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "Xr24O",
+                                              "name": "cell-text",
+                                              "fill": "$text-1",
+                                              "content": "N34°48.455' E128°25.244'",
+                                              "fontFamily": "$font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "azOeo",
+                      "name": "record-2026-07-19",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF08",
+                      "cornerRadius": 10,
+                      "stroke": "#FFFFFF0F",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "PR2l4",
+                          "name": "row-head",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "L7nhFb",
+                              "name": "chevron",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevron-right",
+                              "library": "lucide",
+                              "fill": "$text-3"
+                            },
+                            {
+                              "type": "text",
+                              "id": "mQdWK",
+                              "name": "rec-date",
+                              "fill": "$text-1",
+                              "content": "2026-07-19",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "MaMbw",
+                              "name": "rec-range",
+                              "fill": "$text-2",
+                              "content": "05:52 출항 → 16:20 입항",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "X1lr8X",
+                              "name": "rec-spacer",
+                              "width": "fill_container",
+                              "height": 2
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Qj45I",
+                              "name": "crew-chip",
+                              "fill": "#FFFFFF08",
+                              "cornerRadius": 6,
+                              "gap": 6,
+                              "padding": [
+                                4,
+                                9
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "aZC6g",
+                                  "name": "crew-icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "users",
+                                  "library": "lucide",
+                                  "fill": "$text-2"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Gi4CI",
+                                  "name": "crew-count",
+                                  "fill": "$text-2",
+                                  "content": "승선 2명",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Zw1cB",
+                              "type": "ref",
+                              "ref": "E5sHb",
+                              "name": "rec-badge",
+                              "descendants": {
+                                "wxyUK": {
+                                  "content": "운항 완료"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QDi0D",
+                      "name": "record-2026-07-15",
+                      "width": "fill_container",
+                      "fill": "#FFFFFF08",
+                      "cornerRadius": 10,
+                      "stroke": "#FFFFFF0F",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "g1ofj1",
+                          "name": "row-head",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "gsChG",
+                              "name": "chevron",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevron-right",
+                              "library": "lucide",
+                              "fill": "$text-3"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Mietg",
+                              "name": "rec-date",
+                              "fill": "$text-1",
+                              "content": "2026-07-15",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "n8Ssc",
+                              "name": "rec-range",
+                              "fill": "$text-2",
+                              "content": "06:30 출항 → 18:02 입항",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "oq8bU",
+                              "name": "rec-spacer",
+                              "width": "fill_container",
+                              "height": 2
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MiFgD",
+                              "name": "crew-chip",
+                              "fill": "#FFFFFF08",
+                              "cornerRadius": 6,
+                              "gap": 6,
+                              "padding": [
+                                4,
+                                9
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "C2XdJm",
+                                  "name": "crew-icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "users",
+                                  "library": "lucide",
+                                  "fill": "$text-2"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "N4vbbW",
+                                  "name": "crew-count",
+                                  "fill": "$text-2",
+                                  "content": "승선 3명",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Fckce",
+                              "type": "ref",
+                              "ref": "E5sHb",
+                              "name": "rec-badge",
+                              "descendants": {
+                                "wxyUK": {
+                                  "content": "운항 완료"
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     }

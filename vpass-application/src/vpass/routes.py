@@ -153,11 +153,11 @@ def delete_user(user_id: str, request: Request):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 승선(출석) 세션 / 출항 기록지
+# 승선(출석) 세션 · 출항/입항 확정
 # ═══════════════════════════════════════════════════════════════════════
 @router.get("/api/boarding/session")
 def boarding_session(request: Request):
-    return rt(request).boarding.session()
+    return rt(request).boarding.summary()
 
 
 @router.post("/api/boarding/reset")
@@ -166,14 +166,26 @@ def boarding_reset(request: Request):
     return {"success": True}
 
 
-@router.get("/api/boarding/logs")
-def boarding_logs(request: Request):
-    runtime = rt(request)
-    latest = runtime.voyage.latest_summary()
-    return {
-        "latest_voyage": latest,
-        "days": runtime.boarding.logs_grouped(),
-    }
+@router.post("/api/departure/confirm")
+def confirm_departure(request: Request):
+    """승선 인원 확인 후 출항 확정 — 시동 잠금 해제 + 출항 신고."""
+    try:
+        voyage = rt(request).confirm_departure()
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return {"success": True, "voyage_id": voyage["id"],
+            "message": "출항이 확정되었습니다. 시동 잠금이 해제되었습니다."}
+
+
+@router.post("/api/arrival/confirm")
+def confirm_arrival(request: Request):
+    """입항 확정 — 입항 신고 + 시동 재잠금 + 승선 세션 초기화."""
+    try:
+        voyage = rt(request).confirm_arrival()
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return {"success": True, "voyage_id": voyage["id"],
+            "message": "입항이 확정되었습니다."}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -212,13 +224,8 @@ def put_vessel(cmd: VesselCmd, request: Request):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 어선운항정보 기록 (출항/입항 + 1분 간격 좌표)
+# 운항 기록지 (출입항 + 승선 명단 + 1분 간격 좌표)
 # ═══════════════════════════════════════════════════════════════════════
-class ManualPointCmd(BaseModel):
-    timestamp: str = Field(min_length=1)  # "2026-07-22 06:10:00"
-    coord: str = Field(min_length=1)      # "N34°48.125' E128°25.402'"
-
-
 @router.get("/api/voyages")
 def list_voyages(request: Request):
     return rt(request).voyage.list_voyages()
@@ -230,18 +237,6 @@ def get_voyage(voyage_id: str, request: Request):
     if v is None:
         raise HTTPException(status_code=404, detail="운항 기록을 찾을 수 없습니다.")
     return v
-
-
-@router.post("/api/voyages/manual_point")
-def add_manual_point(cmd: ManualPointCmd, request: Request):
-    try:
-        datetime.strptime(cmd.timestamp, "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        raise HTTPException(
-            status_code=400, detail="시각 형식이 올바르지 않습니다 (YYYY-MM-DD HH:MM:SS)."
-        )
-    voyage = rt(request).voyage.add_manual_point(cmd.timestamp, cmd.coord.strip())
-    return {"success": True, "voyage_id": voyage["id"]}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -262,26 +257,9 @@ def ack_sos(request: Request):
 # ═══════════════════════════════════════════════════════════════════════
 # 개발/시연용 시뮬레이션
 # ═══════════════════════════════════════════════════════════════════════
-class SailCmd(BaseModel):
-    cruising: bool
-
-
 class SimJacketCmd(BaseModel):
     device: str = "jacket-1"
     action: str  # wear | doff | fall | overboard | silence | resume
-
-
-@router.post("/api/dev/sail")
-def dev_sail(cmd: SailCmd, request: Request):
-    runtime = rt(request)
-    engine = runtime.engine.snapshot()
-    if cmd.cruising and engine["engaged"]:
-        raise HTTPException(
-            status_code=409,
-            detail="시동이 잠겨 있습니다. 선원 승선(얼굴 인식) 후 항해할 수 있습니다.",
-        )
-    runtime.telemetry.set_cruising(cmd.cruising)
-    return {"success": True}
 
 
 @router.post("/api/dev/jacket")

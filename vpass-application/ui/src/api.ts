@@ -1,6 +1,13 @@
 // 백엔드 API 호출 헬퍼
 
-import type { AppState, BoardingLogsResponse, User, VoyageDetail, VoyageSummary } from "./types";
+import type {
+  AppState,
+  BoardingSummary,
+  User,
+  Vessel,
+  VoyageDetail,
+  VoyageSummary,
+} from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -38,23 +45,25 @@ export const api = {
   deleteUser: (id: string) =>
     request<{ success: boolean; message: string }>(`/api/users/${id}`, { method: "DELETE" }),
 
-  boardingLogs: () => request<BoardingLogsResponse>("/api/boarding/logs"),
+  boardingSession: () => request<BoardingSummary>("/api/boarding/session"),
   resetBoarding: () => post("/api/boarding/reset"),
 
-  vessel: () => request<import("./types").Vessel | null>("/api/vessel"),
+  confirmDeparture: () =>
+    post<{ success: boolean; voyage_id: string; message: string }>("/api/departure/confirm"),
+  confirmArrival: () =>
+    post<{ success: boolean; voyage_id: string; message: string }>("/api/arrival/confirm"),
+
+  vessel: () => request<Vessel | null>("/api/vessel"),
   saveVessel: (v: { region: string; vessel_id: string; name: string; home_port: string }) =>
     put<{ success: boolean; message: string }>("/api/vessel", v),
 
   voyages: () => request<VoyageSummary[]>("/api/voyages"),
   voyage: (id: string) => request<VoyageDetail>(`/api/voyages/${id}`),
-  addManualPoint: (timestamp: string, coord: string) =>
-    post<{ success: boolean }>("/api/voyages/manual_point", { timestamp, coord }),
 
   triggerSos: () => post<{ success: boolean }>("/api/sos"),
   ackSos: () => post<{ success: boolean }>("/api/sos/ack"),
 
-  // 개발/시연용 시뮬레이션
-  devSail: (cruising: boolean) => post<{ success: boolean }>("/api/dev/sail", { cruising }),
+  // 하드웨어 없이 익수 시나리오를 시연하기 위한 구명조끼 장치 시뮬레이터
   devJacket: (device: string, action: string) =>
     post<{ success: boolean }>("/api/dev/jacket", { device, action }),
 };

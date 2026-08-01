@@ -1,9 +1,80 @@
-// 등록 사용자 목록 + 신규 등록 모달(얼굴 촬영)
+// 등록 사용자 목록 + 2단계 신규 등록 모달 (1. 정보 입력 → 2. 얼굴 등록)
 
-import { CircleUser, Plus, X } from "lucide-react";
+import { Check, CircleUser, Plus, UserRound, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 import type { User } from "../types";
+
+type Step = 1 | 2;
+
+function Stepper({ step }: { step: Step }) {
+  const chips: { n: Step; label: string }[] = [
+    { n: 1, label: "정보 입력" },
+    { n: 2, label: "얼굴 등록" },
+  ];
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+      {chips.map(({ n, label }, i) => {
+        const done = step > n;
+        const active = step === n;
+        const lit = done || active;
+        return (
+          <div key={n} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {i > 0 && (
+              <span
+                style={{
+                  width: 20,
+                  height: 1,
+                  background: done || active ? "var(--accent-border)" : "var(--border)",
+                }}
+              />
+            )}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 12px",
+                borderRadius: 8,
+                background: lit ? "var(--accent-soft)" : "var(--input-bg)",
+                border: `1px solid ${
+                  active ? "var(--accent)" : lit ? "var(--accent-border)" : "var(--border)"
+                }`,
+              }}
+            >
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: lit ? "var(--accent)" : "var(--panel-2)",
+                  color: lit ? "#0a0c11" : "var(--text-3)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                }}
+              >
+                {done ? <Check size={12} /> : n}
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: lit ? 700 : 500,
+                  color: lit ? "var(--accent)" : "var(--text-3)",
+                }}
+              >
+                {label}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function RegisterModal({
   onClose,
@@ -12,25 +83,32 @@ function RegisterModal({
   onClose: () => void;
   onRegistered: () => void;
 }) {
+  const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // 모달 열리면 카메라를 등록 모드로 전환
+  // 2단계에서만 카메라를 등록 모드로 전환한다
   useEffect(() => {
+    if (step !== 2) return;
     api.setCameraMode("register").catch(() => {});
     return () => {
       api.setCameraMode("idle").catch(() => {});
     };
-  }, []);
+  }, [step]);
 
-  const submit = async () => {
+  const goNext = () => {
     if (!name.trim() || !phone.trim()) {
       setError("이름과 연락처를 입력해 주세요.");
       return;
     }
+    setError(null);
+    setStep(2);
+  };
+
+  const submit = async () => {
     setBusy(true);
     setError(null);
     try {
@@ -39,7 +117,6 @@ function RegisterModal({
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "등록에 실패했습니다.");
-    } finally {
       setBusy(false);
     }
   };
@@ -47,11 +124,13 @@ function RegisterModal({
   return (
     <div className="modal-backdrop">
       <div className="modal fade-in-up">
-        <div style={{ display: "flex", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 18, fontWeight: 700 }}>사용자 신규 등록</span>
             <span style={{ fontSize: 12, color: "var(--text-2)" }}>
-              이름과 연락처 입력 후 얼굴을 등록해 주세요.
+              {step === 1
+                ? "1단계 · 선원의 이름과 연락처를 입력해 주세요."
+                : "2단계 · 카메라를 보고 얼굴을 등록해 주세요."}
             </span>
           </div>
           <button onClick={onClose} style={{ color: "var(--text-3)" }}>
@@ -59,116 +138,171 @@ function RegisterModal({
           </button>
         </div>
 
-        <div className="field-group">
-          <span className="field-label">이름</span>
-          <div className="field-box">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="예: 홍길동"
-              autoFocus
-            />
-          </div>
-        </div>
+        <Stepper step={step} />
 
-        <div className="field-group">
-          <span className="field-label">연락처</span>
-          <div className="field-box mono">
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="예: 010-1234-5678"
-            />
-          </div>
-        </div>
+        {step === 1 ? (
+          <>
+            <div className="field-group">
+              <span className="field-label">이름</span>
+              <div className="field-box">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="예: 홍길동"
+                  autoFocus
+                />
+              </div>
+            </div>
 
-        <div className="field-group">
-          <div className="field-label-row">
-            <span className="field-label">구명조끼 장치 ID</span>
-            <span className="field-hint">선택 · 예: jacket-1</span>
-          </div>
-          <div className="field-box mono">
-            <input
-              value={deviceId}
-              onChange={(e) => setDeviceId(e.target.value)}
-              placeholder="장치 미배정 시 비워 두세요"
-            />
-          </div>
-        </div>
+            <div className="field-group">
+              <span className="field-label">연락처</span>
+              <div className="field-box mono">
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="예: 010-1234-5678"
+                />
+              </div>
+            </div>
 
-        {/* 등록용 카메라 미리보기 */}
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            height: 210,
-            background: "var(--cam-bg)",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            flexShrink: 0,
-          }}
-        >
-          <img
-            src="/api/video_feed"
-            alt="등록 카메라"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
-          <div
-            style={{
-              position: "relative",
-              width: 110,
-              height: 134,
-              border: "2px solid var(--accent)",
-              borderRadius: "50%",
-              opacity: 0.85,
-              pointerEvents: "none",
-            }}
-          />
-          <span
-            style={{
-              position: "relative",
-              fontSize: 11,
-              color: "var(--text-2)",
-              textShadow: "0 1px 4px #000",
-            }}
-          >
-            얼굴 영역만 인식합니다
-          </span>
-        </div>
+            <div className="field-group">
+              <div className="field-label-row">
+                <span className="field-label">구명조끼 장치 ID</span>
+                <span className="field-hint">선택 · 예: jacket-1</span>
+              </div>
+              <div className="field-box mono">
+                <input
+                  value={deviceId}
+                  onChange={(e) => setDeviceId(e.target.value)}
+                  placeholder="장치 미배정 시 비워 두세요"
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* 1단계 입력값 확인 */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                width: "100%",
+                padding: "10px 14px",
+                background: "var(--input-bg)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+              }}
+            >
+              <UserRound size={16} color="var(--text-3)" />
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{name}</span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                  color: "var(--text-2)",
+                }}
+              >
+                {phone}
+              </span>
+              <span style={{ flex: 1 }} />
+              <button
+                onClick={() => setStep(1)}
+                style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)" }}
+              >
+                수정
+              </button>
+            </div>
+
+            {/* 등록용 카메라 미리보기 */}
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                height: 240,
+                background: "var(--cam-bg)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src="/api/video_feed"
+                alt="등록 카메라"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+              <div
+                style={{
+                  position: "relative",
+                  width: 130,
+                  height: 158,
+                  border: "2px solid var(--accent)",
+                  borderRadius: "50%",
+                  opacity: 0.85,
+                  pointerEvents: "none",
+                }}
+              />
+              <span
+                style={{
+                  position: "relative",
+                  fontSize: 11,
+                  color: "var(--text-2)",
+                  textShadow: "0 1px 4px #000",
+                }}
+              >
+                얼굴 영역만 인식합니다
+              </span>
+            </div>
+          </>
+        )}
 
         {error && (
-          <div
-            className="chip danger"
-            style={{ width: "100%", whiteSpace: "normal" }}
-          >
+          <div className="chip danger" style={{ width: "100%", whiteSpace: "normal" }}>
             {error}
           </div>
         )}
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button
-            className="btn btn-primary"
-            style={{ flex: 1 }}
-            onClick={submit}
-            disabled={busy}
-          >
-            {busy ? "등록 중…" : "얼굴 촬영 & 등록"}
-          </button>
-          <button className="btn btn-secondary" onClick={onClose}>
-            취소
-          </button>
+          {step === 1 ? (
+            <>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={goNext}>
+                다음 단계
+              </button>
+              <button className="btn btn-secondary" onClick={onClose}>
+                취소
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setStep(1)}
+                disabled={busy}
+              >
+                이전
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={submit}
+                disabled={busy}
+              >
+                {busy ? "등록 중…" : "얼굴 촬영 & 등록"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -307,7 +441,6 @@ export function UsersScreen() {
             </div>
           ))}
 
-          {/* 신규 등록 타일 */}
           <button
             onClick={() => setShowRegister(true)}
             style={{

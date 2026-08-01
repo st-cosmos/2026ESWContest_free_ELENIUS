@@ -154,7 +154,7 @@ export function Home({
   onNavigate,
 }: {
   state: AppState;
-  onNavigate: (key: "departure" | "lifejacket" | "voyage-log") => void;
+  onNavigate: (key: "departure" | "lifejacket" | "voyage-record") => void;
 }) {
   const w = state.weather;
   const vesselName = state.vessel?.name ?? "선장님";
@@ -305,7 +305,7 @@ export function Home({
           icon={Route}
           label="최근 운항"
           value={state.voyage.latest ? state.voyage.latest.date.slice(5) : "기록 없음"}
-          onClick={() => onNavigate("voyage-log")}
+          onClick={() => onNavigate("voyage-record")}
         />
       </div>
     </div>

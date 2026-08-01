@@ -5,7 +5,6 @@ import {
   House,
   Info,
   LifeBuoy,
-  Route,
   Ship,
   Users,
   type LucideIcon,
@@ -15,20 +14,18 @@ import { useAppState } from "../state";
 export type ScreenKey =
   | "home"
   | "departure"
-  | "boarding-log"
+  | "voyage-record"
   | "users"
   | "lifejacket"
-  | "vessel-info"
-  | "voyage-log";
+  | "vessel-info";
 
 export const NAV_ITEMS: { key: ScreenKey; label: string; icon: LucideIcon }[] = [
   { key: "home", label: "홈", icon: House },
   { key: "departure", label: "출항", icon: Ship },
-  { key: "boarding-log", label: "출항 기록지", icon: ClipboardList },
+  { key: "voyage-record", label: "운항 기록지", icon: ClipboardList },
   { key: "users", label: "등록 사용자 목록", icon: Users },
   { key: "lifejacket", label: "구명조끼 모니터", icon: LifeBuoy },
   { key: "vessel-info", label: "어선 정보", icon: Info },
-  { key: "voyage-log", label: "어선운항정보 기록", icon: Route },
 ];
 
 export function Sidebar({
