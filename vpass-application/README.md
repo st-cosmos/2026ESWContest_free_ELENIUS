@@ -45,6 +45,7 @@ uv run vpass --kiosk         # chromium 키오스크 모드(라즈베리파이�
 | `VPASS_COMPASS_X_OFFSET`, `VPASS_COMPASS_Y_OFFSET` | `0` | 지자계 고정 offset 값 |
 | `VPASS_COMPASS_X_SCALE`, `VPASS_COMPASS_Y_SCALE` | `1` | 지자계 고정 scale 값 |
 | `VPASS_COMPASS_HEADING_ALPHA` | `0.25` | 침로 저역통과 필터 계수(0 < alpha <= 1) |
+| `VPASS_DEMO_SERVER_URL` | (없음) | 설정 시 데모 관제 서버와 연동(텔레메트리/신고/출입항 전송·관할 기상 수신). 미설정 시 독립 동작 |
 
 ## 주요 동작 흐름
 
