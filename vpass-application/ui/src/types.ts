@@ -1,0 +1,134 @@
+// 백엔드 /api/state 및 각 API 응답 타입
+
+export interface Telemetry {
+  lat: number;
+  lon: number;
+  position: string;
+  position_compact: string;
+  course: number;
+  speed_kn: number;
+  gps_ok: boolean;
+  comm_ok: boolean;
+}
+
+export interface Vessel {
+  region: string;
+  vessel_id: string;
+  name: string;
+  home_port: string;
+  registered_at: string;
+  updated_at: string;
+  reported_at: string;
+}
+
+export interface EngineState {
+  locked: boolean;
+  killed: boolean;
+  kill_reason: string | null;
+  engaged: boolean;
+  gpio: boolean;
+}
+
+export interface BoardingEntry {
+  user_id: string;
+  name: string;
+  phone: string;
+  time: string;
+  lifejacket: boolean | null;
+}
+
+export interface DeviceState {
+  device: string;
+  user_name: string | null;
+  worn: boolean;
+  last_ping: string;
+  seconds_since_ping: number | null;
+  signal_ok: boolean;
+  last_fall: string;
+  fall_magnitude: number | null;
+  fall_pending: boolean;
+  mob: boolean;
+  mob_cause: "fall" | "signal_loss" | null;
+  mob_at: string | null;
+}
+
+export interface SosReport {
+  cause: "manual" | "mob";
+  detail: string | null;
+  time: string;
+  position: string;
+  vessel_name: string;
+  vessel_id: string;
+}
+
+export interface Weather {
+  temp_c: number;
+  condition: string;
+  feels_like_c: number;
+  precip_prob: number;
+  wind: string;
+  wave_height_m: number;
+  water_temp_c: number;
+  humidity: number;
+  visibility_km: number;
+  pressure_hpa: number;
+  advisory: string | null;
+  sunrise: string;
+  sunset: string;
+  high_tide: string;
+  low_tide: string;
+  updated_at: string;
+  source: string;
+}
+
+export interface VoyageSummary {
+  id: string;
+  date: string;
+  departed_at: string;
+  arrived_at: string | null;
+  status: "active" | "done";
+  point_count?: number;
+}
+
+export interface VoyageDetail extends VoyageSummary {
+  points: { ts: string; coord: string }[];
+}
+
+export interface AppState {
+  time: string;
+  telemetry: Telemetry;
+  vessel: Vessel | null;
+  engine: EngineState;
+  camera_ok: boolean;
+  camera_mode: string;
+  overlay: { text: string; color: string };
+  boarding: { count: number; session: BoardingEntry[] };
+  lifejacket: { devices: DeviceState[]; worn_count: number; mob_alarm: boolean };
+  voyage: {
+    active: boolean;
+    current_id: string | null;
+    departed_at: string | null;
+    latest: VoyageSummary | null;
+    last_report: { type: string; time: string; message: string } | null;
+  };
+  sos: SosReport | null;
+  weather: Weather;
+  platform: { raspberry_pi: boolean };
+}
+
+export interface User {
+  id: string;
+  name: string;
+  phone: string;
+  device_id: string | null;
+  photo: string | null;
+  registered_at: string;
+}
+
+export interface BoardingLogsResponse {
+  latest_voyage: VoyageSummary | null;
+  days: {
+    date: string;
+    entries: { date: string; name: string; phone: string; time: string }[];
+  }[];
+}
