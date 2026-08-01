@@ -15,7 +15,7 @@ from .killswitch import EngineController
 from .lifejacket import DeviceRegistry
 from .sos import SosManager
 from .storage import JsonStore
-from .telemetry import SimulatedTelemetry
+from .telemetry import create_telemetry
 from .voyage import VoyageManager
 from .weather import get_weather
 
@@ -89,7 +89,7 @@ class Runtime:
 
         # 코어 상태
         self.overlay = Overlay()
-        self.telemetry = SimulatedTelemetry()
+        self.telemetry = create_telemetry()
         self.engine = EngineController()
         self.devices = DeviceRegistry(on_mob=self._handle_mob)
         self.sos = SosManager(self.telemetry, self.vessel_store)

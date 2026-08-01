@@ -1,6 +1,6 @@
 """선박 텔레메트리(GPS 위치/침로/속도) 제공자.
 
-운영 환경(라즈베리파이)에서는 GPS 모듈(NMEA)을 붙일 자리이며,
+운영 환경(라즈베리파이)에서는 NMEA GPS + QMC5883L 지자계를 사용하고,
 개발/시연 환경에서는 통영 인근 해상을 항해하는 시뮬레이터가 동작한다.
 
 - set_cruising(True)  → 순항 속도까지 가속하며 침로를 따라 이동
@@ -15,6 +15,9 @@ import random
 import threading
 import time
 from datetime import datetime
+
+from .compass import Qmc5883lReader
+from .gps import NmeaGpsReader
 
 # 기본 위치: 통영 인근 (34°48.125'N 128°25.402'E)
 HOME_LAT = 34 + 48.125 / 60
@@ -112,16 +115,140 @@ class SimulatedTelemetry:
     def snapshot(self) -> dict:
         with self._lock:
             return {
+                "source": "sim",
                 "lat": self.lat,
                 "lon": self.lon,
                 "position": format_position(self.lat, self.lon),
                 "position_compact": format_position_compact(self.lat, self.lon),
                 "course": round(self.course) % 360,
                 "speed_kn": round(self.speed_kn, 1),
+                "altitude_m": None,
+                "satellites": None,
+                "gps_updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "gps_ok": self.gps_ok,
+                "heading_ok": True,
                 "comm_ok": self.comm_ok,
             }
 
     @staticmethod
     def now_full() -> str:
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+class HardwareTelemetry:
+    """실제 GPS/지자계 기반 텔레메트리.
+
+    GPS는 위치/속도를 제공하고, 지자계가 신선한 값을 갖고 있으면 침로는 지자계
+    heading을 우선 사용한다. 지자계 값이 없으면 GPS RMC의 course over ground를
+    fallback으로 사용한다.
+    """
+
+    def __init__(
+        self,
+        gps_port: str,
+        gps_baudrate: int,
+        gps_stale_after_sec: float,
+        compass_bus: int,
+        compass_declination_deg: float,
+        compass_x_offset: float,
+        compass_y_offset: float,
+        compass_x_scale: float,
+        compass_y_scale: float,
+        compass_heading_alpha: float,
+        compass_stale_after_sec: float,
+    ) -> None:
+        self.gps = NmeaGpsReader(
+            gps_port,
+            gps_baudrate,
+            stale_after_sec=gps_stale_after_sec,
+        )
+        self.compass = Qmc5883lReader(
+            compass_bus,
+            declination_deg=compass_declination_deg,
+            x_offset=compass_x_offset,
+            y_offset=compass_y_offset,
+            x_scale=compass_x_scale,
+            y_scale=compass_y_scale,
+            heading_alpha=compass_heading_alpha,
+            stale_after_sec=compass_stale_after_sec,
+        )
+
+    def start(self) -> None:
+        self.gps.start()
+        self.compass.start()
+
+    def stop(self) -> None:
+        self.compass.stop()
+        self.gps.stop()
+
+    def set_cruising(self, cruising: bool) -> None:
+        """실제 하드웨어 모드에서는 운항 상태를 소프트웨어로 강제하지 않는다."""
+        _ = cruising
+
+    def is_cruising_target(self) -> bool:
+        return False
+
+    def snapshot(self) -> dict:
+        gps = self.gps.snapshot()
+        compass = self.compass.snapshot()
+
+        lat = gps["latitude"] if gps["valid"] else None
+        lon = gps["longitude"] if gps["valid"] else None
+        heading = (
+            compass["heading_deg"]
+            if compass["fresh"]
+            else gps["course_deg"]
+        )
+        course = round(heading) % 360 if heading is not None else None
+        position = format_position(lat, lon) if lat is not None and lon is not None else "-"
+        position_compact = (
+            format_position_compact(lat, lon) if lat is not None and lon is not None else "-"
+        )
+
+        return {
+            "source": "hardware",
+            "lat": lat,
+            "lon": lon,
+            "position": position,
+            "position_compact": position_compact,
+            "course": course,
+            "speed_kn": round(float(gps["speed_kn"] or 0.0), 1),
+            "altitude_m": gps["altitude_m"],
+            "satellites": gps["satellites"],
+            "gps_updated_at": gps["updated_at"],
+            "gps_ok": gps["fresh"],
+            "heading_ok": bool(compass["fresh"] or gps["course_deg"] is not None),
+            "comm_ok": bool(gps["connected"] or compass["connected"]),
+            "gps_error": gps["error"],
+            "compass_error": compass["error"],
+        }
+
+
+def create_telemetry():
+    """환경에 맞는 텔레메트리 제공자를 생성한다."""
+    from . import config
+
+    provider = config.TELEMETRY_PROVIDER
+    if provider not in {"auto", "sim", "hardware"}:
+        print(f"[telemetry] unknown provider '{provider}', fallback to auto")
+        provider = "auto"
+
+    use_hardware = provider == "hardware" or (
+        provider == "auto" and config.IS_RASPBERRY_PI
+    )
+    if not use_hardware:
+        return SimulatedTelemetry()
+
+    return HardwareTelemetry(
+        gps_port=config.GPS_PORT,
+        gps_baudrate=config.GPS_BAUDRATE,
+        gps_stale_after_sec=config.GPS_STALE_AFTER_SEC,
+        compass_bus=config.COMPASS_I2C_BUS,
+        compass_declination_deg=config.COMPASS_DECLINATION_DEG,
+        compass_x_offset=config.COMPASS_X_OFFSET,
+        compass_y_offset=config.COMPASS_Y_OFFSET,
+        compass_x_scale=config.COMPASS_X_SCALE,
+        compass_y_scale=config.COMPASS_Y_SCALE,
+        compass_heading_alpha=config.COMPASS_HEADING_ALPHA,
+        compass_stale_after_sec=config.COMPASS_STALE_AFTER_SEC,
+    )

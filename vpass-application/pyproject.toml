@@ -8,6 +8,8 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "opencv-contrib-python>=4.8,<5",
     "numpy>=1.26",
+    "pyserial>=3.5",
+    "smbus2>=0.4",
 ]
 
 [project.scripts]

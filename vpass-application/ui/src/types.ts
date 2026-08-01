@@ -1,14 +1,21 @@
 // 백엔드 /api/state 및 각 API 응답 타입
 
 export interface Telemetry {
-  lat: number;
-  lon: number;
+  source: "sim" | "hardware";
+  lat: number | null;
+  lon: number | null;
   position: string;
   position_compact: string;
-  course: number;
+  course: number | null;
   speed_kn: number;
+  altitude_m: number | null;
+  satellites: number | null;
+  gps_updated_at: string | null;
   gps_ok: boolean;
+  heading_ok: boolean;
   comm_ok: boolean;
+  gps_error?: string | null;
+  compass_error?: string | null;
 }
 
 export interface Vessel {

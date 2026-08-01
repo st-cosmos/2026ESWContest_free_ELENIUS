@@ -45,6 +45,23 @@ IS_RASPBERRY_PI = is_raspberry_pi()
 # ── 카메라 ──────────────────────────────────────────────────────────────
 CAMERA_INDEX = int(os.environ.get("VPASS_CAMERA_INDEX", "0"))
 
+# ── GPS / 지자계 ────────────────────────────────────────────────────────
+# auto: 라즈베리파이에서는 실제 하드웨어, 그 외 개발 환경에서는 시뮬레이터
+# hardware: NMEA GPS + QMC5883L 강제 사용
+# sim: 개발/시연용 시뮬레이터 강제 사용
+TELEMETRY_PROVIDER = os.environ.get("VPASS_TELEMETRY_PROVIDER", "auto").lower()
+GPS_PORT = os.environ.get("VPASS_GPS_PORT", "/dev/serial0")
+GPS_BAUDRATE = int(os.environ.get("VPASS_GPS_BAUDRATE", "9600"))
+GPS_STALE_AFTER_SEC = float(os.environ.get("VPASS_GPS_STALE_AFTER_SEC", "10"))
+COMPASS_I2C_BUS = int(os.environ.get("VPASS_COMPASS_I2C_BUS", "1"))
+COMPASS_DECLINATION_DEG = float(os.environ.get("VPASS_COMPASS_DECLINATION_DEG", "0"))
+COMPASS_X_OFFSET = float(os.environ.get("VPASS_COMPASS_X_OFFSET", "0"))
+COMPASS_Y_OFFSET = float(os.environ.get("VPASS_COMPASS_Y_OFFSET", "0"))
+COMPASS_X_SCALE = float(os.environ.get("VPASS_COMPASS_X_SCALE", "1"))
+COMPASS_Y_SCALE = float(os.environ.get("VPASS_COMPASS_Y_SCALE", "1"))
+COMPASS_HEADING_ALPHA = float(os.environ.get("VPASS_COMPASS_HEADING_ALPHA", "0.25"))
+COMPASS_STALE_AFTER_SEC = float(os.environ.get("VPASS_COMPASS_STALE_AFTER_SEC", "5"))
+
 # ── 얼굴 인식 ────────────────────────────────────────────────────────────
 FACE_SIZE = (200, 200)
 MATCH_THRESHOLD = 52.0          # LBPH confidence (작을수록 유사)
