@@ -25,7 +25,9 @@ def _open_ui(url: str, kiosk: bool) -> None:
             try:
                 subprocess.Popen(
                     [browser, "--kiosk", "--noerrdialogs",
-                     "--disable-session-crashed-bubble", url]
+                     "--disable-session-crashed-bubble",
+                     # GNOME Keyring 미사용 → 'Choose password for new keyring' 방지
+                     "--password-store=basic", url]
                 )
                 return
             except FileNotFoundError:
