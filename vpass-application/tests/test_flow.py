@@ -13,6 +13,7 @@ import time
 os.environ["VPASS_DATA_DIR"] = tempfile.mkdtemp(prefix="vpass-test-")
 
 from vpass import config  # noqa: E402
+from vpass.gps import NmeaGpsReader  # noqa: E402
 from vpass.runtime import Runtime  # noqa: E402
 
 PASS = 0
@@ -30,6 +31,13 @@ def check(name: str, cond: bool, detail: str = ""):
 
 
 def main():
+    print("\n== 0) NMEA GPS 파서 검증 ==")
+    gps = NmeaGpsReader("/dev/null", 9600)
+    gps.update_from_nmea("$GPGGA,123519,3448.125,N,12825.402,E,1,08,0.9,12.3,M,46.9,M,,")
+    fix = gps.snapshot()
+    check("GGA 좌표 파싱", fix["valid"] and abs(fix["latitude"] - 34.8020833) < 0.0001)
+    check("GGA 위성/고도 파싱", fix["satellites"] == 8 and fix["altitude_m"] == 12.3)
+
     # 판정 시간을 테스트용으로 단축 (신호 두절 판정은 ping 주기 3초보다 길어야 함)
     import vpass.lifejacket as lj
     lj.SIGNAL_LOSS_TIMEOUT = 4.5
@@ -115,6 +123,7 @@ def main():
     d = rt.devices.snapshot()[0]
     check("원인=signal_loss", d["mob_cause"] == "signal_loss", str(d["mob_cause"]))
     rt.ack_sos()
+    jacket.apply("doff")
 
     print("\n== 8) 입항 → 세션 초기화 + 재잠금 ==")
     rt.voyage.end_voyage(auto=True)

@@ -119,16 +119,22 @@ export function StatusBar() {
   const [confirming, setConfirming] = useState(false);
 
   const tel = state?.telemetry;
+  const gpsLabel =
+    tel?.satellites !== null && tel?.satellites !== undefined
+      ? `GPS · ${tel.satellites}위성`
+      : "GPS";
+  const courseText =
+    tel?.course !== null && tel?.course !== undefined ? `${tel.course}°` : "-";
   return (
     <header className="status-bar">
       <Tele label="현재 시각" value={state?.time ?? "--:--:--"} />
       <div className="tele-divider" />
       <Tele label="위치" value={tel?.position ?? "-"} />
-      <Tele label="침로" value={tel ? `${tel.course}°` : "-"} />
+      <Tele label="침로" value={courseText} />
       <Tele label="속도" value={tel ? `${tel.speed_kn.toFixed(1)} kn` : "-"} />
       <div style={{ flex: 1 }} />
       <ConnChip label="통신" ok={connected && (tel?.comm_ok ?? false)} />
-      <ConnChip label="GPS" ok={connected && (tel?.gps_ok ?? false)} />
+      <ConnChip label={gpsLabel} ok={connected && (tel?.gps_ok ?? false)} />
       <button
         className="sos-button"
         onClick={() => setConfirming(true)}
