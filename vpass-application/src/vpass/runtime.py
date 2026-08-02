@@ -370,7 +370,15 @@ class Runtime:
             demo = self.demo.cached_weather()
             if demo and demo.get("condition"):
                 weather["condition"] = demo["condition"]
-                for key in ("temp_c", "wind", "wave_height_m", "water_temp_c", "advisory"):
+                for key in (
+                    "temp_c",
+                    "wind",
+                    "wave_height_m",
+                    "water_temp_c",
+                    "advisory",
+                    "precip_prob",
+                    "updated_at",
+                ):
                     if demo.get(key) is not None:
                         weather[key] = demo[key]
                 weather["source"] = "데모 관제 서버"
