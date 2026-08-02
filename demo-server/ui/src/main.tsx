@@ -15,13 +15,21 @@ import "@fontsource/jetbrains-mono/600.css";
 import "@fontsource/jetbrains-mono/700.css";
 
 import "./theme.css";
+import "./simulator.css";
 import App from "./App";
+import { SimulatorPage } from "./screens/SimulatorPage";
 import { AppStateProvider } from "./state";
+import { usePath } from "./route";
+
+function Root() {
+  const path = usePath();
+  return path.startsWith("/simulator") ? <SimulatorPage /> : <App />;
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppStateProvider>
-      <App />
+      <Root />
     </AppStateProvider>
   </StrictMode>,
 );

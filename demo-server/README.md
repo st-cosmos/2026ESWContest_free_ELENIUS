@@ -17,6 +17,8 @@ Smart V-PASS 시연용 **해양경찰 통합 관제 대시보드**입니다.
 3. **해양 기상 관제** — 화면 오른쪽 1/3에 한반도 지도 + 5개 지방해양경찰청(동해·서해·남해·중부·제주) 관할 기상.
 4. **기상 → V-PASS 반영** — 관할 기상을 바꾸면(예: 흐림) 해당 관할의 V-PASS 단말에 자동 반영.
 5. **출입항 자동 수집** — 선박 출입항 시 선박명·식별번호·출입항 시각을 자동 로그로 수집.
+6. **운항 시뮬레이터**(`/simulator`) — 지도에서 V-PASS 단말을 드래그해 GPS 좌표를 만들고,
+   항로(waypoint)를 찍어 일정 속력으로 이동시키며, 지오펜스를 그려 **자동 출입항**을 판정합니다.
 
 ## 실행 방법
 
@@ -36,7 +38,8 @@ uv run demo-server                 # 서버 시작 + 브라우저 자동 열기 
 uv run demo-server --no-browser    # 서버만
 ```
 
-- 접속: `http://localhost:8100` (대시보드), `http://localhost:8100/docs` (API 문서)
+- 접속: `http://localhost:8100` (대시보드), `http://localhost:8100/simulator` (운항 시뮬레이터),
+  `http://localhost:8100/docs` (API 문서)
 - UI 개발 시: `cd ui && npm run dev` → `http://localhost:5273` (API 는 8100 으로 프록시)
 
 ### 환경 변수
@@ -63,6 +66,39 @@ VPASS_DEMO_SERVER_URL=http://localhost:8100 uv run vpass
 - V-PASS 신고(수동 SOS / 자동 익수) → 신고 접수 모달 + 최초 접수 알림
 - V-PASS 출항/입항 → 출입항 자동 수집 로그
 - 관제 대시보드에서 관할 기상 변경 → V-PASS 기상 표시에 자동 반영
+- **운항 시뮬레이터 좌표 → V-PASS GPS** (단말 실측 GPS 가 없을 때만 사용)
+- **지오펜스 통과 판정 → V-PASS 자동 출항/입항 신고**
+
+## 운항 시뮬레이터 (`/simulator`)
+
+상단 탭에서 `운항 시뮬레이터` 로 이동합니다. V-PASS 단말이 연결되면 그 단말의
+좌표를 시뮬레이터가 대신 만들어 내려보냅니다.
+
+| 도구 | 동작 |
+| --- | --- |
+| 이동 | 선박 아이콘·정보 카드를 드래그 → 놓은 위치의 위경도가 V-PASS 로 전송 |
+| 항로 펜 | 지도를 클릭할 때마다 항로 점 추가. `운항 시작` 을 누르면 순서대로 일정 속력 이동 |
+| 지오펜스 | 지도를 클릭해 판정선을 그림. 꼭짓점을 드래그해 편집 |
+| 지우기 | 항로 점·펜스 꼭짓점을 클릭해 삭제 |
+
+- 지오펜스를 처음 그리면 **선박이 있는 쪽을 항내**로 보고 반대쪽을 바다로 잡습니다.
+  방향이 반대라면 `바다 방향 뒤집기` 로 전환합니다.
+- 펜스를 넘어 **바다 쪽으로 나가면 자동 출항**, 다시 **안으로 들어오면 자동 입항** 이
+  V-PASS 단말에 등록되고, 그 결과가 출입항 자동 수집 로그로 돌아옵니다.
+- 실제 속력(kn)으로는 시연 중 움직임이 거의 보이지 않으므로 **배속(1x/10x/30x/60x)** 을
+  제공합니다. V-PASS 에 전송되는 속력은 설정한 실제 속력 그대로입니다.
+
+```
+GET  /api/sim/state       # 시뮬레이터 전체 상태(항로/펜스/선박/이벤트)
+POST /api/sim/position    # 선박 위치 이동(드래그)
+POST /api/sim/route       # 항로 점 전체 교체
+POST /api/sim/fence       # 지오펜스 점 전체 교체
+POST /api/sim/fence/flip  # 바다 방향 뒤집기
+POST /api/sim/speed       # 속력(kn) / 배속
+POST /api/sim/run         # start | pause | stop
+POST /api/sim/reset       # 항로·펜스·이벤트 초기화
+GET  /api/sim/terminal    # (단말용) 시뮬레이션 좌표 + 출입항 명령
+```
 
 ## 데모 시나리오
 
@@ -83,6 +119,7 @@ demo-server/
 │   ├── server.py             # FastAPI 앱 + 정적 서빙
 │   ├── routes.py             # HTTP API 전체
 │   ├── runtime.py            # 매니저 배선 + 위치 시뮬레이션 루프
+│   ├── simulator.py          # 운항 시뮬레이터(항로 이동 + 지오펜스 출입항 판정)
 │   ├── vessels.py            # 선박 레지스트리(수동 + V-PASS 라이브) + 이동 시뮬레이션
 │   ├── weather.py            # 관할별 해양 기상
 │   ├── reports.py            # 신고 수신함 (수동/자동)
@@ -92,7 +129,10 @@ demo-server/
 ├── ui/                       # React + TypeScript (Vite)
 │   └── src/
 │       ├── App.tsx           # 대시보드 조립
-│       ├── components/       # 선박카드/지도/기상/신고 모달/폼 등
-│       └── theme.css         # 라이트·다크 디자인 토큰
+│       ├── route.tsx         # 대시보드(/) ↔ 시뮬레이터(/simulator) 경로 전환
+│       ├── screens/          # SimulatorPage (운항 시뮬레이터)
+│       ├── components/       # 선박카드/지도/기상/신고 모달/폼/SimMap 등
+│       ├── theme.css         # 라이트·다크 디자인 토큰
+│       └── simulator.css     # 시뮬레이터 전용 스타일
 └── data/                     # 런타임 데이터 (git 제외)
 ```

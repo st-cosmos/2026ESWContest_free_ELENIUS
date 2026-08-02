@@ -15,6 +15,8 @@ export interface Vessel {
   crew: number;
   status: VesselStatus;
   source: "manual" | "vpass";
+  // V-PASS 단말의 좌표 출처 (hardware = 실측 GPS → 시뮬레이터 좌표를 무시한다)
+  gps_source: "hardware" | "sim" | "demo_sim" | null;
   live: boolean;
   updated_at: string;
 }
@@ -69,6 +71,55 @@ export interface AppState {
   weather: Record<string, RegionWeather>;
   regions: string[];
   conditions: string[];
+}
+
+// ── 운항 시뮬레이터 ────────────────────────────────────────────────────
+export interface SimPoint {
+  lat: number;
+  lon: number;
+}
+
+export interface SimVessel extends SimPoint {
+  course: number;
+  speed_kn: number;
+  position: string;
+  updated_at: string;
+  running: boolean;
+}
+
+export interface SimProgress {
+  index: number;
+  total_nm: number;
+  done_nm: number;
+  percent: number;
+  leg: number;
+  legs: number;
+  eta_min: number | null;
+}
+
+export interface SimEvent {
+  id: string;
+  kind: "departure" | "arrival";
+  time: string;
+  position: string;
+}
+
+export interface SimState {
+  time: string;
+  vessel: SimVessel;
+  route: SimPoint[];
+  fence: SimPoint[];
+  sea_side: number;
+  speed_kn: number;
+  time_scale: number;
+  time_scales: number[];
+  running: boolean;
+  finished: boolean;
+  port_state: "docked" | "departed";
+  progress: SimProgress;
+  events: SimEvent[];
+  command_seq: number;
+  terminal: Vessel | null;
 }
 
 export interface VesselForm {

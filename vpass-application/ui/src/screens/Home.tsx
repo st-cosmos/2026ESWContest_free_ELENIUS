@@ -10,7 +10,6 @@ import {
   LockOpen,
   Route,
   ShieldCheck,
-  Sun,
   Sunrise,
   Sunset,
   Thermometer,
@@ -20,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { AppState } from "../types";
+import { weatherColor, weatherIcon } from "../weatherMeta";
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -159,6 +159,8 @@ export function Home({
   const w = state.weather;
   const vesselName = state.vessel?.name ?? "선장님";
   const engine = state.engine;
+  // 기상 상태(관제 서버에서 변경 가능)에 따라 아이콘/색상도 함께 바뀐다
+  const ConditionIcon = weatherIcon(w.condition);
 
   return (
     <div className="content">
@@ -206,10 +208,10 @@ export function Home({
                 justifyContent: "center",
                 background: "var(--panel-2)",
                 borderRadius: 42,
-                color: "var(--orange)",
+                color: weatherColor(w.condition),
               }}
             >
-              <Sun size={40} />
+              <ConditionIcon size={40} />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>

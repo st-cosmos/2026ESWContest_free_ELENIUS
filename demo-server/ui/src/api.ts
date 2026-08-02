@@ -1,6 +1,6 @@
 // 데모 관제 서버 API 호출 헬퍼
 
-import type { AppState, RegionWeather, Vessel, VesselForm } from "./types";
+import type { AppState, RegionWeather, SimState, Vessel, VesselForm } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -42,6 +42,17 @@ export const api = {
 
   setWeather: (region: string, condition: string, extras?: Partial<RegionWeather>) =>
     post<Ok>(`/api/weather/${encodeURIComponent(region)}`, { condition, ...extras }),
+
+  // 운항 시뮬레이터
+  simState: () => request<SimState>("/api/sim/state"),
+  simPosition: (lat: number, lon: number) => post<Ok>("/api/sim/position", { lat, lon }),
+  simRoute: (points: number[][]) => post<Ok>("/api/sim/route", { points }),
+  simFence: (points: number[][]) => post<Ok>("/api/sim/fence", { points }),
+  simFlipFence: () => post<Ok>("/api/sim/fence/flip"),
+  simSpeed: (body: { speed_kn?: number; time_scale?: number }) =>
+    post<Ok>("/api/sim/speed", body),
+  simRun: (action: "start" | "pause" | "stop") => post<Ok>("/api/sim/run", { action }),
+  simReset: () => post<Ok>("/api/sim/reset"),
 
   reportSeen: (id: string) => post<Ok>(`/api/reports/${id}/seen`),
   reportDispatch: (id: string) => post<Ok>(`/api/reports/${id}/dispatch`),

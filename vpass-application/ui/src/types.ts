@@ -1,7 +1,8 @@
 // 백엔드 /api/state 및 각 API 응답 타입
 
 export interface Telemetry {
-  source: "sim" | "hardware";
+  // demo_sim = 실측 GPS 미수신 → 데모 관제 서버 운항 시뮬레이터 좌표 사용
+  source: "sim" | "hardware" | "demo_sim";
   lat: number | null;
   lon: number | null;
   position: string;
@@ -15,6 +16,8 @@ export interface Telemetry {
   comm_ok: boolean;
   gps_error?: string | null;
   compass_error?: string | null;
+  // 시뮬레이터 좌표를 쓰는 동안의 배속 (운항 기록 간격 보정에 사용)
+  time_scale?: number;
 }
 
 export interface Vessel {

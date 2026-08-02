@@ -47,6 +47,8 @@ class VesselRegistry:
             "crew": int(v.get("crew", 0)),
             "status": v.get("status", STATUS_DOCKED),
             "source": v.get("source", "manual"),
+            # V-PASS 단말이 실측 GPS 를 쓰는지(hardware) 시뮬레이션 좌표를 쓰는지
+            "gps_source": v.get("gps_source"),
             "live": live,
             "updated_at": v.get("updated_at", ""),
         }
@@ -167,6 +169,8 @@ class VesselRegistry:
                 target["crew"] = int(payload["crew"])
             if payload.get("status") in (STATUS_DEPARTED, STATUS_DOCKED):
                 target["status"] = payload["status"]
+            if payload.get("gps_source"):
+                target["gps_source"] = payload["gps_source"]
             target["last_seen_ts"] = time.time()
             target["updated_at"] = _now()
             result.update(target)

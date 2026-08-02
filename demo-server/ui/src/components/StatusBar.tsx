@@ -1,7 +1,28 @@
-// 상단 상태바: 로고 · 관제 시각 · 연결 상태 · 테마 토글
+// 상단 상태바: 로고 · 페이지 탭 · 관제 시각 · 연결 상태 · 테마 토글
 
-import { Moon, Radar, Sun } from "lucide-react";
+import { LayoutDashboard, Moon, Radar, Route, Sun } from "lucide-react";
 import { useAppState } from "../state";
+import { navigate, usePath } from "../route";
+
+function PageTabs() {
+  const path = usePath();
+  const sim = path.startsWith("/simulator");
+  return (
+    <div className="page-tabs">
+      <button className={`page-tab${sim ? "" : " on"}`} onClick={() => navigate("/")}>
+        <LayoutDashboard size={15} />
+        관제 대시보드
+      </button>
+      <button
+        className={`page-tab${sim ? " on" : ""}`}
+        onClick={() => navigate("/simulator")}
+      >
+        <Route size={15} />
+        운항 시뮬레이터
+      </button>
+    </div>
+  );
+}
 
 export function StatusBar({ time }: { time: string }) {
   const { connected, theme, toggleTheme } = useAppState();
@@ -17,6 +38,8 @@ export function StatusBar({ time }: { time: string }) {
           <div className="logo-sub">해양경찰 통합 관제 시스템</div>
         </div>
       </div>
+
+      <PageTabs />
 
       <div className="spacer" />
 

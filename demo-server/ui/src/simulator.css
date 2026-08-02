@@ -1,0 +1,821 @@
+/* ══════════════════════════════════════════════════════════════════════
+   운항 시뮬레이터 (/simulator) — 토큰은 theme.css 의 것을 그대로 쓴다
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* 상태바 페이지 탭 */
+.page-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+
+.page-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.page-tab.on {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* 좌측 지도 패널 */
+.sim-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sim-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.tool-palette {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+
+.tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.tool-btn.on {
+  background: var(--cyan-soft);
+  border: 1px solid var(--cyan-border);
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+/* 지도 캔버스 */
+.sim-map {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  background: var(--sea);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.sim-map.tool-route,
+.sim-map.tool-fence {
+  cursor: crosshair;
+}
+
+.sim-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sim-grid {
+  stroke: var(--cell-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sim-land {
+  fill: var(--land);
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sim-fence {
+  stroke: var(--orange);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sim-route {
+  stroke: var(--cyan);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sim-route.done {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+/* 편집 핸들 */
+.sim-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 3px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--orange);
+  cursor: grab;
+  z-index: 1;
+}
+
+.sim-wp {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 2px solid var(--cyan);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: grab;
+  z-index: 1;
+}
+
+.sim-wp.start,
+.sim-wp.passed {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 선박 마커 */
+.sim-vessel {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 18px 0 var(--accent-glow);
+  cursor: grab;
+  z-index: 3;
+}
+
+.sim-vessel:active {
+  cursor: grabbing;
+}
+
+.sim-heading {
+  position: absolute;
+  display: flex;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+/* 선박 정보 카드 */
+.sim-callout {
+  position: absolute;
+  width: 268px;
+  margin: 30px 0 0 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 13px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent);
+  box-shadow: 0 10px 30px 0 #00000073;
+  cursor: grab;
+  z-index: 2;
+}
+
+.sim-callout.to-left {
+  margin-left: -294px;
+}
+
+.sim-callout.to-top {
+  margin-top: -200px;
+}
+
+.sc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+}
+
+.sc-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-live {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent);
+}
+
+.sc-live .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.sc-live.off {
+  background: var(--cell-bg);
+  border-color: var(--cell-border);
+  color: var(--text-3);
+}
+
+.sc-live.off .dot {
+  background: var(--text-3);
+}
+
+.sc-id {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.sc-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+}
+
+.sc-cell .l {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.sc-cell .v {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.sc-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.sc-m {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+}
+
+.sc-m .l {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.sc-m .v {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sc-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-3);
+}
+
+/* 지도 위 보조 표시 */
+.sim-compass,
+.sim-legend,
+.sim-hintchip,
+.sim-cursor {
+  position: absolute;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sim-compass {
+  left: 16px;
+  top: 16px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-radius: 50%;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sim-compass span {
+  color: var(--text-2);
+}
+
+.sim-legend {
+  left: 16px;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.sim-legend div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sim-legend .sw {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.sim-legend .sw.accent {
+  background: var(--accent);
+}
+
+.sim-legend .sw.cyan {
+  background: var(--cyan);
+}
+
+.sim-legend .sw.orange {
+  background: var(--orange);
+}
+
+.sim-hintchip {
+  right: 16px;
+  top: 16px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.sim-cursor {
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.sim-scale {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.sim-scale i {
+  width: 120px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--text-3);
+}
+
+.sim-empty {
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--cyan-soft);
+  border: 1px solid var(--cyan-border);
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* 재생 바 */
+.sim-playback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.speed-ctl,
+.scale-ctl,
+.progress-ctl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-3);
+}
+
+.speed-ctl .l,
+.progress-ctl .l {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.speed-ctl .v {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  width: 62px;
+}
+
+.speed-ctl input[type="range"] {
+  width: 150px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.scale-ctl {
+  gap: 4px;
+}
+
+.scale-chip {
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.scale-chip.on {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.progress-ctl .pbar {
+  width: 180px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.progress-ctl .pbar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--cyan);
+  transition: width 0.2s linear;
+}
+
+.progress-ctl .v {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan);
+}
+
+/* 우측 패널 */
+.sim-side {
+  width: 420px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.sim-card {
+  gap: 10px;
+  padding: 14px;
+  flex-shrink: 0;
+}
+
+.sim-card.grow {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.sim-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.cell-value.accent {
+  color: var(--accent);
+}
+
+.sc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.gps-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--orange-soft);
+  border: 1px solid var(--orange-border);
+  color: var(--orange);
+}
+
+.gps-note div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gps-note b {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gps-note span {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-3);
+}
+
+.auto-chip.off {
+  background: var(--cell-bg);
+  border-color: var(--cell-border);
+  color: var(--text-3);
+}
+
+.auto-chip.off .dot {
+  background: var(--text-3);
+}
+
+.icon-btn.sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.empty.sm {
+  padding: 14px;
+  font-size: 11px;
+}
+
+/* 항로 목록 */
+.wp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 208px;
+  overflow-y: auto;
+}
+
+.wp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+}
+
+.wp-num {
+  width: 28px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--cyan-soft);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.wp-num.start,
+.wp-row.passed .wp-num {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.wp-coord {
+  flex: 1 1 auto;
+  font-size: 11px;
+  color: var(--text-1);
+}
+
+.wp-dist {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.wp-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* 지오펜스 */
+.state-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 7px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.state-chip.sea {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.fence-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+}
+
+.fence-rule div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+.fence-rule .accent {
+  color: var(--accent);
+}
+
+.fence-rule .cyan {
+  color: var(--cyan);
+}
+
+/* 이벤트 로그 */
+.ev-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.ev-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ev-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+}
+
+.ev-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ev-txt b {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ev-txt span {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.ev-time {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.ev-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.gps-note.real {
+  background: var(--cyan-soft);
+  border-color: var(--cyan-border);
+  color: var(--cyan);
+}

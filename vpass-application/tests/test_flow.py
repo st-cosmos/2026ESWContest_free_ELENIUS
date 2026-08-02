@@ -106,19 +106,16 @@ def main():
     check("승선 로그 저장", len(rt.boarding_logs_store.load()) == 1)
     check("중복 승선 방지", (rt.boarding.handle_recognition(user), rt.boarding.count())[1] == 1)
 
-    print("\n== 4) 출항 확정 → 시동 해제 + 운항 시작 ==")
+    print("\n== 4) 승선 확인 → 시동 허용 (출항 신고 아님) ==")
     try:
-        rt.confirm_departure()
-        confirmed = True
+        rt.allow_engine_start()
+        allowed = True
     except ValueError as e:
-        confirmed = False
-        print(f"       confirm_departure 실패: {e}")
-    check("출항 확정 성공", confirmed)
+        allowed = False
+        print(f"       allow_engine_start 실패: {e}")
+    check("시동 허용 성공", allowed)
     check("시동 잠금 해제", not rt.engine.snapshot()["locked"])
-    v = rt.voyage.active_voyage()
-    check("운항 기록 생성", v is not None)
-    check("출항 신고 접수", bool(v and v["departure_reported"]))
-    check("승선 명단 스냅샷", bool(v and len(v.get("crew", [])) == 1), str(v and v.get("crew")))
+    check("출항 신고는 아직 없음", rt.voyage.active_voyage() is None)
 
     deadline = time.time() + 30
     while time.time() < deadline and rt.telemetry.snapshot()["speed_kn"] < 3.0:
@@ -126,13 +123,15 @@ def main():
     check("순항 가속", rt.telemetry.snapshot()["speed_kn"] >= 3.0,
           f"speed={rt.telemetry.snapshot()['speed_kn']}")
 
-    print("\n== 4-1) 승선 인원 없이 출항 확정 시 거부 ==")
-    rt2_blocked = False
-    try:
-        rt.confirm_departure()
-    except ValueError:
-        rt2_blocked = True
-    check("운항 중 재확정 거부", rt2_blocked)
+    print("\n== 4-1) 지오펜스 통과 → 자동 출항 등록 ==")
+    rt._handle_port_command("departure")
+    v = rt.voyage.active_voyage()
+    check("운항 기록 생성", v is not None)
+    check("출항 신고 접수", bool(v and v["departure_reported"]))
+    check("승선 명단 스냅샷", bool(v and len(v.get("crew", [])) == 1), str(v and v.get("crew")))
+
+    rt._handle_port_command("departure")
+    check("중복 출항 명령 무시", len(rt.voyage.list_voyages()) == 1)
 
     print("\n== 5) 익수 시나리오: 낙상 + 신호 두절 → 킬 스위치 + SOS ==")
     jacket.apply("overboard")  # 낙상 보고 후 ping 중단
@@ -171,8 +170,8 @@ def main():
     rt.ack_sos()
     jacket.apply("doff")
 
-    print("\n== 8) 입항 확정 → 세션 초기화 + 재잠금 ==")
-    rt.confirm_arrival()
+    print("\n== 8) 지오펜스 진입 → 자동 입항 + 세션 초기화 + 재잠금 ==")
+    rt._handle_port_command("arrival")
     check("입항 신고 접수", rt.voyage.last_report["type"] == "arrival")
     check("승선 세션 초기화", rt.boarding.count() == 0)
     check("시동 재잠금", rt.engine.snapshot()["locked"])
@@ -180,10 +179,10 @@ def main():
     check("운항 기록 완료 처리", done["status"] == "done", str(done))
     check("기록에 승선 인원 보존", done["crew_count"] == 1, str(done))
 
-    print("\n== 9) 승선 인원 없이 출항 확정 시 거부 ==")
+    print("\n== 9) 승선 인원 없이 시동 허용 시 거부 ==")
     blocked = False
     try:
-        rt.confirm_departure()
+        rt.allow_engine_start()
     except ValueError:
         blocked = True
     check("빈 승선 목록 거부", blocked)

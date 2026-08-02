@@ -166,15 +166,26 @@ def boarding_reset(request: Request):
     return {"success": True}
 
 
+@router.post("/api/engine/allow")
+def allow_engine_start(request: Request):
+    """승선 인원 확인 → 시동 허용. 출항 신고는 지오펜스 판정으로 자동 등록된다."""
+    try:
+        result = rt(request).allow_engine_start()
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return {"success": True, "crew": result["crew"],
+            "message": "승선이 확인되었습니다. 시동을 켤 수 있습니다."}
+
+
 @router.post("/api/departure/confirm")
 def confirm_departure(request: Request):
-    """승선 인원 확인 후 출항 확정 — 시동 잠금 해제 + 출항 신고."""
+    """수동 출항 신고 (지오펜스를 사용하지 않는 환경용)."""
     try:
         voyage = rt(request).confirm_departure()
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     return {"success": True, "voyage_id": voyage["id"],
-            "message": "출항이 확정되었습니다. 시동 잠금이 해제되었습니다."}
+            "message": "출항 신고가 접수되었습니다."}
 
 
 @router.post("/api/arrival/confirm")
@@ -224,7 +235,7 @@ def put_vessel(cmd: VesselCmd, request: Request):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 운항 기록지 (출입항 + 승선 명단 + 1분 간격 좌표)
+# 운항 기록지 (출입항 + 승선 명단 + 항해 1분 간격 좌표)
 # ═══════════════════════════════════════════════════════════════════════
 @router.get("/api/voyages")
 def list_voyages(request: Request):

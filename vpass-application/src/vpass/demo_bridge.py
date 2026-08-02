@@ -9,6 +9,8 @@ V-PASS 단말이 데모 관제 서버와 주고받는 통신을 담당한다.
     - 출입항 이벤트                                           → 출입항 자동 수집 로그
   관제 서버 → 단말
     - 관할 해양 기상                                          → V-PASS 기상 표시에 반영
+    - 운항 시뮬레이터 좌표                                    → 실측 GPS 가 없을 때만 사용
+    - 지오펜스 출입항 명령                                    → 자동 출항/입항 기록
 
 모든 네트워크 호출은 짧은 타임아웃 + 예외 무시로 처리해, 관제 서버가
 꺼져 있어도 V-PASS 본체 동작에는 전혀 영향을 주지 않는다.
@@ -27,26 +29,38 @@ TIMEOUT = 2.0
 
 
 class DemoBridge:
-    def __init__(self, base_url: str, vessel_payload_provider):
-        self._base = base_url.rstrip("/")
+    def __init__(self, base_url: str, vessel_payload_provider,
+                 sim_feed=None, on_port_command=None):
+        # 윈도우에서 'localhost' 는 ::1 을 먼저 시도하다 IPv4 로 폴백하며 요청마다
+        # 약 2초가 새는 경우가 있다. 데모 서버는 IPv4(0.0.0.0)로 열리므로 바로 지정한다.
+        self._base = base_url.rstrip("/").replace("//localhost:", "//127.0.0.1:")
         self._provider = vessel_payload_provider  # () -> dict | None
+        self._sim_feed = sim_feed                 # RemoteSimFeed
+        self._on_port_command = on_port_command   # (kind) -> None
+        self._last_command_seq: int | None = None
         self._cached_weather: dict | None = None
         self._lock = threading.Lock()
         self._running = False
         self._thread: threading.Thread | None = None
+        self._sim_thread: threading.Thread | None = None
 
     # ── 수명 주기 ────────────────────────────────────────────────────────
     def start(self) -> None:
         if self._running:
             return
         self._running = True
+        # 시뮬레이터 좌표는 별도 스레드에서 1초 주기로 받아온다.
+        # (선박/기상 동기화가 느려져도 지도 움직임은 그대로 따라가야 한다)
         self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._sim_thread = threading.Thread(target=self._sim_loop, daemon=True)
         self._thread.start()
+        self._sim_thread.start()
 
     def stop(self) -> None:
         self._running = False
-        if self._thread:
-            self._thread.join(timeout=2)
+        for thread in (self._thread, self._sim_thread):
+            if thread:
+                thread.join(timeout=2)
 
     def _loop(self) -> None:
         while self._running:
@@ -56,6 +70,14 @@ class DemoBridge:
             except Exception:
                 pass
             time.sleep(3.0)
+
+    def _sim_loop(self) -> None:
+        while self._running:
+            try:
+                self._sync_sim()
+            except Exception:
+                pass
+            time.sleep(1.0)
 
     # ── 내부 HTTP 헬퍼 ──────────────────────────────────────────────────
     def _post(self, path: str, payload: dict) -> None:
@@ -81,6 +103,34 @@ class DemoBridge:
         payload = self._provider()
         if payload and payload.get("vessel_id"):
             self._post("/api/ingest/vessel", payload)
+
+    def _sync_sim(self) -> None:
+        """운항 시뮬레이터 좌표 + 지오펜스 출입항 명령을 받아온다."""
+        if self._sim_feed is None:
+            return
+        data = self._get("/api/sim/terminal")
+        if not data:
+            self._sim_feed.set(None)
+            return
+
+        telemetry = data.get("telemetry") if data.get("active") else None
+        if telemetry and telemetry.get("lat") is not None:
+            # 시뮬레이터 배속을 함께 실어 보낸다(운항 기록 간격 보정용)
+            telemetry = {**telemetry, "time_scale": float(data.get("time_scale") or 1.0)}
+        else:
+            telemetry = None
+        self._sim_feed.set(telemetry)
+
+        command = data.get("command")
+        seq = int(command.get("seq", 0)) if command else 0
+        if self._last_command_seq is None:
+            # 접속 직후에 남아 있던 마지막 명령은 다시 실행하지 않는다
+            self._last_command_seq = seq
+            return
+        if command and seq > self._last_command_seq:
+            self._last_command_seq = seq
+            if self._on_port_command:
+                self._on_port_command(command.get("kind", ""))
 
     def _sync_weather(self) -> None:
         payload = self._provider()
