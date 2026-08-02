@@ -99,7 +99,11 @@ class Runtime:
         self.sim_feed = RemoteSimFeed()
         self.telemetry = TelemetryRouter(create_telemetry(), self.sim_feed)
         self.engine = EngineController()
-        self.devices = DeviceRegistry(on_mob=self._handle_mob)
+        # 운항 중 구명조끼 해제(버클 풀림) 경고 — UI 모달용, 폴링으로 노출
+        self.jacket_doff_alert: dict | None = None
+        self.devices = DeviceRegistry(
+            on_mob=self._handle_mob, on_wearing=self._handle_wearing_change
+        )
         self.sos = SosManager(self.telemetry, self.vessel_store)
         self.boarding = BoardingManager(
             self.users_store, self.boarding_logs_store,
@@ -168,6 +172,35 @@ class Runtime:
         self.overlay.set(f"⚠ 익수 감지! {who} — 엔진 비상 정지", COLOR_DANGER)
         print(f"[MOB] {who} 익수 감지 → 킬 스위치 작동 + SOS 발보")
 
+    def _handle_wearing_change(self, device_id: str, worn: bool) -> None:
+        """운항 중 구명조끼 해제(버클 풀림) 경고 관리.
+
+        - 운항 중 착용 → 해제 전환: 경고 발생 (UI 가 state 폴링으로 모달 표시)
+        - 같은 장치를 다시 착용하면 경고 자동 해제
+        - 정박 중 탈의는 정상 동작이라 무시한다
+        """
+        if worn:
+            alert = self.jacket_doff_alert
+            if alert and alert["device"] == device_id:
+                self.jacket_doff_alert = None
+            return
+        if self.voyage.active_voyage() is None:
+            return
+        user = self.resolve_device_user(device_id)
+        who = f"{user['name']} 님" if user else f"장치 {device_id}"
+        self.jacket_doff_alert = {
+            "device": device_id,
+            "who": who,
+            "time": datetime.now().strftime("%H:%M:%S"),
+        }
+        self.overlay.set(f"⚠ 운항 중 구명조끼 해제 감지 · {who}", COLOR_DANGER)
+        # 주의: 콘솔 로그는 cp949(Windows) 안전 문자만 사용
+        print(f"[jacket] 운항 중 구명조끼 해제 감지: {who} ({device_id})")
+
+    def ack_jacket_alert(self) -> None:
+        """구명조끼 해제 경고 확인(모달 닫기)."""
+        self.jacket_doff_alert = None
+
     def _handle_departure(self, voyage: dict) -> None:
         """출항: 데모 관제 서버에 출항 이벤트 전송."""
         self._port_to_demo("departure", voyage["departed_at"])
@@ -175,6 +208,7 @@ class Runtime:
     def _handle_arrival(self, voyage: dict) -> None:
         """입항: 시동 재잠금 + 승선 세션 초기화 + 데모 관제 서버 통보."""
         self.boarding.reset_session(relock=True)
+        self.jacket_doff_alert = None  # 입항 후 탈의는 정상
         self._port_to_demo("arrival", voyage.get("arrived_at") or "")
 
     # ── 데모 관제 서버 전송 헬퍼 ────────────────────────────────────────
@@ -337,6 +371,14 @@ class Runtime:
         return target
 
     def resolve_device_user(self, device_id: str) -> dict | None:
+        """장치를 착용한 선원을 해석한다 (익수 알림 · 구명조끼 모니터 표시용).
+
+        이번 승선 세션의 동적 매칭(승선 스캔 시 장치-선원 연결)을 우선 사용하고,
+        없으면 사용자 등록의 고정 배정 필드로 폴백한다.
+        """
+        session_user = self.boarding.device_user(device_id)
+        if session_user is not None:
+            return session_user
         for u in self.users_store.load():
             if u.get("device_id") == device_id:
                 return u
@@ -375,6 +417,7 @@ class Runtime:
                 "devices": devices,
                 "worn_count": self.devices.worn_count(),
                 "mob_alarm": self.devices.any_mob(),
+                "doff_alert": self.jacket_doff_alert,
             },
             "voyage": {
                 "active": active_voyage is not None,

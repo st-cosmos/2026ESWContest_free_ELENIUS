@@ -62,6 +62,13 @@ def device_ack(cmd: AckCmd, request: Request):
     return {"ok": True}
 
 
+@router.post("/api/jacket-alert/ack")
+def ack_jacket_alert(request: Request):
+    """운항 중 구명조끼 해제 경고 모달 확인(닫기) — UI 전용."""
+    rt(request).ack_jacket_alert()
+    return {"success": True}
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # 통합 상태 / 기상
 # ═══════════════════════════════════════════════════════════════════════

@@ -148,7 +148,7 @@ function EngineAllowConfirm({
               >
                 <span className="dot" />
                 {c.lifejacket
-                  ? "구명조끼 착용"
+                  ? `구명조끼 착용${c.device_id ? ` · ${c.device_id}` : ""}`
                   : c.jacket_visual
                     ? "구명조끼 확인(카메라)"
                     : "장치 미배정"}

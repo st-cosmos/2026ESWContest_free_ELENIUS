@@ -10,6 +10,8 @@
   2) 착용 중인데 SIGNAL_LOSS_TIMEOUT 동안 ping 없음     (수중 전파 차단 원리)
 
 익수 판정 시 on_mob 콜백이 1회 호출되고(래치), 상황 확인(ack) 전까지 유지된다.
+착용 상태가 실제로 바뀔 때(착용↔해제 전환)는 on_wearing 콜백이 호출된다
+— 운항 중 버클 해제 경고(Runtime) 등에 사용.
 """
 
 from __future__ import annotations
@@ -27,10 +29,11 @@ def _now_str() -> str:
 
 
 class DeviceRegistry:
-    def __init__(self, on_mob=None):
+    def __init__(self, on_mob=None, on_wearing=None):
         self._devices: dict[str, dict] = {}
         self._lock = threading.Lock()
         self._on_mob = on_mob
+        self._on_wearing = on_wearing  # (device_id, worn) — 전환 시에만 호출
         self._running = False
         self._thread: threading.Thread | None = None
 
@@ -57,6 +60,7 @@ class DeviceRegistry:
     def set_wearing(self, device_id: str, worn: bool) -> None:
         with self._lock:
             d = self._get(device_id)
+            changed = d["worn"] != worn
             d["worn"] = worn
             d["worn_since"] = time.time() if worn else None
             if worn:
@@ -65,6 +69,12 @@ class DeviceRegistry:
             else:
                 # 정상 탈의: 낙상/신호 추적 초기화 (익수 래치는 유지)
                 d["last_fall_ts"] = None
+        # 실제 전환일 때만 알림 — 펌웨어가 같은 상태를 재전송해도 중복 호출 없음
+        if changed and self._on_wearing:
+            try:
+                self._on_wearing(device_id, worn)
+            except Exception as e:
+                print(f"[lifejacket] on_wearing 콜백 오류: {e}")
 
     def ping(self, device_id: str) -> None:
         with self._lock:
@@ -185,6 +195,15 @@ class DeviceRegistry:
         with self._lock:
             d = self._devices.get(device_id)
             return bool(d and d["worn"])
+
+    def worn_devices(self) -> list[dict]:
+        """착용 중인 장치 목록 [{device, worn_since}] — 승선 시 동적 매칭용."""
+        with self._lock:
+            return [
+                {"device": d["device"], "worn_since": d["worn_since"]}
+                for d in self._devices.values()
+                if d["worn"]
+            ]
 
     def any_mob(self) -> bool:
         with self._lock:
