@@ -222,6 +222,83 @@ class HardwareTelemetry:
         }
 
 
+class RemoteSimFeed:
+    """데모 관제 서버 운항 시뮬레이터가 내려주는 좌표 보관소.
+
+    DemoBridge 가 주기적으로 갱신하고, TelemetryRouter 가 읽어 간다.
+    갱신이 끊기면(서버 종료 등) 자동으로 무효 처리된다.
+    """
+
+    STALE_AFTER_SEC = 8.0
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._data: dict | None = None
+        self._ts = 0.0
+
+    def set(self, data: dict | None) -> None:
+        with self._lock:
+            self._data = data
+            self._ts = time.time() if data else 0.0
+
+    def snapshot(self) -> dict | None:
+        with self._lock:
+            if self._data is None or time.time() - self._ts > self.STALE_AFTER_SEC:
+                return None
+            return dict(self._data)
+
+
+class TelemetryRouter:
+    """좌표 출처를 선택한다.
+
+      1) 실측 GPS 가 유효하면 언제나 실측값
+      2) 실측이 없을 때만 데모 관제 서버 시뮬레이터 좌표
+      3) 둘 다 없으면 내장 시뮬레이터
+
+    실측 GPS 를 버리지 않으면서 시뮬레이터로 시연할 수 있게 하는 것이 목적이다.
+    """
+
+    def __init__(self, primary, remote: RemoteSimFeed):
+        self._primary = primary
+        self._remote = remote
+
+    # 수명 주기/제어는 실제 제공자에게 위임한다
+    def start(self) -> None:
+        self._primary.start()
+
+    def stop(self) -> None:
+        self._primary.stop()
+
+    def set_cruising(self, cruising: bool) -> None:
+        self._primary.set_cruising(cruising)
+
+    def is_cruising_target(self) -> bool:
+        return self._primary.is_cruising_target()
+
+    def snapshot(self) -> dict:
+        base = self._primary.snapshot()
+        if base["source"] == "hardware" and base["gps_ok"] and base["lat"] is not None:
+            return base
+
+        sim = self._remote.snapshot()
+        if sim is None:
+            return base
+
+        lat, lon = float(sim["lat"]), float(sim["lon"])
+        return {
+            **base,
+            "source": "demo_sim",
+            "lat": lat,
+            "lon": lon,
+            "position": format_position(lat, lon),
+            "position_compact": format_position_compact(lat, lon),
+            "course": round(float(sim.get("course", base["course"] or 0))) % 360,
+            "speed_kn": round(float(sim.get("speed_kn", 0.0)), 1),
+            "gps_ok": True,
+            "gps_updated_at": sim.get("updated_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        }
+
+
 def create_telemetry():
     """환경에 맞는 텔레메트리 제공자를 생성한다."""
     from . import config

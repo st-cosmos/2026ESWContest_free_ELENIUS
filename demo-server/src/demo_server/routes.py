@@ -163,6 +163,7 @@ class IngestVesselCmd(BaseModel):
     speed_kn: float | None = None
     crew: int | None = None
     status: str | None = None
+    gps_source: str | None = None  # hardware | sim | demo_sim
 
 
 class IngestReportCmd(BaseModel):
@@ -180,6 +181,87 @@ class IngestPortCmd(BaseModel):
     vessel_name: str
     vessel_id: str
     time: str | None = None
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 운항 시뮬레이터 (지도에서 선박을 움직여 V-PASS 단말에 좌표를 공급)
+# ═══════════════════════════════════════════════════════════════════════
+class SimPositionCmd(BaseModel):
+    lat: float
+    lon: float
+
+
+class SimPointsCmd(BaseModel):
+    points: list[list[float]] = Field(default_factory=list)
+
+
+class SimSpeedCmd(BaseModel):
+    speed_kn: float | None = None
+    time_scale: float | None = None
+
+
+class SimRunCmd(BaseModel):
+    action: str  # start | pause | stop
+
+
+@router.get("/api/sim/state")
+def sim_state(request: Request):
+    return rt(request).simulator_snapshot()
+
+
+@router.post("/api/sim/position")
+def sim_position(cmd: SimPositionCmd, request: Request):
+    rt(request).simulator.set_position(cmd.lat, cmd.lon)
+    return {"success": True}
+
+
+@router.post("/api/sim/route")
+def sim_route(cmd: SimPointsCmd, request: Request):
+    rt(request).simulator.set_route(cmd.points)
+    return {"success": True}
+
+
+@router.post("/api/sim/fence")
+def sim_fence(cmd: SimPointsCmd, request: Request):
+    rt(request).simulator.set_fence(cmd.points)
+    return {"success": True}
+
+
+@router.post("/api/sim/fence/flip")
+def sim_fence_flip(request: Request):
+    rt(request).simulator.flip_sea_side()
+    return {"success": True}
+
+
+@router.post("/api/sim/speed")
+def sim_speed(cmd: SimSpeedCmd, request: Request):
+    simulator = rt(request).simulator
+    if cmd.speed_kn is not None:
+        simulator.set_speed(cmd.speed_kn)
+    if cmd.time_scale is not None:
+        simulator.set_time_scale(cmd.time_scale)
+    return {"success": True}
+
+
+@router.post("/api/sim/run")
+def sim_run(cmd: SimRunCmd, request: Request):
+    try:
+        rt(request).simulator.run(cmd.action)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True}
+
+
+@router.post("/api/sim/reset")
+def sim_reset(request: Request):
+    rt(request).simulator.reset()
+    return {"success": True}
+
+
+@router.get("/api/sim/terminal")
+def sim_terminal(request: Request):
+    """V-PASS 단말이 주기적으로 받아가는 시뮬레이션 좌표 + 출입항 명령."""
+    return rt(request).simulator.terminal_feed()
 
 
 @router.post("/api/ingest/vessel")

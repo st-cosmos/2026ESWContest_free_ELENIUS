@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 
 from . import config
-from .boarding import COLOR_DANGER, BoardingManager, Overlay
+from .boarding import COLOR_DANGER, COLOR_OK, BoardingManager, Overlay
 from .camera import CameraManager
 from .demo_bridge import DemoBridge
 from .facerec import (
@@ -21,7 +21,7 @@ from .killswitch import EngineController
 from .lifejacket import DeviceRegistry
 from .sos import SosManager
 from .storage import JsonStore
-from .telemetry import create_telemetry
+from .telemetry import RemoteSimFeed, TelemetryRouter, create_telemetry
 from .voyage import VoyageManager
 from .weather import get_weather
 
@@ -95,7 +95,9 @@ class Runtime:
 
         # 코어 상태
         self.overlay = Overlay()
-        self.telemetry = create_telemetry()
+        # 실측 GPS 우선, 미수신일 때만 데모 서버 시뮬레이터 좌표를 사용한다
+        self.sim_feed = RemoteSimFeed()
+        self.telemetry = TelemetryRouter(create_telemetry(), self.sim_feed)
         self.engine = EngineController()
         self.devices = DeviceRegistry(on_mob=self._handle_mob)
         self.sos = SosManager(self.telemetry, self.vessel_store)
@@ -106,7 +108,7 @@ class Runtime:
         )
         self.camera = CameraManager(self.users_store, self.boarding, config.APP_DIR)
         self.voyage = VoyageManager(
-            self.voyages_store, self.telemetry, self.engine, self.overlay,
+            self.voyages_store, self.telemetry, self.overlay,
             crew_provider=self.boarding.session,
             on_depart=self._handle_departure,
             on_arrive=self._handle_arrival,
@@ -118,7 +120,11 @@ class Runtime:
         # 데모 관제 서버 연동 (선택)
         self.demo: DemoBridge | None = None
         if config.DEMO_SERVER_URL:
-            self.demo = DemoBridge(config.DEMO_SERVER_URL, self._demo_vessel_payload)
+            self.demo = DemoBridge(
+                config.DEMO_SERVER_URL, self._demo_vessel_payload,
+                sim_feed=self.sim_feed,
+                on_port_command=self._handle_port_command,
+            )
 
         # 엔진이 차단되면 배는 반드시 멈춘다
         self.engine.on_change(self._on_engine_change)
@@ -188,6 +194,8 @@ class Runtime:
             "speed_kn": tel["speed_kn"],
             "crew": len(self.boarding.session()),
             "status": "departed" if active else "docked",
+            # 관제 서버가 '이 단말이 실측 GPS 를 쓰는지'를 알 수 있게 함께 보낸다
+            "gps_source": tel["source"],
         }
 
     def _report_to_demo(self, report: dict) -> None:
@@ -203,29 +211,51 @@ class Runtime:
                 vessel.get("vessel_id", "-"), time_str,
             )
 
-    # ── 출항 / 입항 확정 ────────────────────────────────────────────────
-    def confirm_departure(self) -> dict:
-        """선장이 승선 인원을 확인하고 출항을 확정한다.
+    # ── 시동 허용 / 출항 / 입항 ─────────────────────────────────────────
+    def allow_engine_start(self) -> dict:
+        """승선 인원을 확인하고 시동을 켤 수 있는 상태로 만든다.
 
-        이 시점에만 시동 잠금이 해제되고 해양경찰청 출항 신고가 접수된다.
+        출항 신고는 여기서 하지 않는다. 출항/입항은 데모 관제 서버의 지오펜스
+        판정으로 자동 등록된다(_handle_port_command).
         """
         session = self.boarding.session()
         if not session:
             raise ValueError("승선한 선원이 없습니다. 얼굴 인식으로 승선을 먼저 진행해 주세요.")
         if self.engine.snapshot()["killed"]:
             raise ValueError("비상 정지 상태입니다. SOS 상황 확인 후 다시 시도해 주세요.")
+
+        self.engine.unlock()
+        self.overlay.set("승선 확인 완료 · 시동 허용", COLOR_OK)
+        return {"crew": len(session)}
+
+    def _handle_port_command(self, kind: str) -> None:
+        """지오펜스 판정 결과(데모 관제 서버 → 단말)를 운항 기록에 반영한다."""
+        try:
+            if kind == "departure":
+                if self.voyage.active_voyage() is None:
+                    self.voyage.start_voyage()
+                    print("[geofence] 지오펜스 통과 → 자동 출항 등록")
+            elif kind == "arrival":
+                if self.voyage.active_voyage() is not None:
+                    self.confirm_arrival()
+                    print("[geofence] 지오펜스 진입 → 자동 입항 등록")
+        except Exception as e:
+            print(f"[geofence] 출입항 처리 실패: {e}")
+
+    def confirm_departure(self) -> dict:
+        """수동 출항 신고 (지오펜스를 쓰지 않는 환경용 대체 경로)."""
         if self.voyage.active_voyage() is not None:
             raise ValueError("이미 운항 중입니다.")
-
-        self.engine.unlock()  # 엔진 상태 변경 → 항해 시작
-        return self.voyage.start_voyage(auto=False)
+        if self.engine.snapshot()["killed"]:
+            raise ValueError("비상 정지 상태입니다. SOS 상황 확인 후 다시 시도해 주세요.")
+        return self.voyage.start_voyage()
 
     def confirm_arrival(self) -> dict:
         """입항을 확정한다. 시동 재잠금과 승선 세션 초기화가 뒤따른다."""
         if self.voyage.active_voyage() is None:
             raise ValueError("진행 중인 운항이 없습니다.")
         self.telemetry.set_cruising(False)
-        voyage = self.voyage.end_voyage(auto=False)
+        voyage = self.voyage.end_voyage()
         if voyage is None:
             raise ValueError("입항 처리에 실패했습니다.")
         return voyage

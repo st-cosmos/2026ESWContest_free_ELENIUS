@@ -14,10 +14,18 @@ function Tele({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ConnChip({ label, ok }: { label: string; ok: boolean }) {
+function ConnChip({
+  label,
+  ok,
+  sim = false,
+}: {
+  label: string;
+  ok: boolean;
+  sim?: boolean;
+}) {
   return (
     <div className="conn-chip">
-      <span className={`glow-dot${ok ? "" : " off"}`} />
+      <span className={`glow-dot${sim ? " sim" : ok ? "" : " off"}`} />
       <span className="conn-label">{label}</span>
     </div>
   );
@@ -119,8 +127,11 @@ export function StatusBar() {
   const [confirming, setConfirming] = useState(false);
 
   const tel = state?.telemetry;
-  const gpsLabel =
-    tel?.satellites !== null && tel?.satellites !== undefined
+  // 실측 GPS 가 없을 때만 데모 서버 시뮬레이터 좌표를 쓴다 — 출처를 상태바에 그대로 표시
+  const simGps = tel?.source === "demo_sim";
+  const gpsLabel = simGps
+    ? "GPS · 시뮬레이션"
+    : tel?.satellites !== null && tel?.satellites !== undefined
       ? `GPS · ${tel.satellites}위성`
       : "GPS";
   const courseText =
@@ -134,7 +145,11 @@ export function StatusBar() {
       <Tele label="속도" value={tel ? `${tel.speed_kn.toFixed(1)} kn` : "-"} />
       <div style={{ flex: 1 }} />
       <ConnChip label="통신" ok={connected && (tel?.comm_ok ?? false)} />
-      <ConnChip label={gpsLabel} ok={connected && (tel?.gps_ok ?? false)} />
+      <ConnChip
+        label={gpsLabel}
+        ok={connected && (tel?.gps_ok ?? false)}
+        sim={connected && simGps}
+      />
       <button
         className="sos-button"
         onClick={() => setConfirming(true)}

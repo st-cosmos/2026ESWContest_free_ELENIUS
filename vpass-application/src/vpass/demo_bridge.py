@@ -9,6 +9,8 @@ V-PASS 단말이 데모 관제 서버와 주고받는 통신을 담당한다.
     - 출입항 이벤트                                           → 출입항 자동 수집 로그
   관제 서버 → 단말
     - 관할 해양 기상                                          → V-PASS 기상 표시에 반영
+    - 운항 시뮬레이터 좌표                                    → 실측 GPS 가 없을 때만 사용
+    - 지오펜스 출입항 명령                                    → 자동 출항/입항 기록
 
 모든 네트워크 호출은 짧은 타임아웃 + 예외 무시로 처리해, 관제 서버가
 꺼져 있어도 V-PASS 본체 동작에는 전혀 영향을 주지 않는다.
@@ -27,9 +29,13 @@ TIMEOUT = 2.0
 
 
 class DemoBridge:
-    def __init__(self, base_url: str, vessel_payload_provider):
+    def __init__(self, base_url: str, vessel_payload_provider,
+                 sim_feed=None, on_port_command=None):
         self._base = base_url.rstrip("/")
         self._provider = vessel_payload_provider  # () -> dict | None
+        self._sim_feed = sim_feed                 # RemoteSimFeed
+        self._on_port_command = on_port_command   # (kind) -> None
+        self._last_command_seq: int | None = None
         self._cached_weather: dict | None = None
         self._lock = threading.Lock()
         self._running = False
@@ -49,13 +55,18 @@ class DemoBridge:
             self._thread.join(timeout=2)
 
     def _loop(self) -> None:
+        tick = 0
         while self._running:
             try:
-                self._sync_vessel()
-                self._sync_weather()
+                # 시뮬레이터 좌표는 1초 주기(지도 움직임을 그대로 따라가야 한다)
+                self._sync_sim()
+                if tick % 3 == 0:
+                    self._sync_vessel()
+                    self._sync_weather()
             except Exception:
                 pass
-            time.sleep(3.0)
+            tick += 1
+            time.sleep(1.0)
 
     # ── 내부 HTTP 헬퍼 ──────────────────────────────────────────────────
     def _post(self, path: str, payload: dict) -> None:
@@ -81,6 +92,29 @@ class DemoBridge:
         payload = self._provider()
         if payload and payload.get("vessel_id"):
             self._post("/api/ingest/vessel", payload)
+
+    def _sync_sim(self) -> None:
+        """운항 시뮬레이터 좌표 + 지오펜스 출입항 명령을 받아온다."""
+        if self._sim_feed is None:
+            return
+        data = self._get("/api/sim/terminal")
+        if not data:
+            self._sim_feed.set(None)
+            return
+
+        telemetry = data.get("telemetry") if data.get("active") else None
+        self._sim_feed.set(telemetry if telemetry and telemetry.get("lat") is not None else None)
+
+        command = data.get("command")
+        seq = int(command.get("seq", 0)) if command else 0
+        if self._last_command_seq is None:
+            # 접속 직후에 남아 있던 마지막 명령은 다시 실행하지 않는다
+            self._last_command_seq = seq
+            return
+        if command and seq > self._last_command_seq:
+            self._last_command_seq = seq
+            if self._on_port_command:
+                self._on_port_command(command.get("kind", ""))
 
     def _sync_weather(self) -> None:
         payload = self._provider()

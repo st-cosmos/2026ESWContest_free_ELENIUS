@@ -9,6 +9,7 @@ from datetime import datetime
 from . import config
 from .portlog import PortLog
 from .reports import ReportInbox
+from .simulator import Simulator
 from .storage import JsonStore
 from .vessels import STATUS_DEPARTED, STATUS_DOCKED, VesselRegistry
 from .weather import WeatherManager
@@ -38,11 +39,13 @@ class Runtime:
         self.reports_store = JsonStore(config.REPORTS_FILE, [])
         self.portlog_store = JsonStore(config.PORTLOG_FILE, [])
         self.weather_store = JsonStore(config.WEATHER_FILE, {})
+        self.simulator_store = JsonStore(config.SIMULATOR_FILE, {})
 
         self.vessels = VesselRegistry(self.vessels_store)
         self.reports = ReportInbox(self.reports_store)
         self.portlog = PortLog(self.portlog_store)
         self.weather = WeatherManager(self.weather_store)
+        self.simulator = Simulator(self.simulator_store)
 
         self._seed_vessels()
 
@@ -68,10 +71,15 @@ class Runtime:
             self._thread.join(timeout=2)
 
     def _loop(self) -> None:
+        elapsed = 0.0
         while self._running:
-            time.sleep(config.SIM_INTERVAL_SEC)
+            time.sleep(config.SIM_TICK_SEC)
+            elapsed += config.SIM_TICK_SEC
             try:
-                self.vessels.simulate_step(config.SIM_INTERVAL_SEC)
+                self.simulator.step(config.SIM_TICK_SEC)
+                if elapsed >= config.SIM_INTERVAL_SEC:
+                    self.vessels.simulate_step(elapsed)
+                    elapsed = 0.0
             except Exception as e:  # 시뮬레이션 오류가 서버를 죽이지 않도록
                 print(f"[sim] 오류: {e}")
 
@@ -86,6 +94,20 @@ class Runtime:
     # ── V-PASS 수신 ─────────────────────────────────────────────────────
     def ingest_port(self, kind: str, vessel_name: str, vessel_id: str, time_str: str | None) -> dict:
         return self.portlog.add(kind, vessel_name, vessel_id, time_str)
+
+    # ── 운항 시뮬레이터 ─────────────────────────────────────────────────
+    def linked_terminal(self) -> dict | None:
+        """시뮬레이터가 좌표를 공급하는 V-PASS 단말(연결된 라이브 선박)."""
+        vessels = [v for v in self.vessels.list_public() if v["source"] == "vpass"]
+        if not vessels:
+            return None
+        return next((v for v in vessels if v["live"]), vessels[0])
+
+    def simulator_snapshot(self) -> dict:
+        snapshot = self.simulator.snapshot()
+        snapshot["time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        snapshot["terminal"] = self.linked_terminal()
+        return snapshot
 
     # ── 통합 상태 (대시보드 1초 폴링용) ─────────────────────────────────
     def state_snapshot(self) -> dict:

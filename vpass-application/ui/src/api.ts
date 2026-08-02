@@ -48,6 +48,9 @@ export const api = {
   boardingSession: () => request<BoardingSummary>("/api/boarding/session"),
   resetBoarding: () => post("/api/boarding/reset"),
 
+  // 승선 확인 → 시동 허용 (출항 신고는 지오펜스 판정으로 자동 등록)
+  allowEngineStart: () =>
+    post<{ success: boolean; crew: number; message: string }>("/api/engine/allow"),
   confirmDeparture: () =>
     post<{ success: boolean; voyage_id: string; message: string }>("/api/departure/confirm"),
   confirmArrival: () =>

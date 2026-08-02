@@ -18,6 +18,7 @@ VESSELS_FILE = DATA_DIR / "vessels.json"
 REPORTS_FILE = DATA_DIR / "reports.json"
 PORTLOG_FILE = DATA_DIR / "portlog.json"
 WEATHER_FILE = DATA_DIR / "weather.json"
+SIMULATOR_FILE = DATA_DIR / "simulator.json"
 
 # 관할 해양경찰청 (5개)
 REGIONS = ["동해", "서해", "남해", "중부", "제주"]
@@ -30,6 +31,9 @@ LIVE_TIMEOUT_SEC = 15.0
 
 # 출항 중 선박 위치 시뮬레이션 간격(초)
 SIM_INTERVAL_SEC = 1.0
+
+# 운항 시뮬레이터 이동 간격(초) — 지도 위 움직임이 부드럽게 보이도록 더 촘촘히 돈다
+SIM_TICK_SEC = 0.2
 
 DEFAULT_PORT = int(os.environ.get("DEMO_PORT", "8100"))
 
