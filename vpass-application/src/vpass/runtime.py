@@ -11,7 +11,12 @@ from . import config
 from .boarding import COLOR_DANGER, BoardingManager, Overlay
 from .camera import CameraManager
 from .demo_bridge import DemoBridge
-from .facerec import detect_largest_face, imwrite_unicode, safe_filename
+from .facerec import (
+    detect_largest_face,
+    imwrite_unicode,
+    load_face_cascade,
+    safe_filename,
+)
 from .killswitch import EngineController
 from .lifejacket import DeviceRegistry
 from .sos import SosManager
@@ -249,7 +254,8 @@ class Runtime:
         import cv2
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        box = detect_largest_face(self.camera.face_cascade(), gray)
+        # 카메라 스레드의 cascade 를 공유하면 detectMultiScale 이 경합한다 — 요청 전용 인스턴스 사용
+        box = detect_largest_face(load_face_cascade(), gray)
         if box is None:
             raise ValueError("얼굴이 감지되지 않았습니다. 카메라 정면을 응시해 주세요.")
 

@@ -43,7 +43,7 @@ class CameraManager:
         self.raw_register_frame = None    # 등록 촬영용 원본
         self.camera_ok = False
 
-        self._cascade = None
+        self._cascade = None  # 카메라 스레드 전용 — 다른 스레드와 공유 금지
         self._recognizer = None
         self._label_to_user: dict[int, dict] = {}
 
@@ -69,7 +69,7 @@ class CameraManager:
 
     def train_model(self) -> None:
         users = self._users_store.load()
-        recognizer, label_map = train_recognizer(self._cascade, users, self._base_dir)
+        recognizer, label_map = train_recognizer(users, self._base_dir)
         with self.lock:
             self._recognizer = recognizer
             self._label_to_user = label_map
@@ -83,9 +83,6 @@ class CameraManager:
     def get_register_frame(self):
         with self.lock:
             return None if self.raw_register_frame is None else self.raw_register_frame.copy()
-
-    def face_cascade(self):
-        return self._cascade
 
     # ── 메인 루프 ────────────────────────────────────────────────────────
     def _open_camera(self) -> None:
@@ -122,12 +119,16 @@ class CameraManager:
             with self.lock:
                 mode = self.mode
 
-            if mode == "scan":
-                self._process_scan(frame)
-            elif mode == "register":
-                self._process_register(frame)
-            else:
-                self._publish(frame)
+            try:
+                if mode == "scan":
+                    self._process_scan(frame)
+                elif mode == "register":
+                    self._process_register(frame)
+                else:
+                    self._publish(frame)
+            except Exception as e:
+                # 프레임 1장의 처리 실패가 카메라 스레드 전체를 죽이지 않게 한다
+                print(f"[camera] 프레임 처리 오류: {e}")
 
             time.sleep(0.01)
 

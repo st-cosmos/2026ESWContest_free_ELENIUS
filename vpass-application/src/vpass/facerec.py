@@ -18,6 +18,12 @@ from .config import FACE_SIZE
 
 
 def load_face_cascade() -> cv2.CascadeClassifier | None:
+    """얼굴 검출기를 로드한다.
+
+    CascadeClassifier 는 detectMultiScale 호출 중 내부 상태(scaleData)를
+    변경하므로 스레드 간 공유가 안전하지 않다. 사용 주체(스레드/요청)마다
+    이 함수로 전용 인스턴스를 로드해야 한다.
+    """
     cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     cascade = cv2.CascadeClassifier(cascade_path)
     return None if cascade.empty() else cascade
@@ -63,11 +69,13 @@ def extract_face(cascade, image_bgr):
     return normalize_face(crop_face_roi(gray, box))
 
 
-def train_recognizer(cascade, users: list[dict], base_dir: Path):
+def train_recognizer(users: list[dict], base_dir: Path):
     """등록 사용자 사진으로 LBPH 인식기를 학습한다.
 
+    cascade 는 공유 인스턴스 경합을 피하기 위해 호출 시마다 새로 로드한다.
     반환: (recognizer, {label: user}) — 학습 샘플이 없으면 (None, {}).
     """
+    cascade = load_face_cascade()
     samples, labels, label_to_user = [], [], {}
 
     for user in users:
