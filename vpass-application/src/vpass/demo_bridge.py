@@ -31,7 +31,9 @@ TIMEOUT = 2.0
 class DemoBridge:
     def __init__(self, base_url: str, vessel_payload_provider,
                  sim_feed=None, on_port_command=None):
-        self._base = base_url.rstrip("/")
+        # 윈도우에서 'localhost' 는 ::1 을 먼저 시도하다 IPv4 로 폴백하며 요청마다
+        # 약 2초가 새는 경우가 있다. 데모 서버는 IPv4(0.0.0.0)로 열리므로 바로 지정한다.
+        self._base = base_url.rstrip("/").replace("//localhost:", "//127.0.0.1:")
         self._provider = vessel_payload_provider  # () -> dict | None
         self._sim_feed = sim_feed                 # RemoteSimFeed
         self._on_port_command = on_port_command   # (kind) -> None
@@ -40,32 +42,41 @@ class DemoBridge:
         self._lock = threading.Lock()
         self._running = False
         self._thread: threading.Thread | None = None
+        self._sim_thread: threading.Thread | None = None
 
     # ── 수명 주기 ────────────────────────────────────────────────────────
     def start(self) -> None:
         if self._running:
             return
         self._running = True
+        # 시뮬레이터 좌표는 별도 스레드에서 1초 주기로 받아온다.
+        # (선박/기상 동기화가 느려져도 지도 움직임은 그대로 따라가야 한다)
         self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._sim_thread = threading.Thread(target=self._sim_loop, daemon=True)
         self._thread.start()
+        self._sim_thread.start()
 
     def stop(self) -> None:
         self._running = False
-        if self._thread:
-            self._thread.join(timeout=2)
+        for thread in (self._thread, self._sim_thread):
+            if thread:
+                thread.join(timeout=2)
 
     def _loop(self) -> None:
-        tick = 0
         while self._running:
             try:
-                # 시뮬레이터 좌표는 1초 주기(지도 움직임을 그대로 따라가야 한다)
-                self._sync_sim()
-                if tick % 3 == 0:
-                    self._sync_vessel()
-                    self._sync_weather()
+                self._sync_vessel()
+                self._sync_weather()
             except Exception:
                 pass
-            tick += 1
+            time.sleep(3.0)
+
+    def _sim_loop(self) -> None:
+        while self._running:
+            try:
+                self._sync_sim()
+            except Exception:
+                pass
             time.sleep(1.0)
 
     # ── 내부 HTTP 헬퍼 ──────────────────────────────────────────────────
@@ -103,7 +114,12 @@ class DemoBridge:
             return
 
         telemetry = data.get("telemetry") if data.get("active") else None
-        self._sim_feed.set(telemetry if telemetry and telemetry.get("lat") is not None else None)
+        if telemetry and telemetry.get("lat") is not None:
+            # 시뮬레이터 배속을 함께 실어 보낸다(운항 기록 간격 보정용)
+            telemetry = {**telemetry, "time_scale": float(data.get("time_scale") or 1.0)}
+        else:
+            telemetry = None
+        self._sim_feed.set(telemetry)
 
         command = data.get("command")
         seq = int(command.get("seq", 0)) if command else 0

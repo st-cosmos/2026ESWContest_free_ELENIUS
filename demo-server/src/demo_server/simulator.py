@@ -341,5 +341,7 @@ class Simulator:
             return {
                 "active": True,
                 "telemetry": self.telemetry(),
+                # 단말이 운항 기록 간격을 배속에 맞춰 좁힐 수 있도록 함께 내려준다
+                "time_scale": self.time_scale,
                 "command": dict(self.command) if self.command else None,
             }

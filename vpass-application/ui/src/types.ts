@@ -16,6 +16,8 @@ export interface Telemetry {
   comm_ok: boolean;
   gps_error?: string | null;
   compass_error?: string | null;
+  // 시뮬레이터 좌표를 쓰는 동안의 배속 (운항 기록 간격 보정에 사용)
+  time_scale?: number;
 }
 
 export interface Vessel {

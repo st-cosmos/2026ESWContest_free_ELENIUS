@@ -296,6 +296,8 @@ class TelemetryRouter:
             "speed_kn": round(float(sim.get("speed_kn", 0.0)), 1),
             "gps_ok": True,
             "gps_updated_at": sim.get("updated_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            # 시뮬레이터 배속 — 운항 기록 간격을 이 값으로 나눠 실제 항해처럼 보이게 한다
+            "time_scale": float(sim.get("time_scale", 1.0)),
         }
 
 

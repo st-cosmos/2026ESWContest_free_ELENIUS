@@ -1,4 +1,5 @@
-// 운항 기록지: 출입항 단위 아코디언 · 펼치면 승선 로그 + 1분 간격 운항 상세
+// 운항 기록지: 출입항 단위 아코디언 · 펼치면 승선 로그 + 항해 1분 간격 운항 상세
+// (시뮬레이터 배속으로 운항하면 실제 기록 간격은 배속만큼 좁아진다)
 
 import { Archive, ChevronDown, ChevronRight, Route, Users } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -84,7 +85,7 @@ function ExpandedBody({ detail }: { detail: VoyageDetail | null }) {
         <PanelHead
           icon={Route}
           title="운항 상세"
-          meta={`1분 간격 · 총 ${detail.points.length}건`}
+          meta={`항해 1분 간격 · 총 ${detail.points.length}건`}
         />
         <div className="rec-table">
           <div className="rec-thead">
@@ -163,7 +164,7 @@ export function VoyageRecord({ state }: { state: AppState }) {
           <h1 className="page-title">운항 기록지</h1>
           <p className="page-desc">
             출항부터 입항까지를 하나의 기록으로 관리합니다. 기록을 펼치면 승선 로그와
-            1분 간격 운항 상세를 함께 확인할 수 있습니다.
+            항해 1분 간격 운항 상세를 함께 확인할 수 있습니다.
           </p>
         </div>
         <div className="chip neutral">
