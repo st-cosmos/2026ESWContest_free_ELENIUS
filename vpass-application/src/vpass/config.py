@@ -74,6 +74,37 @@ FACE_SIZE = (200, 200)
 MATCH_THRESHOLD = 52.0          # LBPH confidence (작을수록 유사)
 REBOARD_MESSAGE_COOLDOWN = 6.0  # 같은 사람 중복 안내 최소 간격(초)
 
+# ── 구명조끼 시각 확인 (승선 등록 치팅 방지) ─────────────────────────────
+# 모듈(홀센서) 신호만 믿으면 조끼를 입지 않고 버클만 채우는 치팅이 가능하다.
+# 승선 등록 시 얼굴 아래 상체 ROI 의 HSV 색상 비율을 함께 검사한다.
+# 임시 구현(jacketvision.py) — 추후 전용 객체 검출 모델 학습 후 교체 예정.
+JACKET_VISION_ENABLED = (
+    os.environ.get("VPASS_JACKET_VISION", "1").strip().lower() not in ("0", "false", "off")
+)
+
+# 구명조끼 색상 프리셋 (OpenCV HSV: H 0-179, S/V 0-255)
+_JACKET_COLOR_PRESETS: dict[str, list[tuple]] = {
+    "orange": [((5, 110, 100), (22, 255, 255))],
+    "red": [((0, 110, 100), (5, 255, 255)), ((168, 110, 100), (179, 255, 255))],
+    "yellow": [((22, 110, 110), (32, 255, 255))],
+    "lime": [((32, 90, 110), (58, 255, 255))],  # 형광 연두(작업 조끼류)
+}
+
+
+def _jacket_color_ranges() -> list[tuple]:
+    names = os.environ.get("VPASS_JACKET_COLORS", "orange,lime,red")
+    ranges: list[tuple] = []
+    for name in names.split(","):
+        ranges.extend(_JACKET_COLOR_PRESETS.get(name.strip().lower(), []))
+    return ranges or list(_JACKET_COLOR_PRESETS["orange"])
+
+
+JACKET_COLOR_RANGES = _jacket_color_ranges()
+# 상체 ROI 에서 구명조끼 색 픽셀 비율이 이 값 이상이면 착용으로 판정
+JACKET_MIN_COLOR_RATIO = float(os.environ.get("VPASS_JACKET_MIN_RATIO", "0.4"))
+# 상체 ROI 가 화면 밖으로 잘려 남은 면적이 이 비율 미만이면 판단 불가 처리
+JACKET_ROI_MIN_VISIBLE = float(os.environ.get("VPASS_JACKET_ROI_MIN_VISIBLE", "0.35"))
+
 # ── 구명조끼 디바이스 / 익수 감지 ────────────────────────────────────────
 PING_INTERVAL = 3.0        # 펌웨어 ping 주기(초)
 FALL_PING_TIMEOUT = 5.0    # 낙상 후 이 시간 안에 ping 없으면 익수로 판단

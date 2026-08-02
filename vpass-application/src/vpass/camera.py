@@ -2,7 +2,7 @@
 
 백그라운드 스레드에서 프레임을 읽어 모드별로 처리한다.
   - idle:     대기 — 카메라 장치를 닫아 절전한다 (발열 저감)
-  - scan:     출항 화면 — 얼굴 인식 → BoardingManager 에 결과 전달
+  - scan:     출항 화면 — 얼굴 인식 + 구명조끼 시각 확인 → BoardingManager 에 전달
   - register: 등록 화면 — 얼굴 가이드 박스만 표시, 원본 프레임 보관
 
 카메라는 scan/register 모드에서만 열리고, idle 로 돌아오면 해제된다.
@@ -19,7 +19,12 @@ import time
 import cv2
 import numpy as np
 
-from .config import CAMERA_INDEX, DETECT_EVERY_N_FRAMES, MATCH_THRESHOLD
+from .config import (
+    CAMERA_INDEX,
+    DETECT_EVERY_N_FRAMES,
+    JACKET_VISION_ENABLED,
+    MATCH_THRESHOLD,
+)
 from .facerec import (
     crop_face_roi,
     detect_largest_face,
@@ -27,6 +32,7 @@ from .facerec import (
     normalize_face,
     train_recognizer,
 )
+from .jacketvision import assess_jacket
 
 GREEN = (163, 255, 0)   # BGR
 RED = (95, 55, 255)
@@ -58,6 +64,7 @@ class CameraManager:
         # 검출 스로틀 상태 (카메라 스레드 전용)
         self._frame_no = 0
         self._scan_note = None      # 마지막 검출 주석: (box, color, tag, thickness)
+        self._jacket_note = None    # 마지막 구명조끼 확인 주석: (box, color, tag)
         self._register_box = None   # 마지막 검출 가이드 박스
 
     # ── 수명 주기 ────────────────────────────────────────────────────────
@@ -89,6 +96,7 @@ class CameraManager:
                 self.raw_register_frame = None
             self._frame_no = 0
             self._scan_note = None
+            self._jacket_note = None
             self._register_box = None
         if mode in ("scan", "register"):
             self._last_open_try = 0.0  # 대기에서 복귀 시 3초 스로틀 없이 즉시 오픈
@@ -168,7 +176,17 @@ class CameraManager:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             box = detect_largest_face(self._cascade, gray)
             note = None
+            jacket = None
+            jacket_note = None
             if box is not None:
+                # 구명조끼 시각 확인(임시 HSV 구현) — 승선 판정과 화면 표시에 사용
+                if JACKET_VISION_ENABLED:
+                    jacket = assess_jacket(frame, box)
+                    if jacket["box"] is not None:
+                        ok = jacket["visible"] is True
+                        tag = f"{'JACKET' if ok else 'NO JACKET'} {jacket['ratio']:.0%}"
+                        jacket_note = (jacket["box"], GREEN if ok else RED, tag)
+
                 with self.lock:
                     recognizer = self._recognizer
                     label_map = dict(self._label_to_user)
@@ -184,11 +202,12 @@ class CameraManager:
                         boarded = self._boarding.is_boarded(user.get("id") or user.get("name", ""))
                         tag = "BOARDED" if boarded else f"PASSENGER ({confidence:.0f})"
                         note = (box, GREEN, tag, 2)
-                        self._boarding.handle_recognition(user)
+                        self._boarding.handle_recognition(user, jacket)
                     else:
                         note = (box, RED, "UNKNOWN", 2)
                         self._boarding.handle_unknown()
             self._scan_note = note
+            self._jacket_note = jacket_note
 
         # 검출을 건너뛰는 프레임에는 마지막 주석을 그대로 그려 박스 깜빡임을 막는다
         if self._scan_note is not None:
@@ -197,6 +216,12 @@ class CameraManager:
             if tag:
                 cv2.putText(display, tag, (x, y - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+        if self._jacket_note is not None:
+            (x, y, w, h), color, tag = self._jacket_note
+            cv2.rectangle(display, (x, y), (x + w, y + h), color, 1)
+            cv2.putText(display, tag, (x + 4, y + 16),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         self._publish(display)
 

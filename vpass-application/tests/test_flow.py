@@ -68,10 +68,40 @@ def main():
     time.sleep(0.2)
     check("착용 인식", rt.devices.is_worn("jacket-1") is True)
 
-    print("\n== 3) 얼굴 인식 → 승선 목록에만 추가 (시동은 잠긴 채 유지) ==")
+    print("\n== 2-1) 구명조끼 시각 확인 (임시 HSV 구현) ==")
+    import numpy as np  # noqa: E402
+    from vpass import jacketvision  # noqa: E402
+
+    face_box = (270, 80, 100, 100)                  # 화면 중앙 상단의 얼굴
+    plain = np.full((480, 640, 3), 60, np.uint8)    # 무채색 배경/옷
+    r = jacketvision.assess_jacket(plain, face_box)
+    check("무채색 상체 → 미확인", r["visible"] is False and r["box"] is not None, str(r))
+
+    orange = plain.copy()
+    bx, by, bw, bh = r["box"]
+    orange[by:by + bh, bx:bx + bw] = (0, 128, 255)  # 상체 ROI 를 주황(BGR)으로 채움
+    r2 = jacketvision.assess_jacket(orange, face_box)
+    check("주황 상체 → 착용 확인", r2["visible"] is True and r2["ratio"] > 0.9, str(r2))
+
+    r3 = jacketvision.assess_jacket(plain, (270, 380, 100, 100))  # 얼굴이 화면 하단
+    check("상체 화면 밖 → 판단 불가", r3["visible"] is None and r3["box"] is None, str(r3))
+
+    # 모듈은 착용(치팅 가능 상태)이라도 카메라 확인을 통과해야 승선된다
+    rt.boarding._notice_times.clear()
+    rt.boarding.handle_recognition(user, {"visible": False, "ratio": 0.02, "box": (0, 0, 10, 10)})
+    check("카메라 미확인 시 승선 거부", rt.boarding.count() == 0)
+    check("카메라 미확인 경고", "카메라에 확인되지 않습니다" in rt.overlay.get()["text"])
+    rt.boarding.handle_recognition(user, {"visible": None, "ratio": 0.0, "box": None})
+    check("판단 불가 시 승선 보류", rt.boarding.count() == 0)
+    check("판단 불가 안내", "상체가 화면에" in rt.overlay.get()["text"])
+
+    print("\n== 3) 얼굴 인식(모듈+카메라 확인) → 승선 목록에만 추가 (시동은 잠긴 채 유지) ==")
     rt.boarding._notice_times.clear()  # 쿨다운 초기화
-    rt.boarding.handle_recognition(user)
+    rt.boarding.handle_recognition(user, {"visible": True, "ratio": 0.42, "box": (225, 205, 190, 165)})
     check("승선 처리", rt.boarding.count() == 1)
+    entry = rt.boarding.session()[0]
+    check("모듈+카메라 확인 기록",
+          entry["lifejacket"] is True and entry["jacket_visual"] is True, str(entry))
     check("시동 잠금 유지", rt.engine.snapshot()["locked"])
     check("승선 로그 저장", len(rt.boarding_logs_store.load()) == 1)
     check("중복 승선 방지", (rt.boarding.handle_recognition(user), rt.boarding.count())[1] == 1)
@@ -157,6 +187,25 @@ def main():
     except ValueError:
         blocked = True
     check("빈 승선 목록 거부", blocked)
+
+    print("\n== 9-1) 장치 미배정 선원 → 카메라 확인으로 승선 ==")
+    user2 = {"id": "u2", "name": "김선원", "phone": "010-2222-3333",
+             "device_id": None, "photo": None,
+             "registered_at": "2026-08-01 09:00:00"}
+    rt.boarding.handle_recognition(user2, {"visible": True, "ratio": 0.5, "box": (0, 0, 100, 100)})
+    check("카메라 확인만으로 승선", rt.boarding.count() == 1)
+    e2 = rt.boarding.session()[0]
+    check("장치 미배정 + 카메라 확인 기록",
+          e2["lifejacket"] is None and e2["jacket_visual"] is True, str(e2))
+
+    # 시각 확인이 꺼진 경우(jacket_check=None)는 기존 동작 그대로 승선된다
+    user3 = {"id": "u3", "name": "박선원", "phone": "010-3333-4444",
+             "device_id": None, "photo": None,
+             "registered_at": "2026-08-01 09:00:00"}
+    rt.boarding.handle_recognition(user3)
+    e3 = rt.boarding.session()[1]
+    check("시각 확인 꺼짐 → 기존 동작 유지",
+          rt.boarding.count() == 2 and e3["jacket_visual"] is None, str(e3))
 
     rt.stop()
     print(f"\n결과: PASS {PASS} / FAIL {FAIL}")
