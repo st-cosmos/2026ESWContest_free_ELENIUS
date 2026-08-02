@@ -1,6 +1,7 @@
-// 앱 루트: 셋업 게이트 + 셸(상태바/사이드바) + 화면 전환 + SOS 모달
+// 앱 루트: 셋업 게이트 + 셸(상태바/사이드바) + 화면 전환 + SOS/구명조끼 경고 모달
 
 import { useState } from "react";
+import { JacketAlertModal } from "./components/JacketAlertModal";
 import { NAV_ITEMS, Sidebar, type ScreenKey } from "./components/Sidebar";
 import { SosModal } from "./components/SosModal";
 import { StatusBar } from "./components/StatusBar";
@@ -71,6 +72,10 @@ export default function App() {
         {screen === "vessel-info" && <VesselInfo state={state} />}
       </div>
 
+      {/* SOS 모달이 해제 경고보다 위에 오도록 나중에 렌더링 */}
+      {state.lifejacket.doff_alert && (
+        <JacketAlertModal alert={state.lifejacket.doff_alert} />
+      )}
       {state.sos && <SosModal report={state.sos} />}
     </div>
   );

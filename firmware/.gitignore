@@ -1,0 +1,9 @@
+# WiFi 비밀번호 등 개인 설정 (config.example.h 를 복사해서 사용)
+include/config.h
+
+# PlatformIO
+.pio/
+
+# OS / 에디터
+.DS_Store
+.idea/

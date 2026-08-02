@@ -66,6 +66,9 @@ export const api = {
   triggerSos: () => post<{ success: boolean }>("/api/sos"),
   ackSos: () => post<{ success: boolean }>("/api/sos/ack"),
 
+  // 운항 중 구명조끼 해제 경고 모달 확인(닫기)
+  ackJacketAlert: () => post<{ success: boolean }>("/api/jacket-alert/ack"),
+
   // 하드웨어 없이 익수 시나리오를 시연하기 위한 구명조끼 장치 시뮬레이터
   devJacket: (device: string, action: string) =>
     post<{ success: boolean }>("/api/dev/jacket", { device, action }),

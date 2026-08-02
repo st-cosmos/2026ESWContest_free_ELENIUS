@@ -43,7 +43,8 @@ export interface CrewEntry {
   name: string;
   phone: string;
   time: string;
-  lifejacket: boolean | null; // 모듈(홀센서) 확인 · null = 장치 미배정
+  device_id?: string | null; // 승선 스캔 시 동적 매칭된 구명조끼 장치 (구 기록에는 없음)
+  lifejacket: boolean | null; // 모듈(홀센서) 확인 · null = 구버전 기록(장치 미배정)
   jacket_visual?: boolean | null; // 카메라 시각 확인 · null = 시각 확인 꺼짐 (구 기록에는 없음)
 }
 
@@ -66,6 +67,13 @@ export interface DeviceState {
   mob: boolean;
   mob_cause: "fall" | "signal_loss" | null;
   mob_at: string | null;
+}
+
+// 운항 중 구명조끼 해제(버클 풀림) 경고 — 재착용 또는 확인 시 사라짐
+export interface JacketDoffAlert {
+  device: string;
+  who: string;
+  time: string;
 }
 
 export interface SosReport {
@@ -128,7 +136,12 @@ export interface AppState {
   camera_mode: string;
   overlay: { text: string; color: string };
   boarding: { count: number; session: CrewEntry[] };
-  lifejacket: { devices: DeviceState[]; worn_count: number; mob_alarm: boolean };
+  lifejacket: {
+    devices: DeviceState[];
+    worn_count: number;
+    mob_alarm: boolean;
+    doff_alert: JacketDoffAlert | null;
+  };
   voyage: {
     active: boolean;
     current_id: string | null;
