@@ -1,9 +1,12 @@
 """카메라 매니저.
 
 백그라운드 스레드에서 프레임을 읽어 모드별로 처리한다.
-  - idle:     대기 (얼굴 인식 안 함, 화면 절전용)
+  - idle:     대기 — 카메라 장치를 닫아 절전한다 (발열 저감)
   - scan:     출항 화면 — 얼굴 인식 → BoardingManager 에 결과 전달
   - register: 등록 화면 — 얼굴 가이드 박스만 표시, 원본 프레임 보관
+
+카메라는 scan/register 모드에서만 열리고, idle 로 돌아오면 해제된다.
+얼굴 검출은 DETECT_EVERY_N_FRAMES 프레임마다 1회만 수행한다.
 
 카메라가 없는 개발 환경에서도 서버는 정상 동작하며 안내 프레임을 송출한다.
 """
@@ -16,7 +19,7 @@ import time
 import cv2
 import numpy as np
 
-from .config import CAMERA_INDEX, MATCH_THRESHOLD
+from .config import CAMERA_INDEX, DETECT_EVERY_N_FRAMES, MATCH_THRESHOLD
 from .facerec import (
     crop_face_roi,
     detect_largest_face,
@@ -52,6 +55,11 @@ class CameraManager:
         self._thread: threading.Thread | None = None
         self._last_open_try = 0.0
 
+        # 검출 스로틀 상태 (카메라 스레드 전용)
+        self._frame_no = 0
+        self._scan_note = None      # 마지막 검출 주석: (box, color, tag, thickness)
+        self._register_box = None   # 마지막 검출 가이드 박스
+
     # ── 수명 주기 ────────────────────────────────────────────────────────
     def start(self) -> None:
         self._cascade = load_face_cascade()
@@ -79,6 +87,11 @@ class CameraManager:
             self.mode = mode
             if mode == "register":
                 self.raw_register_frame = None
+            self._frame_no = 0
+            self._scan_note = None
+            self._register_box = None
+        if mode in ("scan", "register"):
+            self._last_open_try = 0.0  # 대기에서 복귀 시 3초 스로틀 없이 즉시 오픈
 
     def get_register_frame(self):
         with self.lock:
@@ -95,14 +108,30 @@ class CameraManager:
         self._cap = cv2.VideoCapture(CAMERA_INDEX)
         self.camera_ok = bool(self._cap.isOpened())
 
+    def _close_camera(self) -> None:
+        if self._cap is not None:
+            self._cap.release()
+            self._cap = None
+        self.camera_ok = False
+
     def _loop(self) -> None:
-        self._open_camera()
         while self._running:
+            with self.lock:
+                mode = self.mode
+
+            if mode == "idle":
+                # 절전: 카메라를 닫아 센서/USB 스트리밍을 멈춘다 (발열 저감)
+                self._close_camera()
+                self._publish(self._placeholder("CAMERA STANDBY"))
+                time.sleep(0.3)
+                continue
+
             if self._cap is None or not self._cap.isOpened():
                 self.camera_ok = False
-                self._publish(self._placeholder("CAMERA CONNECTING..."))
-                time.sleep(0.5)
                 self._open_camera()
+                if self._cap is None or not self._cap.isOpened():
+                    self._publish(self._placeholder("CAMERA CONNECTING..."))
+                    time.sleep(0.5)
                 continue
 
             ret, frame = self._cap.read()
@@ -116,14 +145,14 @@ class CameraManager:
             self.camera_ok = True
             frame = cv2.flip(frame, 1)  # 거울 모드
 
-            with self.lock:
-                mode = self.mode
+            self._frame_no += 1
+            detect_now = (self._frame_no - 1) % DETECT_EVERY_N_FRAMES == 0
 
             try:
                 if mode == "scan":
-                    self._process_scan(frame)
+                    self._process_scan(frame, detect_now)
                 elif mode == "register":
-                    self._process_register(frame)
+                    self._process_register(frame, detect_now)
                 else:
                     self._publish(frame)
             except Exception as e:
@@ -132,45 +161,52 @@ class CameraManager:
 
             time.sleep(0.01)
 
-    def _process_scan(self, frame) -> None:
+    def _process_scan(self, frame, detect_now: bool) -> None:
         display = frame.copy()
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        box = detect_largest_face(self._cascade, gray)
 
-        if box is not None:
-            x, y, w, h = box
-            with self.lock:
-                recognizer = self._recognizer
-                label_map = dict(self._label_to_user)
+        if detect_now:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            box = detect_largest_face(self._cascade, gray)
+            note = None
+            if box is not None:
+                with self.lock:
+                    recognizer = self._recognizer
+                    label_map = dict(self._label_to_user)
 
-            if recognizer is None:
-                cv2.rectangle(display, (x, y), (x + w, y + h), WHITE, 1)
-                self._boarding.handle_no_model()
-            else:
-                face = normalize_face(crop_face_roi(gray, box))
-                label, confidence = recognizer.predict(face)
-                if confidence <= MATCH_THRESHOLD and label in label_map:
-                    user = label_map[label]
-                    boarded = self._boarding.is_boarded(user.get("id") or user.get("name", ""))
-                    tag = "BOARDED" if boarded else f"PASSENGER ({confidence:.0f})"
-                    cv2.rectangle(display, (x, y), (x + w, y + h), GREEN, 2)
-                    cv2.putText(display, tag, (x, y - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, GREEN, 2)
-                    self._boarding.handle_recognition(user)
+                if recognizer is None:
+                    note = (box, WHITE, None, 1)
+                    self._boarding.handle_no_model()
                 else:
-                    cv2.rectangle(display, (x, y), (x + w, y + h), RED, 2)
-                    cv2.putText(display, "UNKNOWN", (x, y - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, RED, 2)
-                    self._boarding.handle_unknown()
+                    face = normalize_face(crop_face_roi(gray, box))
+                    label, confidence = recognizer.predict(face)
+                    if confidence <= MATCH_THRESHOLD and label in label_map:
+                        user = label_map[label]
+                        boarded = self._boarding.is_boarded(user.get("id") or user.get("name", ""))
+                        tag = "BOARDED" if boarded else f"PASSENGER ({confidence:.0f})"
+                        note = (box, GREEN, tag, 2)
+                        self._boarding.handle_recognition(user)
+                    else:
+                        note = (box, RED, "UNKNOWN", 2)
+                        self._boarding.handle_unknown()
+            self._scan_note = note
+
+        # 검출을 건너뛰는 프레임에는 마지막 주석을 그대로 그려 박스 깜빡임을 막는다
+        if self._scan_note is not None:
+            (x, y, w, h), color, tag, thickness = self._scan_note
+            cv2.rectangle(display, (x, y), (x + w, y + h), color, thickness)
+            if tag:
+                cv2.putText(display, tag, (x, y - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
         self._publish(display)
 
-    def _process_register(self, frame) -> None:
+    def _process_register(self, frame, detect_now: bool) -> None:
         display = frame.copy()
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        box = detect_largest_face(self._cascade, gray)
-        if box is not None:
-            x, y, w, h = box
+        if detect_now:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            self._register_box = detect_largest_face(self._cascade, gray)
+        if self._register_box is not None:
+            x, y, w, h = self._register_box
             cv2.rectangle(display, (x, y), (x + w, y + h), YELLOW, 2)
         with self.lock:
             self.raw_register_frame = frame.copy()

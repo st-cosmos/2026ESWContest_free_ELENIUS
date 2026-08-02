@@ -49,6 +49,8 @@ DEMO_SERVER_URL = os.environ.get("VPASS_DEMO_SERVER_URL", "").strip() or None
 
 # ── 카메라 ──────────────────────────────────────────────────────────────
 CAMERA_INDEX = int(os.environ.get("VPASS_CAMERA_INDEX", "0"))
+# 발열 저감: N 프레임마다 1회만 얼굴 검출 (1 = 매 프레임)
+DETECT_EVERY_N_FRAMES = max(1, int(os.environ.get("VPASS_DETECT_EVERY_N_FRAMES", "3")))
 
 # ── GPS / 지자계 ────────────────────────────────────────────────────────
 # auto: 라즈베리파이에서는 실제 하드웨어, 그 외 개발 환경에서는 시뮬레이터
