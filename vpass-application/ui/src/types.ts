@@ -40,7 +40,8 @@ export interface CrewEntry {
   name: string;
   phone: string;
   time: string;
-  lifejacket: boolean | null;
+  lifejacket: boolean | null; // 모듈(홀센서) 확인 · null = 장치 미배정
+  jacket_visual?: boolean | null; // 카메라 시각 확인 · null = 시각 확인 꺼짐 (구 기록에는 없음)
 }
 
 export interface BoardingSummary {

@@ -14,6 +14,14 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { AppState, CrewEntry } from "../types";
 
+// 구명조끼 확인 출처(모듈/카메라) 라벨 — 없으면 빈 문자열
+function jacketLabel(entry: CrewEntry): string {
+  const sources = [entry.lifejacket && "모듈", entry.jacket_visual && "카메라"]
+    .filter(Boolean)
+    .join("·");
+  return sources ? ` · 구명조끼 확인(${sources})` : "";
+}
+
 function CrewRow({ entry }: { entry: CrewEntry }) {
   return (
     <div
@@ -44,7 +52,7 @@ function CrewRow({ entry }: { entry: CrewEntry }) {
       </div>
       <span style={{ fontSize: 11, color: "var(--text-2)" }}>
         얼굴 인식 완료 · 승선 확인
-        {entry.lifejacket ? " · 구명조끼 착용" : ""}
+        {jacketLabel(entry)}
       </span>
     </div>
   );
@@ -59,7 +67,7 @@ function DepartureConfirm({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const wearing = crew.filter((c) => c.lifejacket).length;
+  const wearing = crew.filter((c) => c.lifejacket || c.jacket_visual).length;
 
   const confirm = async () => {
     setBusy(true);
@@ -101,7 +109,7 @@ function DepartureConfirm({
               color: "var(--accent)",
             }}
           >
-            {crew.length}명 · 구명조끼 착용 {wearing}명
+            {crew.length}명 · 구명조끼 확인 {wearing}명
           </span>
         </div>
 
@@ -132,9 +140,15 @@ function DepartureConfirm({
               <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>
                 {c.name}
               </span>
-              <span className={`badge ${c.lifejacket ? "accent" : "muted"}`}>
+              <span
+                className={`badge ${c.lifejacket || c.jacket_visual ? "accent" : "muted"}`}
+              >
                 <span className="dot" />
-                {c.lifejacket ? "구명조끼 착용" : "장치 미배정"}
+                {c.lifejacket
+                  ? "구명조끼 착용"
+                  : c.jacket_visual
+                    ? "구명조끼 확인(카메라)"
+                    : "장치 미배정"}
               </span>
               <span style={{ flex: 1 }} />
               <span
@@ -294,7 +308,7 @@ export function Departure({ state }: { state: AppState }) {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "flex-start",
               padding: 18,
             }}
           >
@@ -333,9 +347,11 @@ export function Departure({ state }: { state: AppState }) {
               )}
             </div>
 
+            {/* 얼굴 안내선 — 상체가 함께 나오도록 화면 위쪽에 배치 */}
             <div
               style={{
                 position: "relative",
+                marginTop: 6,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -353,14 +369,20 @@ export function Departure({ state }: { state: AppState }) {
                 }}
               />
               <span style={{ fontSize: 12, color: "var(--text-2)" }}>
-                얼굴을 안내선 안에 맞춰 주세요
+                구명조끼를 착용하고 얼굴을 안내선 안에 맞춰 주세요
               </span>
             </div>
 
             <span
-              style={{ position: "relative", fontSize: 11, color: "var(--text-3)" }}
+              style={{
+                position: "relative",
+                marginTop: "auto",
+                fontSize: 11,
+                color: "var(--text-3)",
+              }}
             >
-              얼굴 영역만 인식합니다 · 승선이 끝나면 우측에서 출항을 확정하세요
+              얼굴 인식과 구명조끼 착용을 함께 확인합니다 · 승선이 끝나면 우측에서 출항을
+              확정하세요
             </span>
           </div>
         </section>
