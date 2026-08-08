@@ -13,6 +13,7 @@ import { UsersScreen } from "./screens/Users";
 import { VesselInfo } from "./screens/VesselInfo";
 import { VoyageRecord } from "./screens/VoyageRecord";
 import { useAppState } from "./state";
+import { useSoundEffects } from "./useSoundEffects";
 
 function initialScreen(): ScreenKey {
   // ?screen=departure 형태로 초기 화면 지정 가능 (개발/키오스크용)
@@ -24,6 +25,7 @@ export default function App() {
   const { state, connected, refresh } = useAppState();
   const [screen, setScreen] = useState<ScreenKey>(initialScreen);
   const [setupDone, setSetupDone] = useState(false);
+  useSoundEffects(state, connected);
 
   if (!state) {
     return (
