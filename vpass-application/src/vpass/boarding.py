@@ -9,6 +9,9 @@
   카메라만 믿으면 색상 위장이 가능하므로 둘을 교차 확인한다.
 - 동적 매칭은 '착용 직후 스캔' 순서를 전제로 하며, 여러 명이 미리 착용해
   두는 등 순서가 어긋나는 경우의 예외 처리는 추후 보강한다.
+- 승선 세션은 한 항차(출항~입항) 단위다. 입항하면 초기화되고, 입항이 다른 경로로
+  처리돼 명단이 남아 있어도 다음 인식 때 새 항차로 보고 비운다(_sync_session_epoch).
+  그래서 입항 이력이 있어도 다음 출항에서는 다시 환영 인사와 함께 승선한다.
 - 시동 잠금 해제와 출항 신고는 여기서 하지 않는다. 선장이 승선 인원을 확인하고
   '출항 확정'을 눌렀을 때 Runtime.confirm_departure() 가 수행한다.
 - 모든 승선 이력은 boarding_logs.json 에 누적 저장된다(보관 기간 1년).
@@ -50,19 +53,21 @@ class Overlay:
 
 class BoardingManager:
     def __init__(self, users_store, logs_store, device_registry, engine, overlay: Overlay,
-                 on_board=None):
+                 on_board=None, arrival_epoch=None):
         self._users = users_store
         self._logs = logs_store
         self._devices = device_registry
         self._engine = engine
         self._overlay = overlay
         self._on_board = on_board
+        self._arrival_epoch = arrival_epoch  # () -> int (VoyageManager.arrival_epoch)
 
         self._lock = threading.Lock()
         self._session: list[dict] = []      # [{user_id, name, phone, time, device_id, ...}]
         self._boarded_ids: set[str] = set()
         self._claimed_devices: set[str] = set()    # 이번 세션에서 매칭이 끝난 장치
         self._notice_times: dict[str, float] = {}  # 중복 안내 쿨다운
+        self._session_epoch: int | None = None     # 이 세션이 시작된 시점의 입항 횟수
 
     # ── 얼굴 인식 콜백 (카메라 스레드에서 호출) ─────────────────────────
     def handle_recognition(self, user: dict, jacket_check: dict | None = None) -> None:
@@ -77,6 +82,9 @@ class BoardingManager:
         name = user.get("name", "")
 
         with self._lock:
+            # 지난 항차(입항 완료)의 명단이 남아 있으면 새 승선 세션으로 시작한다
+            self._sync_session_epoch()
+
             if user_id in self._boarded_ids:
                 if self._cooldown_ok(f"re:{user_id}"):
                     self._overlay.set(f"이미 승선 확인된 선원입니다 ({name})", COLOR_WARN)
@@ -122,6 +130,10 @@ class BoardingManager:
             }
             self._session.append(entry)
             self._boarded_ids.add(user_id)
+            # 카메라는 같은 얼굴을 초당 여러 번 다시 인식한다. 재안내 쿨다운을 지금
+            # 시작해 두지 않으면 환영 인사가 곧바로 '이미 승선 확인된 선원입니다'로
+            # 덮여, 승선에 성공해도 경고 문구만 계속 보이게 된다.
+            self._notice_times[f"re:{user_id}"] = time.time()
 
         # 파일 기록 (락 밖에서)
         self._logs.update(
@@ -140,7 +152,33 @@ class BoardingManager:
         )
 
         checked = "모듈·카메라" if jacket_visual else "모듈"
-        self._overlay.set(f"{name} 님 승선 확인 · 구명조끼 확인({checked})", COLOR_OK)
+        self._overlay.set(f"{name} 님 환영합니다 · 승선 확인(구명조끼 {checked})", COLOR_OK)
+
+        # 운항 중이라면 해당 운항의 승선 명단도 최신화한다
+        if self._on_board:
+            self._on_board(self.session())
+
+    def _sync_session_epoch(self) -> None:
+        """입항 이후 첫 인식이면 지난 항차의 승선 세션을 비운다. (락 안에서 호출)
+
+        입항하면 Runtime 이 세션을 초기화하지만(_handle_arrival), 입항이 다른 경로로
+        처리되면 지난 항차의 명단이 남아 다음 출항 때 '이미 승선 확인된 선원입니다'
+        안내만 반복된다. 마지막 입항 횟수가 세션 시작 시점과 달라졌으면 새 항차로
+        보고 명단을 비워, 다시 환영 인사와 함께 승선하도록 한다.
+        """
+        epoch = self._arrival_epoch() if self._arrival_epoch else None
+        if not self._session:
+            self._session_epoch = epoch  # 새 세션은 지금의 입항 상태를 기준으로 시작
+        elif epoch != self._session_epoch:
+            self._clear_session()
+            self._session_epoch = epoch
+
+    def _clear_session(self) -> None:
+        """승선 명단·매칭·안내 쿨다운을 비운다. (락 안에서 호출)"""
+        self._session.clear()
+        self._boarded_ids.clear()
+        self._claimed_devices.clear()
+        self._notice_times.clear()
 
     def _claim_device(self) -> str | None:
         """미매칭 착용 장치 중 가장 최근에 착용된 장치를 이 선원 몫으로 선점한다.
@@ -166,10 +204,6 @@ class BoardingManager:
                     return dict(e)
         return None
 
-        # 운항 중이라면 해당 운항의 승선 명단도 최신화한다
-        if self._on_board:
-            self._on_board(self.session())
-
     def handle_unknown(self) -> None:
         if self._cooldown_ok("unknown"):
             self._overlay.set("등록되지 않은 사람입니다", COLOR_DANGER)
@@ -193,10 +227,8 @@ class BoardingManager:
     # ── 세션 관리 ────────────────────────────────────────────────────────
     def reset_session(self, relock: bool = True) -> None:
         with self._lock:
-            self._session.clear()
-            self._boarded_ids.clear()
-            self._claimed_devices.clear()
-            self._notice_times.clear()
+            self._clear_session()
+            self._session_epoch = None  # 다음 인식 때 현재 입항 상태로 다시 잡는다
         if relock:
             self._engine.lock()
 

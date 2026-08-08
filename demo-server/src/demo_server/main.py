@@ -2,6 +2,8 @@
 
   uv run demo-server                # 서버 시작 + 브라우저 자동 열기
   uv run demo-server --no-browser   # 서버만 시작
+  uv run demo-server --reset        # 이전 신고·출입항·출항 상태를 지우고 시작
+  uv run demo-server --reset-all    # 시뮬레이터 항로·펜스, 기상까지 전부 지우고 시작
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ import webbrowser
 import uvicorn
 
 from .config import DEFAULT_PORT
+from .reset import reset_data
 
 
 def _open_ui(url: str) -> None:
@@ -26,7 +29,19 @@ def main() -> None:
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--no-browser", action="store_true", help="브라우저를 열지 않음")
+    parser.add_argument("--reset", action="store_true",
+                        help="이전 신고·출입항 로그·선박 목록과 시뮬레이터 출항 상태를 "
+                             "지우고 시작 (항로·펜스는 유지)")
+    parser.add_argument("--reset-all", action="store_true",
+                        help="시뮬레이터 항로·펜스와 관할 기상까지 모두 지우고 시작")
     args = parser.parse_args()
+
+    # 서버(Runtime)가 파일을 읽기 전에 지워야 한다
+    if args.reset or args.reset_all:
+        scope = "전체 데이터" if args.reset_all else "운영 데이터"
+        removed = reset_data(include_setup=args.reset_all)
+        detail = ", ".join(removed) if removed else "지울 데이터가 없습니다"
+        print(f"[reset] {scope} 초기화 — {detail}")
 
     if not args.no_browser:
         threading.Thread(

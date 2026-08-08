@@ -14,6 +14,7 @@ os.environ["VPASS_DATA_DIR"] = tempfile.mkdtemp(prefix="vpass-test-")
 
 from vpass import config  # noqa: E402
 from vpass.gps import NmeaGpsReader  # noqa: E402
+from vpass.reset import reset_data  # noqa: E402
 from vpass.runtime import Runtime  # noqa: E402
 
 PASS = 0
@@ -135,6 +136,13 @@ def main():
     check("장치 동적 매칭(jacket-1)", entry["device_id"] == "jacket-1", str(entry))
     check("시동 잠금 유지", rt.engine.snapshot()["locked"])
     check("승선 로그 저장", len(rt.boarding_logs_store.load()) == 1)
+    check("환영 인사 표시", "환영합니다" in rt.overlay.get()["text"], rt.overlay.get()["text"])
+
+    # 카메라는 같은 얼굴을 초당 여러 번 다시 인식한다.
+    # 그때마다 '이미 승선' 안내로 덮이면 환영 인사를 볼 수 없다.
+    rt.boarding.handle_recognition(user, {"visible": True, "ratio": 0.42, "box": (225, 205, 190, 165)})
+    check("연속 재인식에도 환영 인사 유지",
+          "환영합니다" in rt.overlay.get()["text"], rt.overlay.get()["text"])
     check("중복 승선 방지", (rt.boarding.handle_recognition(user), rt.boarding.count())[1] == 1)
 
     print("\n== 4) 승선 확인 → 시동 허용 (출항 신고 아님) ==")
@@ -275,7 +283,69 @@ def main():
           rt.boarding.count() == 3 and e4["device_id"] == "jacket-3"
           and e4["jacket_visual"] is None, str(e4))
 
+    print("\n== 9-2) 운항 중 추가 승선 반영 + 입항 후 재출항 시 다시 환영 인사 ==")
+    jacket_visual = {"visible": True, "ratio": 0.42, "box": (225, 205, 190, 165)}
+    voyage = rt.confirm_departure()
+    check("출항 시 승선 명단 스냅샷",
+          len(rt.voyage.get_voyage(voyage["id"])["crew"]) == 3,
+          str(rt.voyage.get_voyage(voyage["id"])["crew"]))
+
+    # 운항 중 추가 승선 → 해당 운항 기록의 명단도 갱신되어야 한다(on_board 콜백)
+    rt.sim_jacket("jacket-5").apply("wear")
+    time.sleep(0.15)
+    rt.boarding.handle_recognition(user, jacket_visual)
+    check("운항 중 추가 승선 시 운항 명단 갱신",
+          len(rt.voyage.get_voyage(voyage["id"])["crew"]) == 4,
+          str(rt.voyage.get_voyage(voyage["id"])["crew"]))
+
+    rt.confirm_arrival()
+    check("입항 시 승선 세션 초기화", rt.boarding.count() == 0)
+
+    rt.sim_jacket("jacket-6").apply("wear")
+    time.sleep(0.15)
+    rt.boarding.handle_recognition(user, jacket_visual)
+    check("입항 후 같은 선원 재승선", rt.boarding.count() == 1)
+    check("입항 후 환영 인사", "환영합니다" in rt.overlay.get()["text"], rt.overlay.get()["text"])
+
+    # 입항이 세션을 비우지 못한 경우(재시작 등)에도 다음 인식에서 스스로 정리된다
+    rt.boarding._session_epoch = rt.voyage.arrival_epoch() - 1
+    rt.sim_jacket("jacket-7").apply("wear")
+    time.sleep(0.15)
+    rt.boarding.handle_recognition(user2, jacket_visual)
+    session = rt.boarding.session()
+    check("지난 항차 잔여 세션 자동 정리",
+          len(session) == 1 and session[0]["user_id"] == "u2", str(session))
+    check("자동 정리 후 환영 인사", "환영합니다" in rt.overlay.get()["text"], rt.overlay.get()["text"])
+
     rt.stop()
+
+    print("\n== 10) 시작 옵션 데이터 초기화 (--reset / --reset-all) ==")
+    rt.vessel_store.save({"vessel_id": "테스트-00001", "name": "테스트호"})
+    face = config.FACES_DIR / "test_face.jpg"
+    face.write_bytes(b"jpeg")
+    check("초기화 전 운항 기록 존재", config.VOYAGES_FILE.exists())
+
+    removed = reset_data()
+    check("--reset: 운항 기록 삭제", not config.VOYAGES_FILE.exists(), str(removed))
+    check("--reset: 승선 이력 삭제", not config.BOARDING_LOGS_FILE.exists())
+    check("--reset: 등록 선원·어선 정보 유지",
+          config.USERS_FILE.exists() and config.VESSEL_FILE.exists())
+    check("--reset: 얼굴 사진 유지", face.exists())
+    check("--reset 재실행 안전(멱등)", reset_data() == [])
+
+    removed_all = reset_data(include_registry=True)
+    check("--reset-all: 등록 선원 삭제", not config.USERS_FILE.exists(), str(removed_all))
+    check("--reset-all: 어선 정보 삭제", not config.VESSEL_FILE.exists())
+    check("--reset-all: 얼굴 사진 삭제", not face.exists())
+    check("--reset-all: faces 디렉터리 유지", config.FACES_DIR.is_dir())
+
+    # 초기화 뒤 새로 뜬 서버는 '이미 출항' 상태를 물려받지 않아야 한다
+    fresh = Runtime()
+    check("초기화 후 재시작: 운항 중 아님", fresh.voyage.active_voyage() is None)
+    check("초기화 후 재시작: 승선 인원 없음", fresh.boarding.count() == 0)
+    check("초기화 후 재시작: 시동 잠금", fresh.engine.snapshot()["locked"])
+    fresh.stop()
+
     print(f"\n결과: PASS {PASS} / FAIL {FAIL}")
     sys.exit(1 if FAIL else 0)
 

@@ -108,7 +108,9 @@ class Runtime:
         self.boarding = BoardingManager(
             self.users_store, self.boarding_logs_store,
             self.devices, self.engine, self.overlay,
+            # VoyageManager 는 아래에서 생성되므로 지연 호출로 연결한다
             on_board=lambda crew: self.voyage.sync_active_crew(),
+            arrival_epoch=lambda: self.voyage.arrival_epoch(),
         )
         self.camera = CameraManager(self.users_store, self.boarding, config.APP_DIR)
         self.voyage = VoyageManager(
