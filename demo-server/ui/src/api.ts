@@ -1,6 +1,15 @@
 // 데모 관제 서버 API 호출 헬퍼
 
-import type { AppState, RegionWeather, SimState, Vessel, VesselForm } from "./types";
+import type {
+  AppState,
+  Boundary,
+  OceanBBox,
+  OceanFieldData,
+  SimState,
+  Vessel,
+  VesselForm,
+  WeatherPatch,
+} from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -40,8 +49,43 @@ export const api = {
   setVesselStatus: (id: string, status: "departed" | "docked") =>
     post<Ok>(`/api/vessels/${id}/status`, { status }),
 
-  setWeather: (region: string, condition: string, extras?: Partial<RegionWeather>) =>
+  /** 기상 상태(맑음/흐림…) 변경 */
+  setWeather: (region: string, condition: string, extras?: WeatherPatch) =>
     post<Ok>(`/api/weather/${encodeURIComponent(region)}`, { condition, ...extras }),
+
+  /** 풍향·풍속·해류 등 수치만 변경 (기상 상태는 유지) */
+  patchWeather: (region: string, patch: WeatherPatch) =>
+    post<Ok>(`/api/weather/${encodeURIComponent(region)}`, patch),
+
+  /** 해양 벡터 필드 — 해류/바람 흐름 시각화용 격자.
+   *  region 을 주면 그 관할 기상으로 계산한다(표류 예측과 같은 관할을 쓰기 위함). */
+  oceanField: (
+    layer: "current" | "wind",
+    bbox: OceanBBox,
+    cols = 26,
+    rows = 18,
+    region?: string,
+  ) => {
+    const q = new URLSearchParams({
+      layer,
+      min_lat: String(bbox.min_lat),
+      max_lat: String(bbox.max_lat),
+      min_lon: String(bbox.min_lon),
+      max_lon: String(bbox.max_lon),
+      cols: String(cols),
+      rows: String(rows),
+    });
+    if (region) q.set("region", region);
+    return request<OceanFieldData>(`/api/ocean/field?${q}`);
+  },
+
+  /** 요구조자 예상 위치 바운더리 (minutes 생략 시 실제 경과 시간) */
+  boundary: (reportId: string, minutes?: number) =>
+    request<Boundary>(
+      `/api/reports/${reportId}/boundary${minutes === undefined ? "" : `?minutes=${minutes}`}`,
+    ),
+
+  simReleaseSos: () => post<Ok>("/api/sim/sos/release"),
 
   // 운항 시뮬레이터
   simState: () => request<SimState>("/api/sim/state"),

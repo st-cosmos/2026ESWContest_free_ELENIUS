@@ -68,6 +68,7 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_COMPASS_X_SCALE`, `VPASS_COMPASS_Y_SCALE` | `1` | 지자계 고정 scale 값 |
 | `VPASS_COMPASS_HEADING_ALPHA` | `0.25` | 침로 저역통과 필터 계수(0 < alpha <= 1) |
 | `VPASS_DEMO_SERVER_URL` | (없음) | 설정 시 데모 관제 서버와 연동(텔레메트리/신고/출입항 전송·관할 기상 수신). 미설정 시 독립 동작 |
+| | | 관할 기상에는 풍향(`wind_dir`)·풍속(`wind_speed_ms`)·해류(`current_dir`/`current_kn`)가 포함되며, 관제 서버의 요구조자 표류 예측과 **같은 값**이 표시됩니다 |
 | `VPASS_JACKET_VISION` | `1` | 승선 시 구명조끼 카메라 시각 확인 사용 여부 (`0` 비활성) |
 | `VPASS_JACKET_METHOD` | `auto` | 판정 방법 — `auto`(모델 있으면 ml)/`ml`/`hsv` |
 | `VPASS_JACKET_MODEL` | `models/jacket_classifier.tflite` | 가슴 ROI 이진 분류 TFLite 모델 경로 |

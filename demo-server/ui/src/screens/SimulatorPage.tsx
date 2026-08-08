@@ -7,17 +7,20 @@ import {
   ExternalLink,
   Gauge,
   History,
+  Lock,
   LogIn,
   LogOut,
   Move,
   PenTool,
   Pause,
+  PersonStanding,
   Play,
   Repeat,
   RotateCcw,
   Ruler,
   SatelliteDish,
   Ship,
+  Siren,
   Spline,
   Square,
   Trash2,
@@ -25,6 +28,7 @@ import {
 } from "lucide-react";
 import { api } from "../api";
 import { useAppState } from "../state";
+import { navigate } from "../route";
 import { StatusBar } from "../components/StatusBar";
 import { SimMap, distanceNm, formatCoord, type Tool } from "../components/SimMap";
 import type { SimPoint, SimState } from "../types";
@@ -114,6 +118,7 @@ export function SimulatorPage() {
   const departed = sim.port_state === "departed";
   const realGps = sim.terminal?.gps_source === "hardware";
   const legs = sim.route.slice(1).map((p, i) => distanceNm(sim.route[i], p));
+  const sosLocked = Boolean(sim.sos?.locked);
 
   return (
     <div className="app">
@@ -164,6 +169,10 @@ export function SimulatorPage() {
             progress={sim.progress}
             tool={tool}
             terminal={terminal}
+            sos={sim.sos}
+            onOpenBoundary={
+              sim.sos?.info ? () => navigate(`/boundary/${sim.sos.info!.report_id}`) : undefined
+            }
             onVesselMove={onVesselMove}
             onRouteChange={onRouteChange}
             onFenceChange={onFenceChange}
@@ -173,11 +182,18 @@ export function SimulatorPage() {
             <button
               className="btn btn-primary"
               onClick={() => send(api.simRun("start"))}
-              disabled={sim.running || sim.route.length < 2}
+              disabled={sim.running || sim.route.length < 2 || sosLocked}
+              title={sosLocked ? "SOS 접수로 위치가 고정되어 있습니다" : undefined}
             >
               <Play size={16} />
               운항 시작
             </button>
+            {sosLocked && (
+              <span className="sim-lockchip">
+                <Lock size={14} />
+                SOS 위치 고정 · 운항 재개 불가
+              </span>
+            )}
             <button
               className="btn btn-secondary"
               onClick={() => send(api.simRun("pause"))}
@@ -239,8 +255,62 @@ export function SimulatorPage() {
           </div>
         </div>
 
-        {/* 우: 단말 / 항로 / 지오펜스 */}
+        {/* 우: SOS / 단말 / 항로 / 지오펜스 */}
         <div className="sim-side">
+          {sosLocked && (
+            <section className="panel sim-card sos">
+              <div className="panel-head">
+                <Siren size={17} style={{ color: "var(--red)" }} />
+                <div className="panel-title">SOS 접수 · 운항 정지</div>
+                <div className="spacer" />
+                <span className="sos-kind">
+                  {sim.sos.info?.cause === "mob" ? "자동 익수" : "수동 SOS"}{" "}
+                  {sim.sos.info?.time?.slice(-8) ?? ""}
+                </span>
+              </div>
+
+              <div className="sos-metrics">
+                <div className="sos-m">
+                  <span className="l">킬 스위치</span>
+                  <span className="v red">작동 · 엔진 정지</span>
+                </div>
+                <div className="sos-m">
+                  <span className="l">시뮬레이터</span>
+                  <span className="v red">위치 고정</span>
+                </div>
+                <div className="sos-m">
+                  <span className="l">표류 (해류+풍압)</span>
+                  <span className="v orange">
+                    {sim.sos.drift_kn.toFixed(2)} kn · {sim.sos.drift_bearing}°
+                  </span>
+                </div>
+              </div>
+
+              {sim.sos.info?.detail && <div className="sos-detail">{sim.sos.info.detail}</div>}
+
+              <div className="sos-actions">
+                {sim.sos.info && (
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => navigate(`/boundary/${sim.sos.info!.report_id}`)}
+                  >
+                    <PersonStanding size={15} />
+                    요구조자 예상 위치
+                  </button>
+                )}
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    if (window.confirm("위치 고정을 해제하고 운항을 재개할 수 있게 할까요?"))
+                      send(api.simReleaseSos());
+                  }}
+                >
+                  고정 해제
+                </button>
+              </div>
+            </section>
+          )}
+
           <section className="panel sim-card">
             <div className="panel-head">
               <SatelliteDish size={17} />

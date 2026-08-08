@@ -87,9 +87,19 @@ def set_vessel_status(vessel_id: str, cmd: StatusCmd, request: Request):
 # 해양 기상 (관할별) — 설정하면 V-PASS 가 조회해 반영
 # ═══════════════════════════════════════════════════════════════════════
 class WeatherCmd(BaseModel):
-    condition: str
+    """관할 기상 수정.
+
+    condition 없이 수치만 보내면 기상 상태는 그대로 두고 값만 바꾼다.
+    풍향(wind_dir)은 바람이 불어오는 방향, 해류(current_dir)는 흘러가는 방위다.
+    """
+
+    condition: str | None = None
     temp_c: float | None = None
-    wind: str | None = None
+    wind_dir: str | None = None          # N/NE/E/SE/S/SW/W/NW
+    wind_speed_ms: float | None = None
+    gust_ms: float | None = None
+    current_dir: float | None = None     # 0~359
+    current_kn: float | None = None
     wave_height_m: float | None = None
     water_temp_c: float | None = None
 
@@ -114,8 +124,49 @@ def set_region_weather(region: str, cmd: WeatherCmd, request: Request):
         extras=cmd.model_dump(exclude={"condition"}, exclude_none=True),
     )
     if entry is None:
-        raise HTTPException(status_code=400, detail="올바르지 않은 관할 또는 기상 상태입니다.")
+        raise HTTPException(
+            status_code=400, detail="올바르지 않은 관할·기상 상태 또는 풍향입니다."
+        )
     return {"success": True, "region": region, "weather": entry}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 해양 벡터 필드 (해류 · 풍향/풍속 시각화) — 국립해양조사원 또는 관제 설정값
+# ═══════════════════════════════════════════════════════════════════════
+@router.get("/api/ocean/field")
+def ocean_field(
+    request: Request,
+    layer: str = "current",
+    min_lat: float | None = None,
+    max_lat: float | None = None,
+    min_lon: float | None = None,
+    max_lon: float | None = None,
+    cols: int = 26,
+    rows: int = 18,
+    region: str | None = None,
+):
+    bbox = None
+    if None not in (min_lat, max_lat, min_lon, max_lon):
+        bbox = {"min_lat": min_lat, "max_lat": max_lat,
+                "min_lon": min_lon, "max_lon": max_lon}
+    return rt(request).ocean.field(
+        layer=layer, bbox=bbox, cols=cols, rows=rows, region=region
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 요구조자 예상 위치 (표류 예측 바운더리)
+# ═══════════════════════════════════════════════════════════════════════
+@router.get("/api/reports/{report_id}/boundary")
+def report_boundary(report_id: str, request: Request, minutes: float | None = None):
+    """익수 지점 + 해류·풍압으로 계산한 예상 중심 좌표와 확률 반경.
+
+    minutes 를 주면 해당 경과 시간(분)으로, 없으면 실제 경과 시간으로 계산한다.
+    """
+    result = rt(request).report_boundary(report_id, minutes)
+    if result is None:
+        raise HTTPException(status_code=404, detail="신고를 찾을 수 없습니다.")
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -144,7 +195,8 @@ def report_dispatch(report_id: str, request: Request):
 
 @router.post("/api/reports/{report_id}/close")
 def report_close(report_id: str, request: Request):
-    r = rt(request).reports.close(report_id)
+    """상황 종료 — 남은 신고가 없으면 시뮬레이터 위치 고정도 함께 해제된다."""
+    r = rt(request).close_report(report_id)
     if r is None:
         raise HTTPException(status_code=404, detail="신고를 찾을 수 없습니다.")
     return {"success": True, "report": r}
@@ -258,6 +310,13 @@ def sim_reset(request: Request):
     return {"success": True}
 
 
+@router.post("/api/sim/sos/release")
+def sim_sos_release(request: Request):
+    """SOS 위치 고정 해제 (시연 중 수동 복구용)."""
+    rt(request).simulator.release_sos()
+    return {"success": True}
+
+
 @router.get("/api/sim/terminal")
 def sim_terminal(request: Request):
     """V-PASS 단말이 주기적으로 받아가는 시뮬레이션 좌표 + 출입항 명령."""
@@ -272,7 +331,8 @@ def ingest_vessel(cmd: IngestVesselCmd, request: Request):
 
 @router.post("/api/ingest/report")
 def ingest_report(cmd: IngestReportCmd, request: Request):
-    report = rt(request).reports.add(cmd.model_dump())
+    """V-PASS 신고 수신 → 수신함 저장 + 운항 시뮬레이터 위치 고정."""
+    report = rt(request).ingest_report(cmd.model_dump())
     return {"success": True, "report": report}
 
 

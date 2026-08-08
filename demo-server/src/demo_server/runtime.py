@@ -6,13 +6,16 @@ import threading
 import time
 from datetime import datetime
 
-from . import config
+from . import config, drift
+from .geo import parse_position
+from .khoa import KhoaClient
+from .ocean import OceanField, region_for
 from .portlog import PortLog
 from .reports import ReportInbox
 from .simulator import Simulator
 from .storage import JsonStore
 from .vessels import STATUS_DEPARTED, STATUS_DOCKED, VesselRegistry
-from .weather import WeatherManager
+from .weather import WIND_DIRS, WeatherManager
 
 # 최초 실행 시 데모 선박 시드 (pencil 기획 시안 기준)
 _SEED_VESSELS = [
@@ -45,7 +48,15 @@ class Runtime:
         self.reports = ReportInbox(self.reports_store)
         self.portlog = PortLog(self.portlog_store)
         self.weather = WeatherManager(self.weather_store)
-        self.simulator = Simulator(self.simulator_store)
+
+        # 국립해양조사원 연동 + 해양 벡터 필드 (키 미설정 시 관제 설정값으로 계산)
+        self.khoa = KhoaClient()
+        self.ocean = OceanField(self.weather, self.khoa)
+
+        # SOS 로 정지한 배는 표류만 반영한다 (해류 + 풍압)
+        self.simulator = Simulator(
+            self.simulator_store, drift_provider=self._sim_drift_vector
+        )
 
         self._seed_vessels()
 
@@ -79,9 +90,31 @@ class Runtime:
                 self.simulator.step(config.SIM_TICK_SEC)
                 if elapsed >= config.SIM_INTERVAL_SEC:
                     self.vessels.simulate_step(elapsed)
+                    self.ocean.sync_observations()
                     elapsed = 0.0
             except Exception as e:  # 시뮬레이션 오류가 서버를 죽이지 않도록
                 print(f"[sim] 오류: {e}")
+
+    # ── 표류 (해류 + 풍압) ───────────────────────────────────────────────
+    def _sim_drift_region(self) -> str:
+        """표류 계산에 쓸 관할.
+
+        신고 관할 → 연결된 V-PASS 단말의 관할 → 좌표 기준 순으로 고른다.
+        요구조자 예상 위치(신고 관할 기준)와 시뮬레이터 선박이 서로 다른 방향으로
+        흘러가면 안 되므로, 신고가 있을 때는 반드시 같은 관할을 쓴다.
+        """
+        info = self.simulator.sos_info or {}
+        report = self.reports.get(info.get("report_id", "")) if info else None
+        if report and report.get("region"):
+            return report["region"]
+        terminal = self.linked_terminal()
+        if terminal and terminal.get("region"):
+            return terminal["region"]
+        return region_for(self.simulator.lat, self.simulator.lon)
+
+    def _sim_drift_vector(self) -> dict:
+        """관할 기상(해류 + 풍압)으로 표류 벡터를 계산한다."""
+        return drift.drift_vector(self.weather.get(self._sim_drift_region()) or {})
 
     # ── 출입항 상태 전환 (수동 선박 데모 조작) ──────────────────────────
     def set_vessel_status(self, vessel_id: str, status: str) -> dict | None:
@@ -94,6 +127,91 @@ class Runtime:
     # ── V-PASS 수신 ─────────────────────────────────────────────────────
     def ingest_port(self, kind: str, vessel_name: str, vessel_id: str, time_str: str | None) -> dict:
         return self.portlog.add(kind, vessel_name, vessel_id, time_str)
+
+    def ingest_report(self, payload: dict) -> dict:
+        """신고 접수 → 수신함에 저장하고 운항 시뮬레이터를 즉시 위치 고정한다.
+
+        실제 단말에서는 킬 스위치가 작동해 배가 멈추므로, 시뮬레이터도 항로
+        이동을 중단해야 관제 화면과 상태가 어긋나지 않는다.
+        """
+        report = self.reports.add(payload)
+        self.simulator.lock_for_sos({
+            "report_id": report["id"],
+            "cause": report["cause"],
+            "detail": report.get("detail"),
+            "time": report["time"],
+            "vessel_name": report.get("vessel_name"),
+            "vessel_id": report.get("vessel_id"),
+        })
+        print(f"[sos] 신고 접수 → 시뮬레이터 위치 고정 ({report.get('vessel_name')})")
+        return report
+
+    def close_report(self, report_id: str) -> dict | None:
+        """상황 종료 → 신고를 닫고, 남은 신고가 없으면 위치 고정을 해제한다."""
+        report = self.reports.close(report_id)
+        if report is None:
+            return None
+        if not self.reports.active():
+            self.simulator.release_sos()
+            print("[sos] 모든 신고 종료 → 시뮬레이터 위치 고정 해제")
+        return report
+
+    # ── 요구조자 예상 위치 (표류 예측) ──────────────────────────────────
+    def _report_origin(self, report: dict) -> tuple[float, float]:
+        """신고의 익수 지점 좌표. 좌표 문자열이 없으면 선박/시뮬레이터 위치로 폴백."""
+        coords = parse_position(report.get("position"))
+        if coords is not None:
+            return coords
+        vessel_id = report.get("vessel_id")
+        for vessel in self.vessels.list_public():
+            if vessel.get("vessel_id") == vessel_id:
+                return float(vessel["lat"]), float(vessel["lon"])
+        return self.simulator.lat, self.simulator.lon
+
+    @staticmethod
+    def _elapsed_minutes(report: dict) -> float:
+        stamp = report.get("time") or report.get("created_at") or ""
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%H:%M:%S"):
+            try:
+                parsed = datetime.strptime(stamp, fmt)
+            except ValueError:
+                continue
+            if fmt == "%H:%M:%S":
+                today = datetime.now()
+                parsed = parsed.replace(year=today.year, month=today.month, day=today.day)
+            return max(0.0, (datetime.now() - parsed).total_seconds() / 60.0)
+        return 0.0
+
+    def report_boundary(self, report_id: str, minutes: float | None = None) -> dict | None:
+        """신고 1건의 요구조자 예상 위치·확률 바운더리·시간별 탐색 구역."""
+        report = next(
+            (r for r in self.reports.list_public() if r.get("id") == report_id), None
+        )
+        if report is None:
+            return None
+
+        lat, lon = self._report_origin(report)
+        region = report.get("region") or region_for(lat, lon)
+        weather = self.weather.get(region) or {}
+        elapsed = self._elapsed_minutes(report) if minutes is None else float(minutes)
+
+        result = drift.predict(lat, lon, weather, elapsed)
+        result.update({
+            "report": report,
+            "region": region,
+            "weather": weather,
+            "elapsed_actual_min": round(self._elapsed_minutes(report), 1),
+            "timeline": drift.timeline(lat, lon, weather, elapsed),
+            "survival_hours": drift.survival_window_hours(weather.get("water_temp_c")),
+            "vessel": {
+                "lat": self.simulator.lat,
+                "lon": self.simulator.lon,
+                "locked": self.simulator.sos_locked,
+                "drift_kn": round(self.simulator.drift_kn, 2),
+                "drift_m": round(self.simulator.drift_m),
+            },
+        })
+        return result
 
     # ── 운항 시뮬레이터 ─────────────────────────────────────────────────
     def linked_terminal(self) -> dict | None:
@@ -122,4 +240,13 @@ class Runtime:
             "weather": self.weather.all(),
             "regions": config.REGIONS,
             "conditions": config.CONDITIONS,
+            "wind_dirs": list(WIND_DIRS.keys()),
+            # 진행 중인 SOS — 대시보드에서 요구조자 예상 위치로 유도한다
+            "sos": {
+                "locked": self.simulator.sos_locked,
+                "info": dict(self.simulator.sos_info) if self.simulator.sos_info else None,
+                "drift_kn": round(self.simulator.drift_kn, 2),
+                "active_reports": len(self.reports.active()),
+            },
+            "ocean_source": "국립해양조사원" if self.khoa.enabled else "관제 설정값",
         }

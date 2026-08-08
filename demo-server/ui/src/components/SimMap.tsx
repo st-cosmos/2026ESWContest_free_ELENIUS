@@ -3,8 +3,18 @@
 // (SVG 를 preserveAspectRatio="none" 로 늘려 쓰기 때문에 원형 마커는 HTML 이 안전하다)
 
 import { useRef, useState } from "react";
-import { Anchor, Crosshair, GripHorizontal, Navigation, Ship } from "lucide-react";
-import type { SimPoint, SimProgress, SimVessel } from "../types";
+import {
+  Anchor,
+  ArrowRight,
+  Crosshair,
+  GripHorizontal,
+  Navigation,
+  PersonStanding,
+  Ship,
+  Siren,
+  Waves,
+} from "lucide-react";
+import type { SimPoint, SimProgress, SimSos, SimVessel } from "../types";
 
 // 데모 해역: 통영 인근 (V-PASS 홈 좌표를 포함하는 범위)
 export const BOUNDS = {
@@ -49,6 +59,9 @@ interface Props {
   progress: SimProgress;
   tool: Tool;
   terminal: { name: string; vessel_id: string; crew: number } | null;
+  /** SOS 접수 상태 — 위치 고정 + 표류만 반영 중임을 지도에 표시한다 */
+  sos?: SimSos | null;
+  onOpenBoundary?: () => void;
   onVesselMove: (pt: SimPoint, done: boolean) => void;
   onRouteChange: (points: SimPoint[], done: boolean) => void;
   onFenceChange: (points: SimPoint[], done: boolean) => void;
@@ -61,6 +74,8 @@ export function SimMap({
   progress,
   tool,
   terminal,
+  sos,
+  onOpenBoundary,
   onVesselMove,
   onRouteChange,
   onFenceChange,
@@ -207,9 +222,33 @@ export function SimMap({
         );
       })}
 
+      {/* SOS 접수 — 엔진 정지 + 위치 고정, 표류만 반영 */}
+      {sos?.locked && (
+        <>
+          <div className="sim-sosbanner">
+            <Siren size={16} />
+            SOS 접수 · 킬 스위치 작동 · 선박 위치 고정 (표류만 반영)
+          </div>
+          <div
+            className="sim-drifttag"
+            style={{ left: `${vesselPct.x}%`, top: `${vesselPct.y}%` }}
+          >
+            <Waves size={13} />
+            표류 {sos.drift_kn.toFixed(2)} kn · {sos.drift_bearing}° · 누적 {sos.drift_m} m
+          </div>
+          {sos.info && onOpenBoundary && (
+            <button className="sim-boundarylink" onClick={onOpenBoundary}>
+              <PersonStanding size={15} />
+              요구조자 예상 위치 바운더리 열기
+              <ArrowRight size={14} />
+            </button>
+          )}
+        </>
+      )}
+
       {/* 선박 마커 + 정보 카드 (둘 다 드래그하면 좌표가 이동한다) */}
       <div
-        className="sim-vessel"
+        className={`sim-vessel${sos?.locked ? " sos" : ""}`}
         style={{ left: `${vesselPct.x}%`, top: `${vesselPct.y}%` }}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => beginDrag(e, { lat: vessel.lat, lon: vessel.lon }, onVesselMove)}

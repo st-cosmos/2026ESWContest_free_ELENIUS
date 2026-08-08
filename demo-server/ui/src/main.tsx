@@ -16,14 +16,22 @@ import "@fontsource/jetbrains-mono/700.css";
 
 import "./theme.css";
 import "./simulator.css";
+import "./boundary.css";
 import App from "./App";
 import { SimulatorPage } from "./screens/SimulatorPage";
+import BoundaryPage from "./screens/BoundaryPage";
 import { AppStateProvider } from "./state";
 import { usePath } from "./route";
 
 function Root() {
   const path = usePath();
-  return path.startsWith("/simulator") ? <SimulatorPage /> : <App />;
+  if (path.startsWith("/simulator")) return <SimulatorPage />;
+  // /boundary/{reportId} — 신고 접수 현황에서 선박을 누르면 진입
+  if (path.startsWith("/boundary/")) {
+    const reportId = path.split("/")[2] ?? "";
+    return <BoundaryPage key={reportId} reportId={reportId} />;
+  }
+  return <App />;
 }
 
 createRoot(document.getElementById("root")!).render(

@@ -4,6 +4,9 @@
   2) 항로(waypoint)를 찍으면 순서대로 일정 속력으로 이동한다
   3) 지오펜스(열린 선)를 넘어 바다 쪽으로 나가면 출항,
      바다에서 육지 쪽으로 들어오면 입항으로 판정해 단말에 명령을 내려보낸다
+  4) SOS(수동/익수 자동)가 접수되면 킬 스위치로 배가 멈추므로 **항로 이동을 즉시
+     중단하고 위치를 고정**한다. 다만 실제로는 정지한 배도 해류·바람에 밀리므로
+     표류 벡터(drift.py)만큼은 계속 움직인다.
 
 단말은 실측 GPS 가 잡히지 않을 때만 이 좌표를 사용한다(V-PASS telemetry 참고).
 좌표 계산은 데모 해역(통영 인근) 규모에서 평면 근사로 충분하다.
@@ -17,7 +20,7 @@ import time
 import uuid
 from datetime import datetime
 
-from .geo import format_position
+from .geo import advance, format_position
 
 # 기본 위치: 통영 인근 (V-PASS 시뮬레이터와 동일한 홈 좌표)
 HOME_LAT = 34 + 48.125 / 60
@@ -73,9 +76,11 @@ def _points(raw_list) -> list[dict]:
 
 
 class Simulator:
-    def __init__(self, store):
+    def __init__(self, store, drift_provider=None):
         self._store = store
         self._lock = threading.RLock()
+        # () -> {"bearing": float, "speed_kn": float} — Runtime 이 관할 기상으로 계산
+        self._drift_provider = drift_provider
 
         data = store.load() or {}
         self.lat = float(data.get("lat", HOME_LAT))
@@ -96,6 +101,13 @@ class Simulator:
         self.target_index = int(data.get("target_index", 1))
         self.updated_at = _now()
 
+        # SOS 위치 고정 상태
+        self.sos_locked = bool(data.get("sos_locked", False))
+        self.sos_info: dict | None = data.get("sos_info")
+        self.drift_kn = float(data.get("drift_kn", 0.0))
+        self.drift_bearing = float(data.get("drift_bearing", 0.0))
+        self.drift_m = float(data.get("drift_m", 0.0))
+
     # ── 저장 ────────────────────────────────────────────────────────────
     def _persist(self) -> None:
         self._store.save({
@@ -113,6 +125,11 @@ class Simulator:
             "command_seq": self.command_seq,
             "target_index": self.target_index,
             "finished": self.finished,
+            "sos_locked": self.sos_locked,
+            "sos_info": self.sos_info,
+            "drift_kn": self.drift_kn,
+            "drift_bearing": self.drift_bearing,
+            "drift_m": self.drift_m,
         })
 
     # ── 지오펜스 판정 ───────────────────────────────────────────────────
@@ -169,9 +186,62 @@ class Simulator:
         })
         del self.events[MAX_EVENTS:]
 
+    # ── SOS 위치 고정 / 표류 ────────────────────────────────────────────
+    def lock_for_sos(self, info: dict | None = None) -> bool:
+        """SOS 접수 → 항로 이동 중단 + 위치 고정. 이후 표류만 반영한다."""
+        with self._lock:
+            first = not self.sos_locked
+            self.sos_locked = True
+            self.running = False
+            if info:
+                self.sos_info = info
+            if first:
+                self.drift_m = 0.0
+            self.updated_at = _now()
+            self._persist()
+            return first
+
+    def release_sos(self) -> None:
+        """상황 종료 → 위치 고정 해제 (운항 재개 가능)."""
+        with self._lock:
+            self.sos_locked = False
+            self.sos_info = None
+            self.drift_kn = 0.0
+            self.drift_m = 0.0
+            self.updated_at = _now()
+            self._persist()
+
+    def _drift_step(self, dt: float) -> None:
+        """정지한 배가 해류·풍압에 밀리는 만큼만 위치를 갱신한다. (락 안에서 호출)
+
+        지오펜스 판정은 하지 않는다 — 표류로 판정선을 넘었다고 출입항을 등록하면
+        기록이 오염되기 때문이다.
+        """
+        vector = None
+        if self._drift_provider is not None:
+            try:
+                vector = self._drift_provider()
+            except Exception as e:
+                print(f"[sim] 표류 벡터 계산 실패: {e}")
+        if not vector:
+            return
+        speed = float(vector.get("speed_kn") or 0.0)
+        bearing = float(vector.get("bearing") or 0.0)
+        self.drift_kn, self.drift_bearing = speed, bearing
+        if speed <= 0.0:
+            return
+        seconds = dt * self.time_scale
+        self.lat, self.lon = advance(self.lat, self.lon, bearing, speed, seconds)
+        self.course = bearing
+        self.drift_m += speed * seconds / 3600.0 * 1852.0
+        self.updated_at = _now()
+
     # ── 이동 루프 (Runtime 이 주기적으로 호출) ──────────────────────────
     def step(self, dt: float) -> None:
         with self._lock:
+            if self.sos_locked:
+                self._drift_step(dt)
+                return
             if not self.running or len(self.route) < 2:
                 return
             remaining = self.speed_kn * (dt * self.time_scale) / 3600.0
@@ -247,6 +317,10 @@ class Simulator:
     def run(self, action: str) -> None:
         with self._lock:
             if action == "start":
+                if self.sos_locked:
+                    raise ValueError(
+                        "SOS 접수로 위치가 고정되어 있습니다. 신고를 종료한 뒤 다시 시도해 주세요."
+                    )
                 if len(self.route) < 2:
                     raise ValueError("항로 점을 2개 이상 찍어 주세요.")
                 if self.finished or self.target_index >= len(self.route):
@@ -281,6 +355,10 @@ class Simulator:
             self.course = 245.0
             self.speed_kn = DEFAULT_SPEED_KN
             self.port_state = "docked"
+            self.sos_locked = False
+            self.sos_info = None
+            self.drift_kn = 0.0
+            self.drift_m = 0.0
             self.updated_at = _now()
             self._persist()
 
@@ -308,11 +386,18 @@ class Simulator:
         }
 
     def telemetry(self) -> dict:
+        # SOS 로 정지한 뒤에는 표류 속력을 그대로 단말에 보낸다 (엔진 정지 + 표류중)
+        if self.running:
+            speed = round(self.speed_kn, 1)
+        elif self.sos_locked:
+            speed = round(self.drift_kn, 2)
+        else:
+            speed = 0.0
         return {
             "lat": round(self.lat, 6),
             "lon": round(self.lon, 6),
             "course": round(self.course) % 360,
-            "speed_kn": round(self.speed_kn, 1) if self.running else 0.0,
+            "speed_kn": speed,
             "position": format_position(self.lat, self.lon),
             "updated_at": self.updated_at,
         }
@@ -333,6 +418,13 @@ class Simulator:
                 "progress": self._progress(),
                 "events": list(self.events),
                 "command_seq": self.command_seq,
+                "sos": {
+                    "locked": self.sos_locked,
+                    "info": dict(self.sos_info) if self.sos_info else None,
+                    "drift_kn": round(self.drift_kn, 2),
+                    "drift_bearing": round(self.drift_bearing),
+                    "drift_m": round(self.drift_m),
+                },
             }
 
     def terminal_feed(self) -> dict:

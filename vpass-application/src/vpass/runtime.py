@@ -448,6 +448,13 @@ class Runtime:
                 for key in (
                     "temp_c",
                     "wind",
+                    # 풍향·풍속·해류는 관제 서버의 표류 예측과 같은 입력값이라
+                    # 개별 필드까지 그대로 받아 화면에 같은 수치를 보여준다
+                    "wind_dir",
+                    "wind_speed_ms",
+                    "gust_ms",
+                    "current_dir",
+                    "current_kn",
                     "wave_height_m",
                     "water_temp_c",
                     "advisory",
