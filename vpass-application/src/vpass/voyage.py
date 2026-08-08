@@ -34,6 +34,10 @@ class VoyageManager:
         self._last_track_ts = 0.0
         self.last_report: dict | None = None  # 마지막 출입항 신고 내용
 
+        # 지금까지의 입항 횟수. 값이 바뀌면 '새 항차'로 보고 승선 세션을 다시 시작한다
+        # (파일에서 한 번만 세고 이후에는 메모리로만 관리 — 얼굴 인식마다 조회된다)
+        self._arrival_epoch = sum(1 for v in self._store.load() if v.get("arrived_at"))
+
         # 재시작 시 진행 중이던 운항 복구
         if self._find_active() is not None:
             self._last_track_ts = time.time()
@@ -47,6 +51,10 @@ class VoyageManager:
 
     def active_voyage(self) -> dict | None:
         return self._find_active()
+
+    def arrival_epoch(self) -> int:
+        """지금까지의 입항 횟수 — 승선 세션이 지난 항차의 것인지 판정하는 기준."""
+        return self._arrival_epoch
 
     # ── 감시 루프 ────────────────────────────────────────────────────────
     def start(self) -> None:
@@ -153,6 +161,8 @@ class VoyageManager:
                 return voyages
 
             self._store.update(_update)
+            # 다음 승선 스캔이 '새 항차'임을 알 수 있게 한다 (on_arrive 콜백보다 먼저)
+            self._arrival_epoch += 1
 
         message = "입항 신고가 해양경찰청에 접수되었습니다"
         self.last_report = {
