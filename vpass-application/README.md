@@ -214,6 +214,12 @@ uv run python tests/test_flow.py
   uv run vpass --kiosk
   ```
   chromium 은 `--password-store=basic` 으로 실행되어 키링 비밀번호 창이 뜨지 않습니다.
+- 한글 입력: chromium 을 `--ozone-platform=x11` 로 띄워 XWayland 에서 실행합니다.
+  Wayland 네이티브로 뜨면 chromium 이 `text-input` 프로토콜만 쓰는데 fcitx4 는 이를
+  제공하지 않아, `GTK_IM_MODULE=fcitx` 가 설정돼 있어도 한영 전환이 되지 않습니다.
+  이미 chromium 이 떠 있으면 새 창이 기존 프로세스에 붙어 이 플래그가 무시되므로,
+  전환이 안 되면 chromium 을 완전히 종료한 뒤 vpass 를 다시 실행하세요.
+  (fcitx5 로 올리면 `--enable-wayland-ime` 로 Wayland 네이티브 유지도 가능합니다.)
 - 기상: 현재 시뮬레이션 제공자(`weather.py`)로 동작하며, 기상청 API 연동 시 해당 모듈만 교체하면 됩니다.
 
 ## 프로젝트 구조

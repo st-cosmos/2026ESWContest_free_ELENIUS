@@ -27,7 +27,11 @@ def _open_ui(url: str, kiosk: bool) -> None:
                     [browser, "--kiosk", "--noerrdialogs",
                      "--disable-session-crashed-bubble",
                      # GNOME Keyring 미사용 → 'Choose password for new keyring' 방지
-                     "--password-store=basic", url]
+                     "--password-store=basic",
+                     # XWayland 로 띄워야 fcitx 한글 입력이 된다. Wayland 네이티브로
+                     # 뜨면 chromium 은 text-input 프로토콜만 쓰는데 fcitx4 는 그걸
+                     # 제공하지 않아 GTK_IM_MODULE 설정과 무관하게 영문만 입력된다.
+                     "--ozone-platform=x11", url]
                 )
                 return
             except FileNotFoundError:
