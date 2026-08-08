@@ -15,8 +15,10 @@ dependencies = [
 [project.optional-dependencies]
 # 구명조끼 ML 판정용 TFLite 런타임 (라즈베리파이: uv sync --extra ml)
 # 윈도우 개발 환경에는 휠이 없어 linux 로 한정한다 — 미설치 시 HSV 폴백으로 동작.
+# tflite-runtime 은 cp311 휠까지만 있어 Python 3.12+ 는 후속 패키지 LiteRT 를 쓴다.
 ml = [
-    "tflite-runtime>=2.13; sys_platform == 'linux'",
+    "tflite-runtime>=2.13; sys_platform == 'linux' and python_version < '3.12'",
+    "ai-edge-litert>=1.0; sys_platform == 'linux' and python_version >= '3.12'",
 ]
 
 [project.scripts]

@@ -60,7 +60,19 @@ def load_datasets(data_dir: Path, img_size: int, batch: int, seed: int):
     )
     train = tf.keras.utils.image_dataset_from_directory(data_dir, subset="training", **common)
     val = tf.keras.utils.image_dataset_from_directory(data_dir, subset="validation", **common)
+
+    # 증강은 모델이 아니라 학습 데이터 파이프라인에서만 적용한다.
+    # 모델 안에 넣으면 난수 연산이 추론 그래프에 남아 TFLite 변환이 실패한다.
+    augment = tf.keras.Sequential([
+        tf.keras.layers.RandomFlip("horizontal"),
+        tf.keras.layers.RandomRotation(0.05),
+        tf.keras.layers.RandomZoom(0.1),
+        tf.keras.layers.RandomBrightness(0.2, value_range=(0.0, 255.0)),
+        tf.keras.layers.RandomContrast(0.2),
+    ], name="augment")
+
     auto = tf.data.AUTOTUNE
+    train = train.map(lambda x, y: (augment(x, training=True), y), num_parallel_calls=auto)
     return train.prefetch(auto), val.prefetch(auto)
 
 
@@ -73,17 +85,8 @@ def build_model(img_size: int) -> tf.keras.Model:
     )
     base.trainable = False
 
-    augment = tf.keras.Sequential([
-        tf.keras.layers.RandomFlip("horizontal"),
-        tf.keras.layers.RandomRotation(0.05),
-        tf.keras.layers.RandomZoom(0.1),
-        tf.keras.layers.RandomBrightness(0.2, value_range=(0.0, 255.0)),
-        tf.keras.layers.RandomContrast(0.2),
-    ], name="augment")
-
     inputs = tf.keras.Input(shape=(img_size, img_size, 3))
-    x = augment(inputs)
-    x = base(x, training=False)
+    x = base(inputs, training=False)
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
     x = tf.keras.layers.Dropout(0.2)(x)
     outputs = tf.keras.layers.Dense(1, activation="sigmoid", name="jacket_prob")(x)
@@ -168,9 +171,11 @@ def main():
         print("[경고] 검증 정확도가 90% 미만입니다 — 데이터를 더 모으거나 오분류 샘플을 확인하세요")
 
     print("\n[3/3] TFLite 변환")
-    convert_tflite(model, train_ds, args.out)
+    out = args.out.resolve()
+    convert_tflite(model, train_ds, out)
     print("\n완료. 라즈베리파이 배포:")
-    print(f"  1) {args.out.relative_to(app_dir)} 를 파이의 같은 경로로 복사")
+    shown = out.relative_to(app_dir) if out.is_relative_to(app_dir) else out
+    print(f"  1) {shown} 를 파이의 같은 경로로 복사")
     print("  2) 파이에서: uv sync --extra ml")
     print("  3) 앱 재시작 → 로그에 '[jacketvision] TFLite 모델 로드' 확인")
 

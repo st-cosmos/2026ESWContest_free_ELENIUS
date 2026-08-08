@@ -106,22 +106,22 @@ class _TFLiteJacketClassifier:
 
 
 def _load_interpreter_cls():
-    """가벼운 것 우선으로 사용 가능한 TFLite Interpreter 클래스를 찾는다."""
+    """(Interpreter, OpResolverType|None) — 가벼운 런타임 우선으로 찾는다."""
     try:
-        from tflite_runtime.interpreter import Interpreter  # 라즈베리파이 (uv sync --extra ml)
-        return Interpreter
+        from tflite_runtime import interpreter as m  # 라즈베리파이 (uv sync --extra ml)
+        return m.Interpreter, getattr(m, "OpResolverType", None)
     except ImportError:
         pass
     try:
-        from ai_edge_litert.interpreter import Interpreter
-        return Interpreter
+        from ai_edge_litert import interpreter as m
+        return m.Interpreter, getattr(m, "OpResolverType", None)
     except ImportError:
         pass
     try:
-        from tensorflow.lite import Interpreter  # 개발 PC 에 tensorflow 가 있는 경우
-        return Interpreter
-    except ImportError:
-        return None
+        import tensorflow as tf  # 개발 PC 에 tensorflow 가 있는 경우
+        return tf.lite.Interpreter, getattr(tf.lite.experimental, "OpResolverType", None)
+    except (ImportError, AttributeError):
+        return None, None
 
 
 # 지연 로드 싱글턴 — 테스트에서 _CLASSIFIER 를 직접 주입해 교체할 수 있다
@@ -140,17 +140,29 @@ def _get_classifier():
         if JACKET_VISION_METHOD == "ml":
             print(f"[jacketvision] 모델 없음: {JACKET_MODEL_PATH} — HSV 로 폴백")
         return None
-    interpreter_cls = _load_interpreter_cls()
+    interpreter_cls, resolver_type = _load_interpreter_cls()
     if interpreter_cls is None:
         print("[jacketvision] tflite 런타임 없음 (uv sync --extra ml) — HSV 로 폴백")
         return None
     try:
         _CLASSIFIER = _TFLiteJacketClassifier(interpreter_cls(model_path=str(JACKET_MODEL_PATH)))
-        print(f"[jacketvision] TFLite 모델 로드: {JACKET_MODEL_PATH.name} "
-              f"(입력 {_CLASSIFIER._w}x{_CLASSIFIER._h})")
     except Exception as e:
-        print(f"[jacketvision] 모델 로드 실패({e}) — HSV 로 폴백")
+        # 일부 환경은 XNNPACK 델리게이트가 양자화 모델 준비에 실패한다 — 델리게이트 없이 재시도
+        first_error = e
         _CLASSIFIER = None
+        if resolver_type is not None:
+            try:
+                _CLASSIFIER = _TFLiteJacketClassifier(interpreter_cls(
+                    model_path=str(JACKET_MODEL_PATH),
+                    experimental_op_resolver_type=resolver_type.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
+                ))
+            except Exception:
+                pass
+        if _CLASSIFIER is None:
+            print(f"[jacketvision] 모델 로드 실패({first_error}) — HSV 로 폴백")
+            return None
+    print(f"[jacketvision] TFLite 모델 로드: {JACKET_MODEL_PATH.name} "
+          f"(입력 {_CLASSIFIER._w}x{_CLASSIFIER._h})")
     return _CLASSIFIER
 
 
