@@ -9,6 +9,8 @@ venv/
 *.egg-info/
 
 # ── vpass-application 특정 ──────────────────────────
+# 런타임 데이터 전체 제외 — 구명조끼 학습 데이터셋(data/jacket_dataset/)도 여기 포함된다.
+# 학습 이미지는 git 에 올리지 않는다 (배포용 모델은 models/*.tflite 로만 커밋).
 vpass-application/data/
 
 # ── Node / React UI ─────────────────────────────────
