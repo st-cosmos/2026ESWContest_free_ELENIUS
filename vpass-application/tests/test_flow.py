@@ -14,6 +14,7 @@ os.environ["VPASS_DATA_DIR"] = tempfile.mkdtemp(prefix="vpass-test-")
 
 from vpass import config  # noqa: E402
 from vpass.gps import NmeaGpsReader  # noqa: E402
+from vpass.reset import reset_data  # noqa: E402
 from vpass.runtime import Runtime  # noqa: E402
 
 PASS = 0
@@ -276,6 +277,34 @@ def main():
           and e4["jacket_visual"] is None, str(e4))
 
     rt.stop()
+
+    print("\n== 10) 시작 옵션 데이터 초기화 (--reset / --reset-all) ==")
+    rt.vessel_store.save({"vessel_id": "테스트-00001", "name": "테스트호"})
+    face = config.FACES_DIR / "test_face.jpg"
+    face.write_bytes(b"jpeg")
+    check("초기화 전 운항 기록 존재", config.VOYAGES_FILE.exists())
+
+    removed = reset_data()
+    check("--reset: 운항 기록 삭제", not config.VOYAGES_FILE.exists(), str(removed))
+    check("--reset: 승선 이력 삭제", not config.BOARDING_LOGS_FILE.exists())
+    check("--reset: 등록 선원·어선 정보 유지",
+          config.USERS_FILE.exists() and config.VESSEL_FILE.exists())
+    check("--reset: 얼굴 사진 유지", face.exists())
+    check("--reset 재실행 안전(멱등)", reset_data() == [])
+
+    removed_all = reset_data(include_registry=True)
+    check("--reset-all: 등록 선원 삭제", not config.USERS_FILE.exists(), str(removed_all))
+    check("--reset-all: 어선 정보 삭제", not config.VESSEL_FILE.exists())
+    check("--reset-all: 얼굴 사진 삭제", not face.exists())
+    check("--reset-all: faces 디렉터리 유지", config.FACES_DIR.is_dir())
+
+    # 초기화 뒤 새로 뜬 서버는 '이미 출항' 상태를 물려받지 않아야 한다
+    fresh = Runtime()
+    check("초기화 후 재시작: 운항 중 아님", fresh.voyage.active_voyage() is None)
+    check("초기화 후 재시작: 승선 인원 없음", fresh.boarding.count() == 0)
+    check("초기화 후 재시작: 시동 잠금", fresh.engine.snapshot()["locked"])
+    fresh.stop()
+
     print(f"\n결과: PASS {PASS} / FAIL {FAIL}")
     sys.exit(1 if FAIL else 0)
 

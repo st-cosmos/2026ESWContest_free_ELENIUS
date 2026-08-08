@@ -42,6 +42,26 @@ uv run demo-server --no-browser    # 서버만
   `http://localhost:8100/docs` (API 문서)
 - UI 개발 시: `cd ui && npm run dev` → `http://localhost:5273` (API 는 8100 으로 프록시)
 
+### 3) 데이터 초기화하고 실행하기
+
+관제 서버도 이전 실행 상태를 파일로 들고 있습니다. 특히 운항 시뮬레이터의
+출입항 상태(`port_state`)가 `departed` 로 남아 있으면 다시 켜도 '출항 중'에서
+이어지므로, V-PASS 단말만 초기화해서는 시연이 깨끗하게 리셋되지 않습니다.
+
+```bash
+uv run demo-server --reset       # 신고·출입항 로그·선박 목록 + 출항 상태 초기화
+uv run demo-server --reset-all   # 시뮬레이터 항로·펜스, 관할 기상까지 전부 초기화
+```
+
+| 옵션 | 지우는 것 | 남기는 것 |
+| --- | --- | --- |
+| `--reset` | `reports.json`(신고), `portlog.json`(출입항 로그), `vessels.json`(선박 목록 → 데모 6척으로 재생성), 시뮬레이터의 출항 상태·단말 명령·이벤트 | 시뮬레이터 항로·펜스·배속, 관할 기상 |
+| `--reset-all` | 위 항목 + `simulator.json`, `weather.json` | (없음 — 최초 실행 상태로 돌아감) |
+
+- `--reset` 은 **항로와 지오펜스를 남깁니다**. 매번 다시 그리지 않고 시연을
+  처음부터 반복할 수 있도록, 선박만 항로 시작점·정박 상태로 되돌립니다.
+- V-PASS 단말도 함께 초기화하려면 `uv run vpass --reset` 을 같이 실행하세요.
+
 ### 환경 변수
 
 | 변수 | 기본값 | 설명 |
@@ -115,7 +135,8 @@ GET  /api/sim/terminal    # (단말용) 시뮬레이션 좌표 + 출입항 명�
 demo-server/
 ├── pyproject.toml            # uv 프로젝트 (스크립트: demo-server)
 ├── src/demo_server/
-│   ├── main.py               # 엔트리포인트 (uvicorn + 브라우저)
+│   ├── main.py               # 엔트리포인트 (uvicorn + 브라우저 + --reset)
+│   ├── reset.py              # 시작 시 데이터 초기화(--reset / --reset-all)
 │   ├── server.py             # FastAPI 앱 + 정적 서빙
 │   ├── routes.py             # HTTP API 전체
 │   ├── runtime.py            # 매니저 배선 + 위치 시뮬레이션 루프
