@@ -68,14 +68,19 @@ def main():
     time.sleep(0.2)
     check("착용 인식", rt.devices.is_worn("jacket-1") is True)
 
-    print("\n== 2-1) 구명조끼 시각 확인 (임시 HSV 구현) ==")
+    print("\n== 2-1) 구명조끼 시각 확인 (HSV 폴백 경로) ==")
     import numpy as np  # noqa: E402
     from vpass import jacketvision  # noqa: E402
+
+    # 모델 유무와 무관하게 HSV 폴백 경로를 검증하도록 분류기를 비활성화한다
+    jacketvision._CLASSIFIER = None
+    jacketvision._CLASSIFIER_LOADED = True
 
     face_box = (270, 80, 100, 100)                  # 화면 중앙 상단의 얼굴
     plain = np.full((480, 640, 3), 60, np.uint8)    # 무채색 배경/옷
     r = jacketvision.assess_jacket(plain, face_box)
-    check("무채색 상체 → 미확인", r["visible"] is False and r["box"] is not None, str(r))
+    check("무채색 상체 → 미확인",
+          r["visible"] is False and r["box"] is not None and r["method"] == "hsv", str(r))
 
     orange = plain.copy()
     bx, by, bw, bh = r["box"]
@@ -85,6 +90,31 @@ def main():
 
     r3 = jacketvision.assess_jacket(plain, (270, 380, 100, 100))  # 얼굴이 화면 하단
     check("상체 화면 밖 → 판단 불가", r3["visible"] is None and r3["box"] is None, str(r3))
+
+    print("\n== 2-2) 구명조끼 시각 확인 (ML 분류기 경로) ==")
+
+    class _StubClassifier:
+        """TFLite 분류기 대역 — 고정 착용 확률을 돌려준다."""
+        def __init__(self, score):
+            self.score = score
+
+        def predict(self, roi_bgr):
+            assert roi_bgr.size > 0
+            return self.score
+
+    jacketvision._CLASSIFIER = _StubClassifier(0.92)
+    m1 = jacketvision.assess_jacket(plain, face_box)
+    check("확률 0.92 → 착용 확인",
+          m1["visible"] is True and m1["ratio"] == 0.92 and m1["method"] == "ml", str(m1))
+
+    jacketvision._CLASSIFIER = _StubClassifier(0.08)
+    m2 = jacketvision.assess_jacket(plain, face_box)
+    check("확률 0.08 → 미확인", m2["visible"] is False and m2["method"] == "ml", str(m2))
+
+    m3 = jacketvision.assess_jacket(plain, (270, 380, 100, 100))
+    check("ML 이라도 상체 화면 밖 → 판단 불가", m3["visible"] is None and m3["box"] is None, str(m3))
+
+    jacketvision._CLASSIFIER = None  # 이후 테스트는 다시 HSV 폴백
 
     # 모듈은 착용(치팅 가능 상태)이라도 카메라 확인을 통과해야 승선된다
     rt.boarding._notice_times.clear()

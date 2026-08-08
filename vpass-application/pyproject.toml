@@ -12,6 +12,13 @@ dependencies = [
     "smbus2>=0.4",
 ]
 
+[project.optional-dependencies]
+# 구명조끼 ML 판정용 TFLite 런타임 (라즈베리파이: uv sync --extra ml)
+# 윈도우 개발 환경에는 휠이 없어 linux 로 한정한다 — 미설치 시 HSV 폴백으로 동작.
+ml = [
+    "tflite-runtime>=2.13; sys_platform == 'linux'",
+]
+
 [project.scripts]
 vpass = "vpass.main:main"
 

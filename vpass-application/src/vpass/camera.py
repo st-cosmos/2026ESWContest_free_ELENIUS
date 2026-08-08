@@ -22,6 +22,9 @@ import numpy as np
 from .config import (
     CAMERA_INDEX,
     DETECT_EVERY_N_FRAMES,
+    JACKET_CAPTURE_DIR,
+    JACKET_CAPTURE_ENABLED,
+    JACKET_CAPTURE_INTERVAL,
     JACKET_VISION_ENABLED,
     MATCH_THRESHOLD,
 )
@@ -66,6 +69,7 @@ class CameraManager:
         self._scan_note = None      # 마지막 검출 주석: (box, color, tag, thickness)
         self._jacket_note = None    # 마지막 구명조끼 확인 주석: (box, color, tag)
         self._register_box = None   # 마지막 검출 가이드 박스
+        self._last_capture = 0.0    # 학습 데이터 수집(ROI 저장) 스로틀
 
     # ── 수명 주기 ────────────────────────────────────────────────────────
     def start(self) -> None:
@@ -179,13 +183,15 @@ class CameraManager:
             jacket = None
             jacket_note = None
             if box is not None:
-                # 구명조끼 시각 확인(임시 HSV 구현) — 승선 판정과 화면 표시에 사용
+                # 구명조끼 시각 확인(TFLite 분류기, 없으면 HSV 폴백) — 승선 판정과 화면 표시에 사용
                 if JACKET_VISION_ENABLED:
                     jacket = assess_jacket(frame, box)
                     if jacket["box"] is not None:
                         ok = jacket["visible"] is True
                         tag = f"{'JACKET' if ok else 'NO JACKET'} {jacket['ratio']:.0%}"
                         jacket_note = (jacket["box"], GREEN if ok else RED, tag)
+                        if JACKET_CAPTURE_ENABLED:
+                            self._maybe_capture_roi(frame, jacket)
 
                 with self.lock:
                     recognizer = self._recognizer
@@ -224,6 +230,23 @@ class CameraManager:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         self._publish(display)
+
+    def _maybe_capture_roi(self, frame, jacket: dict) -> None:
+        """학습 데이터 수집: 가슴 ROI 크롭을 주기 제한으로 저장한다.
+
+        VPASS_JACKET_CAPTURE=1 일 때만 호출된다. 파일명에 판정 점수를 넣어
+        나중에 jacket/ vs no_jacket/ 으로 분류(라벨링)할 때 참고하게 한다.
+        """
+        now = time.time()
+        if now - self._last_capture < JACKET_CAPTURE_INTERVAL:
+            return
+        self._last_capture = now
+        x, y, w, h = jacket["box"]
+        crop = frame[y:y + h, x:x + w]
+        JACKET_CAPTURE_DIR.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S") + f"-{int(now * 1000) % 1000:03d}"
+        name = f"{stamp}_{jacket['method']}{jacket['ratio']:.2f}.jpg"
+        cv2.imwrite(str(JACKET_CAPTURE_DIR / name), crop)
 
     def _process_register(self, frame, detect_now: bool) -> None:
         display = frame.copy()
