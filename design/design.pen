@@ -20,7 +20,7 @@
           "fill": "$text-1",
           "content": "Smart V-PASS Design System",
           "fontFamily": "$font-display",
-          "fontSize": 22,
+          "fontSize": 24,
           "fontWeight": "700"
         },
         {
@@ -52,7 +52,7 @@
                   "fill": "#0A0C11",
                   "content": "확인",
                   "fontFamily": "$font-body",
-                  "fontSize": 14,
+                  "fontSize": 16,
                   "fontWeight": "700"
                 }
               ]
@@ -81,7 +81,7 @@
                   "fill": "$text-2",
                   "content": "취소",
                   "fontFamily": "$font-body",
-                  "fontSize": 14,
+                  "fontSize": 16,
                   "fontWeight": "500"
                 }
               ]
@@ -110,7 +110,7 @@
                   "fill": "$red",
                   "content": "삭제",
                   "fontFamily": "$font-body",
-                  "fontSize": 14,
+                  "fontSize": 16,
                   "fontWeight": "700"
                 }
               ]
@@ -146,7 +146,7 @@
                   "fill": "$accent",
                   "content": "승선 완료",
                   "fontFamily": "$font-body",
-                  "fontSize": 11,
+                  "fontSize": 13,
                   "fontWeight": "700"
                 }
               ]
@@ -174,7 +174,7 @@
                   "fill": "$text-2",
                   "content": "어선명",
                   "fontFamily": "$font-body",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "600"
                 },
                 {
@@ -199,7 +199,7 @@
                       "fill": "$text-1",
                       "content": "청해호",
                       "fontFamily": "$font-body",
-                      "fontSize": 14,
+                      "fontSize": 16,
                       "fontWeight": "normal"
                     }
                   ]
@@ -237,7 +237,7 @@
                   "fill": "$text-2",
                   "content": "출항",
                   "fontFamily": "$font-body",
-                  "fontSize": 14,
+                  "fontSize": 16,
                   "fontWeight": "500"
                 }
               ]
@@ -256,7 +256,7 @@
                   "fill": "$text-2",
                   "content": "통신/GPS 연결 상태",
                   "fontFamily": "$font-body",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "600"
                 },
                 {
@@ -295,7 +295,7 @@
                           "fill": "$text-2",
                           "content": "양호",
                           "fontFamily": "$font-body",
-                          "fontSize": 11,
+                          "fontSize": 13,
                           "fontWeight": "normal"
                         }
                       ]
@@ -330,7 +330,7 @@
                           "fill": "$text-2",
                           "content": "보통",
                           "fontFamily": "$font-body",
-                          "fontSize": 11,
+                          "fontSize": 13,
                           "fontWeight": "normal"
                         }
                       ]
@@ -365,7 +365,7 @@
                           "fill": "$text-2",
                           "content": "불량",
                           "fontFamily": "$font-body",
-                          "fontSize": 11,
+                          "fontSize": 13,
                           "fontWeight": "normal"
                         }
                       ]
@@ -408,7 +408,7 @@
                   "fill": "$text-3",
                   "content": "현재 시각",
                   "fontFamily": "$font-body",
-                  "fontSize": 10,
+                  "fontSize": 12,
                   "fontWeight": "600"
                 },
                 {
@@ -418,7 +418,7 @@
                   "fill": "$text-1",
                   "content": "2026-07-23 14:32:05",
                   "fontFamily": "$font-mono",
-                  "fontSize": 13,
+                  "fontSize": 15,
                   "fontWeight": "500"
                 }
               ]
@@ -445,7 +445,7 @@
                   "fill": "$text-3",
                   "content": "위치",
                   "fontFamily": "$font-body",
-                  "fontSize": 10,
+                  "fontSize": 12,
                   "fontWeight": "600"
                 },
                 {
@@ -455,7 +455,7 @@
                   "fill": "$text-1",
                   "content": "34°48.125'N 128°25.402'E",
                   "fontFamily": "$font-mono",
-                  "fontSize": 13,
+                  "fontSize": 15,
                   "fontWeight": "500"
                 }
               ]
@@ -474,7 +474,7 @@
                   "fill": "$text-3",
                   "content": "침로",
                   "fontFamily": "$font-body",
-                  "fontSize": 10,
+                  "fontSize": 12,
                   "fontWeight": "600"
                 },
                 {
@@ -484,7 +484,7 @@
                   "fill": "$text-1",
                   "content": "245°",
                   "fontFamily": "$font-mono",
-                  "fontSize": 13,
+                  "fontSize": 15,
                   "fontWeight": "500"
                 }
               ]
@@ -503,7 +503,7 @@
                   "fill": "$text-3",
                   "content": "속도",
                   "fontFamily": "$font-body",
-                  "fontSize": 10,
+                  "fontSize": 12,
                   "fontWeight": "600"
                 },
                 {
@@ -513,7 +513,7 @@
                   "fill": "$text-1",
                   "content": "12.4 kn",
                   "fontFamily": "$font-mono",
-                  "fontSize": 13,
+                  "fontSize": 15,
                   "fontWeight": "500"
                 }
               ]
@@ -561,7 +561,7 @@
                   "fill": "$text-2",
                   "content": "통신",
                   "fontFamily": "$font-body",
-                  "fontSize": 11,
+                  "fontSize": 13,
                   "fontWeight": "600"
                 }
               ]
@@ -602,7 +602,7 @@
                   "fill": "$text-2",
                   "content": "GPS",
                   "fontFamily": "$font-body",
-                  "fontSize": 11,
+                  "fontSize": 13,
                   "fontWeight": "600"
                 }
               ]
@@ -643,7 +643,7 @@
                   "fill": "#FFFFFF",
                   "content": "SOS",
                   "fontFamily": "$font-display",
-                  "fontSize": 15,
+                  "fontSize": 17,
                   "fontWeight": "800",
                   "letterSpacing": 1.5
                 }
@@ -720,7 +720,7 @@
                       "fill": "$text-1",
                       "content": "Smart V-PASS",
                       "fontFamily": "$font-display",
-                      "fontSize": 16,
+                      "fontSize": 18,
                       "fontWeight": "700",
                       "letterSpacing": -0.3
                     },
@@ -731,7 +731,7 @@
                       "fill": "$text-3",
                       "content": "어선 안전 관리 시스템",
                       "fontFamily": "$font-body",
-                      "fontSize": 10,
+                      "fontSize": 12,
                       "fontWeight": "normal"
                     }
                   ]
@@ -880,7 +880,7 @@
                   "fill": "$text-2",
                   "content": "시스템 정상 작동 중",
                   "fontFamily": "$font-body",
-                  "fontSize": 11,
+                  "fontSize": 13,
                   "fontWeight": "600"
                 }
               ]
@@ -969,7 +969,7 @@
                           "fill": "$text-1",
                           "content": "출항 · 승선 얼굴 인식",
                           "fontFamily": "$font-body",
-                          "fontSize": 19,
+                          "fontSize": 21,
                           "fontWeight": "700"
                         },
                         {
@@ -981,7 +981,7 @@
                           "width": "fill_container",
                           "content": "선원 얼굴을 인식해 승선 목록을 만든 뒤, 출항 확정 버튼을 눌러야 시동 잠금이 해제됩니다.",
                           "fontFamily": "$font-body",
-                          "fontSize": 12,
+                          "fontSize": 14,
                           "fontWeight": "normal"
                         }
                       ]
@@ -1025,7 +1025,7 @@
                               "fill": "$text-1",
                               "content": "실시간 얼굴 인식",
                               "fontFamily": "$font-body",
-                              "fontSize": 15,
+                              "fontSize": 17,
                               "fontWeight": "600"
                             },
                             {
@@ -1065,7 +1065,7 @@
                                   "fill": "$red",
                                   "content": "LIVE",
                                   "fontFamily": "$font-display",
-                                  "fontSize": 10,
+                                  "fontSize": 12,
                                   "fontWeight": "700",
                                   "letterSpacing": 1
                                 }
@@ -1119,7 +1119,7 @@
                                   "fill": "$accent",
                                   "content": "홍길동 님 승선 확인 · 목록에 추가되었습니다",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 13,
+                                  "fontSize": 15,
                                   "fontWeight": "700"
                                 }
                               ]
@@ -1148,7 +1148,7 @@
                                   "fill": "$text-2",
                                   "content": "얼굴을 안내선 안에 맞춰 주세요",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 12,
+                                  "fontSize": 14,
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -1160,7 +1160,7 @@
                               "fill": "$text-3",
                               "content": "얼굴 영역만 인식합니다 · 승선이 끝나면 우측에서 출항을 확정하세요",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
+                              "fontSize": 13,
                               "fontWeight": "normal"
                             }
                           ]
@@ -1205,7 +1205,7 @@
                                   "fill": "$text-1",
                                   "content": "승선 인식 인원",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 15,
+                                  "fontSize": 17,
                                   "fontWeight": "600"
                                 },
                                 {
@@ -1233,7 +1233,7 @@
                                       "fill": "$accent",
                                       "content": "3",
                                       "fontFamily": "$font-mono",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "700"
                                     }
                                   ]
@@ -1282,7 +1282,7 @@
                                           "fill": "$accent",
                                           "content": "홍길동",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "700"
                                         },
                                         {
@@ -1299,7 +1299,7 @@
                                           "fill": "$text-3",
                                           "content": "07:42:15",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 11,
+                                          "fontSize": 13,
                                           "fontWeight": "normal"
                                         }
                                       ]
@@ -1311,7 +1311,7 @@
                                       "fill": "$text-2",
                                       "content": "얼굴 인식 완료 · 승선 처리됨",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -1346,7 +1346,7 @@
                                           "fill": "$accent",
                                           "content": "김철수",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "700"
                                         },
                                         {
@@ -1363,7 +1363,7 @@
                                           "fill": "$text-3",
                                           "content": "07:43:02",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 11,
+                                          "fontSize": 13,
                                           "fontWeight": "normal"
                                         }
                                       ]
@@ -1375,7 +1375,7 @@
                                       "fill": "$text-2",
                                       "content": "얼굴 인식 완료 · 승선 처리됨",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -1410,7 +1410,7 @@
                                           "fill": "$accent",
                                           "content": "이영희",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "700"
                                         },
                                         {
@@ -1427,7 +1427,7 @@
                                           "fill": "$text-3",
                                           "content": "07:45:38",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 11,
+                                          "fontSize": 13,
                                           "fontWeight": "normal"
                                         }
                                       ]
@@ -1439,7 +1439,7 @@
                                       "fill": "$text-2",
                                       "content": "얼굴 인식 완료 · 승선 처리됨",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -1506,7 +1506,7 @@
                                       "fill": "$text-1",
                                       "content": "시동 잠금 중",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 14,
+                                      "fontSize": 16,
                                       "fontWeight": "700"
                                     },
                                     {
@@ -1516,7 +1516,7 @@
                                       "fill": "$text-2",
                                       "content": "승선 인원 확인 후 출항을 확정하세요",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -1542,7 +1542,7 @@
                               "fill": "$text-3",
                               "content": "출항 확정 시 시동 잠금 해제 · 해양경찰청 자동 신고",
                               "fontFamily": "$font-body",
-                              "fontSize": 10,
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -1637,7 +1637,7 @@
                           "fill": "$text-1",
                           "content": "등록 사용자 목록",
                           "fontFamily": "$font-body",
-                          "fontSize": 19,
+                          "fontSize": 21,
                           "fontWeight": "700"
                         },
                         {
@@ -1647,7 +1647,7 @@
                           "fill": "$text-3",
                           "content": "얼굴 인식을 위해 시스템에 등록된 선원 대장입니다.",
                           "fontFamily": "$font-body",
-                          "fontSize": 12,
+                          "fontSize": 14,
                           "fontWeight": "normal"
                         }
                       ]
@@ -1686,7 +1686,7 @@
                       "fill": "$text-1",
                       "content": "시스템 등록 사용 대장",
                       "fontFamily": "$font-body",
-                      "fontSize": 15,
+                      "fontSize": 17,
                       "fontWeight": "600"
                     },
                     {
@@ -1758,7 +1758,7 @@
                                       "fill": "$accent",
                                       "content": "홍길동",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 15,
+                                      "fontSize": 17,
                                       "fontWeight": "700"
                                     },
                                     {
@@ -1768,7 +1768,7 @@
                                       "fill": "$text-2",
                                       "content": "010-1234-5678",
                                       "fontFamily": "$font-mono",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -1778,7 +1778,7 @@
                                       "fill": "$text-3",
                                       "content": "등록일 2026-05-02",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 10,
+                                      "fontSize": 12,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -1804,7 +1804,7 @@
                                       "fill": "$red",
                                       "content": "삭제",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "700"
                                     }
                                   ]
@@ -1864,7 +1864,7 @@
                                       "fill": "$accent",
                                       "content": "김철수",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 15,
+                                      "fontSize": 17,
                                       "fontWeight": "700"
                                     },
                                     {
@@ -1874,7 +1874,7 @@
                                       "fill": "$text-2",
                                       "content": "010-2345-6789",
                                       "fontFamily": "$font-mono",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -1884,7 +1884,7 @@
                                       "fill": "$text-3",
                                       "content": "등록일 2026-05-02",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 10,
+                                      "fontSize": 12,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -1910,7 +1910,7 @@
                                       "fill": "$red",
                                       "content": "삭제",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "700"
                                     }
                                   ]
@@ -1970,7 +1970,7 @@
                                       "fill": "$accent",
                                       "content": "이영희",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 15,
+                                      "fontSize": 17,
                                       "fontWeight": "700"
                                     },
                                     {
@@ -1980,7 +1980,7 @@
                                       "fill": "$text-2",
                                       "content": "010-3456-7890",
                                       "fontFamily": "$font-mono",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -1990,7 +1990,7 @@
                                       "fill": "$text-3",
                                       "content": "등록일 2026-06-11",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 10,
+                                      "fontSize": 12,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -2016,7 +2016,7 @@
                                       "fill": "$red",
                                       "content": "삭제",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "700"
                                     }
                                   ]
@@ -2085,7 +2085,7 @@
                                       "fill": "$accent",
                                       "content": "박민수",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 15,
+                                      "fontSize": 17,
                                       "fontWeight": "700"
                                     },
                                     {
@@ -2095,7 +2095,7 @@
                                       "fill": "$text-2",
                                       "content": "010-4567-8901",
                                       "fontFamily": "$font-mono",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -2105,7 +2105,7 @@
                                       "fill": "$text-3",
                                       "content": "등록일 2026-06-28",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 10,
+                                      "fontSize": 12,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -2131,7 +2131,7 @@
                                       "fill": "$red",
                                       "content": "삭제",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "700"
                                     }
                                   ]
@@ -2191,7 +2191,7 @@
                                       "fill": "$accent",
                                       "content": "최수진",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 15,
+                                      "fontSize": 17,
                                       "fontWeight": "700"
                                     },
                                     {
@@ -2201,7 +2201,7 @@
                                       "fill": "$text-2",
                                       "content": "010-5678-9012",
                                       "fontFamily": "$font-mono",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -2211,7 +2211,7 @@
                                       "fill": "$text-3",
                                       "content": "등록일 2026-07-15",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 10,
+                                      "fontSize": 12,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -2237,7 +2237,7 @@
                                       "fill": "$red",
                                       "content": "삭제",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "700"
                                     }
                                   ]
@@ -2279,7 +2279,7 @@
                                   "fill": "$text-3",
                                   "content": "신규 사용자 등록",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 12,
+                                  "fontSize": 14,
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -2355,7 +2355,7 @@
                       "fill": "$text-1",
                       "content": "사용자 신규 등록",
                       "fontFamily": "$font-body",
-                      "fontSize": 18,
+                      "fontSize": 20,
                       "fontWeight": "700"
                     },
                     {
@@ -2365,7 +2365,7 @@
                       "fill": "$text-2",
                       "content": "1단계 · 선원의 이름과 연락처를 입력해 주세요.",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -2423,7 +2423,7 @@
                           "fill": "#0A0C11",
                           "content": "1",
                           "fontFamily": "$font-mono",
-                          "fontSize": 10,
+                          "fontSize": 12,
                           "fontWeight": "700"
                         }
                       ]
@@ -2435,7 +2435,7 @@
                       "fill": "$accent",
                       "content": "정보 입력",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "700"
                     }
                   ]
@@ -2481,7 +2481,7 @@
                           "fill": "$text-3",
                           "content": "2",
                           "fontFamily": "$font-mono",
-                          "fontSize": 10,
+                          "fontSize": 12,
                           "fontWeight": "700"
                         }
                       ]
@@ -2493,7 +2493,7 @@
                       "fill": "$text-3",
                       "content": "얼굴 등록",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "500"
                     }
                   ]
@@ -2665,7 +2665,7 @@
                       "fill": "$text-1",
                       "content": "구명조끼 모니터",
                       "fontFamily": "$font-body",
-                      "fontSize": 19,
+                      "fontSize": 21,
                       "fontWeight": "700"
                     },
                     {
@@ -2675,7 +2675,7 @@
                       "fill": "$text-3",
                       "content": "구명조끼 착용이 인식된 선원 목록이 표시됩니다.",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -2715,7 +2715,7 @@
                       "width": "fill_container",
                       "content": "구명조끼 부착 디바이스(블루투스)가 착용 여부와 익수 상태를 실시간으로 감지합니다. 착용이 인식되면 선원이 목록에 자동 추가됩니다.",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -2765,7 +2765,7 @@
                       "fill": "$text-1",
                       "content": "착용이 감지된 선원이 없습니다",
                       "fontFamily": "$font-body",
-                      "fontSize": 15,
+                      "fontSize": 17,
                       "fontWeight": "600"
                     },
                     {
@@ -2775,7 +2775,7 @@
                       "fill": "$text-3",
                       "content": "구명조끼 노드 디바이스가 연결되면 자동으로 표시됩니다",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -2866,7 +2866,7 @@
                           "fill": "$text-1",
                           "content": "어선 정보",
                           "fontFamily": "$font-body",
-                          "fontSize": 19,
+                          "fontSize": 21,
                           "fontWeight": "700"
                         },
                         {
@@ -2876,7 +2876,7 @@
                           "fill": "$text-3",
                           "content": "최초 등록한 정보를 언제든지 수정할 수 있습니다. 수정 시 해양경찰청에 자동 보고됩니다.",
                           "fontFamily": "$font-body",
-                          "fontSize": 12,
+                          "fontSize": 14,
                           "fontWeight": "normal"
                         }
                       ]
@@ -2913,7 +2913,7 @@
                           "fill": "$accent",
                           "content": "해양경찰청에 자동 보고되었습니다",
                           "fontFamily": "$font-body",
-                          "fontSize": 12,
+                          "fontSize": 14,
                           "fontWeight": "600"
                         }
                       ]
@@ -2948,7 +2948,7 @@
                           "fill": "$text-2",
                           "content": "지역 해양경찰청",
                           "fontFamily": "$font-body",
-                          "fontSize": 12,
+                          "fontSize": 14,
                           "fontWeight": "600"
                         },
                         {
@@ -2981,7 +2981,7 @@
                                   "fill": "$text-2",
                                   "content": "동해",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 13,
+                                  "fontSize": 15,
                                   "fontWeight": "500"
                                 }
                               ]
@@ -3009,7 +3009,7 @@
                                   "fill": "$text-2",
                                   "content": "서해",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 13,
+                                  "fontSize": 15,
                                   "fontWeight": "500"
                                 }
                               ]
@@ -3037,7 +3037,7 @@
                                   "fill": "$accent",
                                   "content": "남해",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 13,
+                                  "fontSize": 15,
                                   "fontWeight": "700"
                                 }
                               ]
@@ -3065,7 +3065,7 @@
                                   "fill": "$text-2",
                                   "content": "중부",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 13,
+                                  "fontSize": 15,
                                   "fontWeight": "500"
                                 }
                               ]
@@ -3093,7 +3093,7 @@
                                   "fill": "$text-2",
                                   "content": "제주",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 13,
+                                  "fontSize": 15,
                                   "fontWeight": "500"
                                 }
                               ]
@@ -3124,7 +3124,7 @@
                               "fill": "$text-2",
                               "content": "어선식별번호",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "600"
                             },
                             {
@@ -3141,7 +3141,7 @@
                               "fill": "$text-3",
                               "content": "숫자만 입력 가능",
                               "fontFamily": "$font-body",
-                              "fontSize": 10,
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -3169,7 +3169,7 @@
                               "fill": "$text-1",
                               "content": "2607-001-461100-3",
                               "fontFamily": "$font-mono",
-                              "fontSize": 14,
+                              "fontSize": 16,
                               "fontWeight": "normal"
                             },
                             {
@@ -3215,7 +3215,7 @@
                               "fill": "$text-2",
                               "content": "어선명",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "600"
                             },
                             {
@@ -3232,7 +3232,7 @@
                               "fill": "$text-3",
                               "content": "한글만 입력 가능",
                               "fontFamily": "$font-body",
-                              "fontSize": 10,
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -3260,7 +3260,7 @@
                               "fill": "$text-1",
                               "content": "청해호",
                               "fontFamily": "$font-body",
-                              "fontSize": 14,
+                              "fontSize": 16,
                               "fontWeight": "normal"
                             },
                             {
@@ -3306,7 +3306,7 @@
                               "fill": "$text-2",
                               "content": "출항지",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "600"
                             },
                             {
@@ -3323,7 +3323,7 @@
                               "fill": "$text-3",
                               "content": "숫자만 입력 가능",
                               "fontFamily": "$font-body",
-                              "fontSize": 10,
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -3351,7 +3351,7 @@
                               "fill": "$text-1",
                               "content": "통영부두-03",
                               "fontFamily": "$font-mono",
-                              "fontSize": 14,
+                              "fontSize": 16,
                               "fontWeight": "normal"
                             },
                             {
@@ -3525,7 +3525,7 @@
                       "fill": "$text-1",
                       "content": "어선 최초 등록",
                       "fontFamily": "$font-body",
-                      "fontSize": 20,
+                      "fontSize": 22,
                       "fontWeight": "700"
                     },
                     {
@@ -3535,7 +3535,7 @@
                       "fill": "$text-2",
                       "content": "모든 항목 입력 시 해양경찰청에 자동 등록됩니다",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -3557,7 +3557,7 @@
                   "fill": "$text-2",
                   "content": "지역 해양경찰청 선택",
                   "fontFamily": "$font-body",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "600"
                 },
                 {
@@ -3590,7 +3590,7 @@
                           "fill": "$text-2",
                           "content": "동해",
                           "fontFamily": "$font-body",
-                          "fontSize": 13,
+                          "fontSize": 15,
                           "fontWeight": "500"
                         }
                       ]
@@ -3618,7 +3618,7 @@
                           "fill": "$text-2",
                           "content": "서해",
                           "fontFamily": "$font-body",
-                          "fontSize": 13,
+                          "fontSize": 15,
                           "fontWeight": "500"
                         }
                       ]
@@ -3646,7 +3646,7 @@
                           "fill": "$accent",
                           "content": "남해",
                           "fontFamily": "$font-body",
-                          "fontSize": 13,
+                          "fontSize": 15,
                           "fontWeight": "700"
                         }
                       ]
@@ -3674,7 +3674,7 @@
                           "fill": "$text-2",
                           "content": "중부",
                           "fontFamily": "$font-body",
-                          "fontSize": 13,
+                          "fontSize": 15,
                           "fontWeight": "500"
                         }
                       ]
@@ -3702,7 +3702,7 @@
                           "fill": "$text-2",
                           "content": "제주",
                           "fontFamily": "$font-body",
-                          "fontSize": 13,
+                          "fontSize": 15,
                           "fontWeight": "500"
                         }
                       ]
@@ -3733,7 +3733,7 @@
                       "fill": "$text-2",
                       "content": "어선식별번호",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "600"
                     },
                     {
@@ -3750,7 +3750,7 @@
                       "fill": "$text-3",
                       "content": "숫자만 입력 가능",
                       "fontFamily": "$font-body",
-                      "fontSize": 10,
+                      "fontSize": 12,
                       "fontWeight": "normal"
                     }
                   ]
@@ -3777,7 +3777,7 @@
                       "fill": "$text-1",
                       "content": "2607-001-461100-3",
                       "fontFamily": "$font-mono",
-                      "fontSize": 14,
+                      "fontSize": 16,
                       "fontWeight": "normal"
                     }
                   ]
@@ -3806,7 +3806,7 @@
                       "fill": "$text-2",
                       "content": "어선명",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "600"
                     },
                     {
@@ -3823,7 +3823,7 @@
                       "fill": "$text-3",
                       "content": "한글만 입력 가능",
                       "fontFamily": "$font-body",
-                      "fontSize": 10,
+                      "fontSize": 12,
                       "fontWeight": "normal"
                     }
                   ]
@@ -3850,7 +3850,7 @@
                       "fill": "$text-1",
                       "content": "청해호",
                       "fontFamily": "$font-body",
-                      "fontSize": 14,
+                      "fontSize": 16,
                       "fontWeight": "normal"
                     }
                   ]
@@ -3879,7 +3879,7 @@
                       "fill": "$text-2",
                       "content": "출항지",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "600"
                     },
                     {
@@ -3896,7 +3896,7 @@
                       "fill": "$text-3",
                       "content": "숫자만 입력 가능",
                       "fontFamily": "$font-body",
-                      "fontSize": 10,
+                      "fontSize": 12,
                       "fontWeight": "normal"
                     }
                   ]
@@ -3923,7 +3923,7 @@
                       "fill": "$text-1",
                       "content": "통영부두-03",
                       "fontFamily": "$font-mono",
-                      "fontSize": 14,
+                      "fontSize": 16,
                       "fontWeight": "normal"
                     }
                   ]
@@ -3965,7 +3965,7 @@
                   "width": "fill_container",
                   "content": "모든 항목을 입력해야 V-PASS를 시작할 수 있습니다",
                   "fontFamily": "$font-body",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "600"
                 }
               ]
@@ -3989,7 +3989,7 @@
               "fill": "$text-3",
               "content": "등록 완료 시 '해양경찰청에 자동 등록되었습니다' 메시지가 표시된 후 메인 화면으로 이동합니다",
               "fontFamily": "$font-body",
-              "fontSize": 10,
+              "fontSize": 12,
               "fontWeight": "normal"
             }
           ]
@@ -4075,7 +4075,7 @@
               "fill": "$red",
               "content": "EMERGENCY · SOS",
               "fontFamily": "$font-display",
-              "fontSize": 14,
+              "fontSize": 16,
               "fontWeight": "800",
               "letterSpacing": 2
             },
@@ -4086,7 +4086,7 @@
               "fill": "$text-1",
               "content": "해양경찰청에 신고가 완료되었습니다",
               "fontFamily": "$font-body",
-              "fontSize": 20,
+              "fontSize": 22,
               "fontWeight": "700"
             },
             {
@@ -4100,7 +4100,7 @@
               "lineHeight": 1.6,
               "textAlign": "center",
               "fontFamily": "$font-body",
-              "fontSize": 13,
+              "fontSize": 15,
               "fontWeight": "normal"
             },
             {
@@ -4131,7 +4131,7 @@
                       "fill": "$text-3",
                       "content": "신고 시각",
                       "fontFamily": "$font-body",
-                      "fontSize": 11,
+                      "fontSize": 13,
                       "fontWeight": "normal"
                     },
                     {
@@ -4148,7 +4148,7 @@
                       "fill": "$text-1",
                       "content": "2026-07-23 14:32:05",
                       "fontFamily": "$font-mono",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -4167,7 +4167,7 @@
                       "fill": "$text-3",
                       "content": "신고 위치",
                       "fontFamily": "$font-body",
-                      "fontSize": 11,
+                      "fontSize": 13,
                       "fontWeight": "normal"
                     },
                     {
@@ -4184,7 +4184,7 @@
                       "fill": "$text-1",
                       "content": "N34°48.125' E128°25.402'",
                       "fontFamily": "$font-mono",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -4203,7 +4203,7 @@
                       "fill": "$text-3",
                       "content": "어선명",
                       "fontFamily": "$font-body",
-                      "fontSize": 11,
+                      "fontSize": 13,
                       "fontWeight": "normal"
                     },
                     {
@@ -4220,7 +4220,7 @@
                       "fill": "$text-1",
                       "content": "청해호 (2607-001-461100-3)",
                       "fontFamily": "$font-mono",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -4254,7 +4254,7 @@
                   "fill": "#FFFFFF",
                   "content": "상황 확인",
                   "fontFamily": "$font-body",
-                  "fontSize": 14,
+                  "fontSize": 16,
                   "fontWeight": "700"
                 }
               ]
@@ -4268,7 +4268,7 @@
           "fill": "$text-3",
           "content": "SOS 버튼을 2초 내 3회 누르면 어떤 페이지 위에서도 이 모달이 표시됩니다",
           "fontFamily": "$font-body",
-          "fontSize": 11,
+          "fontSize": 13,
           "fontWeight": "normal"
         }
       ]
@@ -4353,7 +4353,7 @@
                           "fill": "$text-1",
                           "content": "안녕하세요, 청해호",
                           "fontFamily": "$font-body",
-                          "fontSize": 19,
+                          "fontSize": 21,
                           "fontWeight": "700"
                         },
                         {
@@ -4363,7 +4363,7 @@
                           "fill": "$text-3",
                           "content": "2026년 7월 23일 목요일 · 통영부두-03 · 기상청 해양 예보 14:30 갱신",
                           "fontFamily": "$font-body",
-                          "fontSize": 12,
+                          "fontSize": 14,
                           "fontWeight": "normal"
                         }
                       ]
@@ -4400,7 +4400,7 @@
                           "fill": "$accent",
                           "content": "현재 발효 중인 해상 특보 없음",
                           "fontFamily": "$font-body",
-                          "fontSize": 12,
+                          "fontSize": 14,
                           "fontWeight": "600"
                         }
                       ]
@@ -4436,7 +4436,7 @@
                           "fill": "$text-1",
                           "content": "현재 해상 기상",
                           "fontFamily": "$font-body",
-                          "fontSize": 15,
+                          "fontSize": 17,
                           "fontWeight": "600"
                         },
                         {
@@ -4491,7 +4491,7 @@
                                       "fill": "$text-1",
                                       "content": "27°C",
                                       "fontFamily": "$font-display",
-                                      "fontSize": 44,
+                                      "fontSize": 46,
                                       "fontWeight": "600",
                                       "letterSpacing": -1
                                     },
@@ -4502,7 +4502,7 @@
                                       "fill": "$text-2",
                                       "content": "맑음",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 16,
+                                      "fontSize": 18,
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -4514,7 +4514,7 @@
                                   "fill": "$text-3",
                                   "content": "체감 29°C · 강수확률 10%",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 12,
+                                  "fontSize": 14,
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -4576,7 +4576,7 @@
                                           "fill": "$text-3",
                                           "content": "풍향 / 풍속",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 10,
+                                          "fontSize": 12,
                                           "fontWeight": "normal"
                                         },
                                         {
@@ -4586,7 +4586,7 @@
                                           "fill": "$text-1",
                                           "content": "NW 4.2 m/s",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "600"
                                         }
                                       ]
@@ -4633,7 +4633,7 @@
                                           "fill": "$text-3",
                                           "content": "파고",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 10,
+                                          "fontSize": 12,
                                           "fontWeight": "normal"
                                         },
                                         {
@@ -4643,7 +4643,7 @@
                                           "fill": "$text-1",
                                           "content": "0.8 m",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "600"
                                         }
                                       ]
@@ -4690,7 +4690,7 @@
                                           "fill": "$text-3",
                                           "content": "수온",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 10,
+                                          "fontSize": 12,
                                           "fontWeight": "normal"
                                         },
                                         {
@@ -4700,7 +4700,7 @@
                                           "fill": "$text-1",
                                           "content": "24.5°C",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "600"
                                         }
                                       ]
@@ -4756,7 +4756,7 @@
                                           "fill": "$text-3",
                                           "content": "습도",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 10,
+                                          "fontSize": 12,
                                           "fontWeight": "normal"
                                         },
                                         {
@@ -4766,7 +4766,7 @@
                                           "fill": "$text-1",
                                           "content": "68%",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "600"
                                         }
                                       ]
@@ -4813,7 +4813,7 @@
                                           "fill": "$text-3",
                                           "content": "시정",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 10,
+                                          "fontSize": 12,
                                           "fontWeight": "normal"
                                         },
                                         {
@@ -4823,7 +4823,7 @@
                                           "fill": "$text-1",
                                           "content": "10 km",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "600"
                                         }
                                       ]
@@ -4870,7 +4870,7 @@
                                           "fill": "$text-3",
                                           "content": "기압",
                                           "fontFamily": "$font-body",
-                                          "fontSize": 10,
+                                          "fontSize": 12,
                                           "fontWeight": "normal"
                                         },
                                         {
@@ -4880,7 +4880,7 @@
                                           "fill": "$text-1",
                                           "content": "1012 hPa",
                                           "fontFamily": "$font-mono",
-                                          "fontSize": 13,
+                                          "fontSize": 15,
                                           "fontWeight": "600"
                                         }
                                       ]
@@ -4914,7 +4914,7 @@
                           "fill": "$text-1",
                           "content": "일출·일몰 / 물때",
                           "fontFamily": "$font-body",
-                          "fontSize": 15,
+                          "fontSize": 17,
                           "fontWeight": "600"
                         },
                         {
@@ -4950,7 +4950,7 @@
                               "fill": "$text-2",
                               "content": "일출",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "normal"
                             },
                             {
@@ -4967,7 +4967,7 @@
                               "fill": "$text-1",
                               "content": "05:24",
                               "fontFamily": "$font-mono",
-                              "fontSize": 13,
+                              "fontSize": 15,
                               "fontWeight": "600"
                             }
                           ]
@@ -5005,7 +5005,7 @@
                               "fill": "$text-2",
                               "content": "일몰",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "normal"
                             },
                             {
@@ -5022,7 +5022,7 @@
                               "fill": "$text-1",
                               "content": "19:42",
                               "fontFamily": "$font-mono",
-                              "fontSize": 13,
+                              "fontSize": 15,
                               "fontWeight": "600"
                             }
                           ]
@@ -5060,7 +5060,7 @@
                               "fill": "$text-2",
                               "content": "만조",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "normal"
                             },
                             {
@@ -5077,7 +5077,7 @@
                               "fill": "$text-1",
                               "content": "11:32",
                               "fontFamily": "$font-mono",
-                              "fontSize": 13,
+                              "fontSize": 15,
                               "fontWeight": "600"
                             }
                           ]
@@ -5115,7 +5115,7 @@
                               "fill": "$text-2",
                               "content": "간조",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "normal"
                             },
                             {
@@ -5132,7 +5132,7 @@
                               "fill": "$text-1",
                               "content": "17:48",
                               "fontFamily": "$font-mono",
-                              "fontSize": 13,
+                              "fontSize": 15,
                               "fontWeight": "600"
                             }
                           ]
@@ -5199,7 +5199,7 @@
                               "fill": "$text-3",
                               "content": "승선 인원",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
+                              "fontSize": 13,
                               "fontWeight": "normal"
                             },
                             {
@@ -5209,7 +5209,7 @@
                               "fill": "$text-1",
                               "content": "3명",
                               "fontFamily": "$font-body",
-                              "fontSize": 15,
+                              "fontSize": 17,
                               "fontWeight": "700"
                             }
                           ]
@@ -5277,7 +5277,7 @@
                               "fill": "$text-3",
                               "content": "구명조끼 착용",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
+                              "fontSize": 13,
                               "fontWeight": "normal"
                             },
                             {
@@ -5287,7 +5287,7 @@
                               "fill": "$text-1",
                               "content": "0명",
                               "fontFamily": "$font-body",
-                              "fontSize": 15,
+                              "fontSize": 17,
                               "fontWeight": "700"
                             }
                           ]
@@ -5355,7 +5355,7 @@
                               "fill": "$text-3",
                               "content": "시동 잠금",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
+                              "fontSize": 13,
                               "fontWeight": "normal"
                             },
                             {
@@ -5365,7 +5365,7 @@
                               "fill": "$text-1",
                               "content": "잠김",
                               "fontFamily": "$font-body",
-                              "fontSize": 15,
+                              "fontSize": 17,
                               "fontWeight": "700"
                             }
                           ]
@@ -5433,7 +5433,7 @@
                               "fill": "$text-3",
                               "content": "최근 운항",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
+                              "fontSize": 13,
                               "fontWeight": "normal"
                             },
                             {
@@ -5443,7 +5443,7 @@
                               "fill": "$text-1",
                               "content": "07-22",
                               "fontFamily": "$font-body",
-                              "fontSize": 15,
+                              "fontSize": 17,
                               "fontWeight": "700"
                             }
                           ]
@@ -5528,7 +5528,7 @@
                       "fill": "$text-1",
                       "content": "출항 확정",
                       "fontFamily": "$font-body",
-                      "fontSize": 18,
+                      "fontSize": 20,
                       "fontWeight": "700"
                     },
                     {
@@ -5538,7 +5538,7 @@
                       "fill": "$text-2",
                       "content": "아래 승선 인원으로 출항합니다.",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -5570,7 +5570,7 @@
                   "fill": "$text-2",
                   "content": "승선 인원",
                   "fontFamily": "$font-body",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "600"
                 },
                 {
@@ -5587,7 +5587,7 @@
                   "fill": "$accent",
                   "content": "3명 · 구명조끼 착용 3명",
                   "fontFamily": "$font-mono",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "600"
                 }
               ]
@@ -5626,7 +5626,7 @@
                       "fill": "$accent",
                       "content": "홍길동",
                       "fontFamily": "$font-body",
-                      "fontSize": 13,
+                      "fontSize": 15,
                       "fontWeight": "700"
                     },
                     {
@@ -5654,7 +5654,7 @@
                       "fill": "$text-3",
                       "content": "07:42:15",
                       "fontFamily": "$font-mono",
-                      "fontSize": 11,
+                      "fontSize": 13,
                       "fontWeight": "normal"
                     }
                   ]
@@ -5682,7 +5682,7 @@
                       "fill": "$accent",
                       "content": "김철수",
                       "fontFamily": "$font-body",
-                      "fontSize": 13,
+                      "fontSize": 15,
                       "fontWeight": "700"
                     },
                     {
@@ -5710,7 +5710,7 @@
                       "fill": "$text-3",
                       "content": "07:43:02",
                       "fontFamily": "$font-mono",
-                      "fontSize": 11,
+                      "fontSize": 13,
                       "fontWeight": "normal"
                     }
                   ]
@@ -5738,7 +5738,7 @@
                       "fill": "$accent",
                       "content": "이영희",
                       "fontFamily": "$font-body",
-                      "fontSize": 13,
+                      "fontSize": 15,
                       "fontWeight": "700"
                     },
                     {
@@ -5766,7 +5766,7 @@
                       "fill": "$text-3",
                       "content": "07:45:38",
                       "fontFamily": "$font-mono",
-                      "fontSize": 11,
+                      "fontSize": 13,
                       "fontWeight": "normal"
                     }
                   ]
@@ -5808,7 +5808,7 @@
                   "width": "fill_container",
                   "content": "확정 시 시동 잠금 해제 · 해양경찰청 출항 신고 자동 접수",
                   "fontFamily": "$font-body",
-                  "fontSize": 11,
+                  "fontSize": 13,
                   "fontWeight": "600"
                 }
               ]
@@ -5909,7 +5909,7 @@
                       "fill": "$text-1",
                       "content": "사용자 신규 등록",
                       "fontFamily": "$font-body",
-                      "fontSize": 18,
+                      "fontSize": 20,
                       "fontWeight": "700"
                     },
                     {
@@ -5919,7 +5919,7 @@
                       "fill": "$text-2",
                       "content": "2단계 · 카메라를 보고 얼굴을 등록해 주세요.",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -5989,7 +5989,7 @@
                       "fill": "$accent",
                       "content": "정보 입력",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "700"
                     }
                   ]
@@ -6035,7 +6035,7 @@
                           "fill": "#0A0C11",
                           "content": "2",
                           "fontFamily": "$font-mono",
-                          "fontSize": 10,
+                          "fontSize": 12,
                           "fontWeight": "700"
                         }
                       ]
@@ -6047,7 +6047,7 @@
                       "fill": "$accent",
                       "content": "얼굴 등록",
                       "fontFamily": "$font-body",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "fontWeight": "700"
                     }
                   ]
@@ -6087,7 +6087,7 @@
                   "fill": "$text-1",
                   "content": "홍길동",
                   "fontFamily": "$font-body",
-                  "fontSize": 13,
+                  "fontSize": 15,
                   "fontWeight": "700"
                 },
                 {
@@ -6097,7 +6097,7 @@
                   "fill": "$text-2",
                   "content": "010-1234-5678",
                   "fontFamily": "$font-mono",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 },
                 {
@@ -6114,7 +6114,7 @@
                   "fill": "$accent",
                   "content": "수정",
                   "fontFamily": "$font-body",
-                  "fontSize": 11,
+                  "fontSize": 13,
                   "fontWeight": "700"
                 }
               ]
@@ -6151,7 +6151,7 @@
                   "fill": "$text-3",
                   "content": "얼굴 영역만 인식합니다",
                   "fontFamily": "$font-body",
-                  "fontSize": 11,
+                  "fontSize": 13,
                   "fontWeight": "normal"
                 }
               ]
@@ -6272,7 +6272,7 @@
                           "fill": "$text-1",
                           "content": "운항 기록지",
                           "fontFamily": "$font-body",
-                          "fontSize": 19,
+                          "fontSize": 21,
                           "fontWeight": "700"
                         },
                         {
@@ -6284,7 +6284,7 @@
                           "width": "fill_container",
                           "content": "출항부터 입항까지를 하나의 기록으로 관리합니다. 기록을 펼치면 승선 로그와 1분 간격 운항 상세를 함께 확인할 수 있습니다.",
                           "fontFamily": "$font-body",
-                          "fontSize": 12,
+                          "fontSize": 14,
                           "fontWeight": "normal"
                         }
                       ]
@@ -6321,7 +6321,7 @@
                           "fill": "$text-2",
                           "content": "로그 보관 기간 1년",
                           "fontFamily": "$font-body",
-                          "fontSize": 11,
+                          "fontSize": 13,
                           "fontWeight": "600"
                         }
                       ]
@@ -6377,7 +6377,7 @@
                               "fill": "$text-1",
                               "content": "2026-07-23",
                               "fontFamily": "$font-mono",
-                              "fontSize": 13,
+                              "fontSize": 15,
                               "fontWeight": "700"
                             },
                             {
@@ -6387,7 +6387,7 @@
                               "fill": "$text-2",
                               "content": "06:12 출항 → 입항 대기",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "normal"
                             },
                             {
@@ -6427,7 +6427,7 @@
                                   "fill": "$text-2",
                                   "content": "승선 3명",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 13,
                                   "fontWeight": "600"
                                 }
                               ]
@@ -6494,7 +6494,7 @@
                               "fill": "$accent",
                               "content": "2026-07-22",
                               "fontFamily": "$font-mono",
-                              "fontSize": 13,
+                              "fontSize": 15,
                               "fontWeight": "700"
                             },
                             {
@@ -6504,7 +6504,7 @@
                               "fill": "$text-2",
                               "content": "06:10 출항 → 17:45 입항",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "normal"
                             },
                             {
@@ -6544,7 +6544,7 @@
                                   "fill": "$text-2",
                                   "content": "승선 3명",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 13,
                                   "fontWeight": "600"
                                 }
                               ]
@@ -6613,7 +6613,7 @@
                                       "fill": "$text-1",
                                       "content": "승선 로그",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 13,
+                                      "fontSize": 15,
                                       "fontWeight": "700"
                                     },
                                     {
@@ -6630,7 +6630,7 @@
                                       "fill": "$text-3",
                                       "content": "얼굴 인식 승선 3명",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -6667,7 +6667,7 @@
                                               "fill": "$text-3",
                                               "content": "No.",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 11,
+                                              "fontSize": 13,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -6685,7 +6685,7 @@
                                               "fill": "$text-3",
                                               "content": "이름",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 11,
+                                              "fontSize": 13,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -6703,7 +6703,7 @@
                                               "fill": "$text-3",
                                               "content": "전화번호",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 11,
+                                              "fontSize": 13,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -6722,7 +6722,7 @@
                                               "fill": "$text-3",
                                               "content": "승선 시간",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 11,
+                                              "fontSize": 13,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -6757,7 +6757,7 @@
                                               "fill": "$text-3",
                                               "content": "01",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -6775,7 +6775,7 @@
                                               "fill": "$text-1",
                                               "content": "홍길동",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 13,
+                                              "fontSize": 15,
                                               "fontWeight": "700"
                                             }
                                           ]
@@ -6793,7 +6793,7 @@
                                               "fill": "$text-2",
                                               "content": "010-1234-5678",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -6812,7 +6812,7 @@
                                               "fill": "$accent",
                                               "content": "07:42:15",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -6847,7 +6847,7 @@
                                               "fill": "$text-3",
                                               "content": "02",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -6865,7 +6865,7 @@
                                               "fill": "$text-1",
                                               "content": "김철수",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 13,
+                                              "fontSize": 15,
                                               "fontWeight": "700"
                                             }
                                           ]
@@ -6883,7 +6883,7 @@
                                               "fill": "$text-2",
                                               "content": "010-2345-6789",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -6902,7 +6902,7 @@
                                               "fill": "$accent",
                                               "content": "07:43:02",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -6937,7 +6937,7 @@
                                               "fill": "$text-3",
                                               "content": "03",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -6955,7 +6955,7 @@
                                               "fill": "$text-1",
                                               "content": "이영희",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 13,
+                                              "fontSize": 15,
                                               "fontWeight": "700"
                                             }
                                           ]
@@ -6973,7 +6973,7 @@
                                               "fill": "$text-2",
                                               "content": "010-3456-7890",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -6992,7 +6992,7 @@
                                               "fill": "$accent",
                                               "content": "07:45:38",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -7040,7 +7040,7 @@
                                       "fill": "$text-1",
                                       "content": "운항 상세",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 13,
+                                      "fontSize": 15,
                                       "fontWeight": "700"
                                     },
                                     {
@@ -7057,7 +7057,7 @@
                                       "fill": "$text-3",
                                       "content": "1분 간격 · 총 695건",
                                       "fontFamily": "$font-body",
-                                      "fontSize": 11,
+                                      "fontSize": 13,
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -7094,7 +7094,7 @@
                                               "fill": "$text-3",
                                               "content": "시간",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 11,
+                                              "fontSize": 13,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -7112,7 +7112,7 @@
                                               "fill": "$text-3",
                                               "content": "좌표",
                                               "fontFamily": "$font-body",
-                                              "fontSize": 11,
+                                              "fontSize": 13,
                                               "fontWeight": "600"
                                             }
                                           ]
@@ -7147,7 +7147,7 @@
                                               "fill": "$text-2",
                                               "content": "2026-07-22 06:10:00",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7165,7 +7165,7 @@
                                               "fill": "$text-1",
                                               "content": "N34°48.125' E128°25.402'",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7200,7 +7200,7 @@
                                               "fill": "$text-2",
                                               "content": "2026-07-22 06:11:00",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7218,7 +7218,7 @@
                                               "fill": "$text-1",
                                               "content": "N34°48.190' E128°25.371'",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7253,7 +7253,7 @@
                                               "fill": "$text-2",
                                               "content": "2026-07-22 06:12:00",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7271,7 +7271,7 @@
                                               "fill": "$text-1",
                                               "content": "N34°48.257' E128°25.340'",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7306,7 +7306,7 @@
                                               "fill": "$text-2",
                                               "content": "2026-07-22 06:13:00",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7324,7 +7324,7 @@
                                               "fill": "$text-1",
                                               "content": "N34°48.322' E128°25.308'",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7359,7 +7359,7 @@
                                               "fill": "$text-2",
                                               "content": "2026-07-22 06:14:00",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7377,7 +7377,7 @@
                                               "fill": "$text-1",
                                               "content": "N34°48.390' E128°25.276'",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7412,7 +7412,7 @@
                                               "fill": "$text-2",
                                               "content": "2026-07-22 06:15:00",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7430,7 +7430,7 @@
                                               "fill": "$text-1",
                                               "content": "N34°48.455' E128°25.244'",
                                               "fontFamily": "$font-mono",
-                                              "fontSize": 12,
+                                              "fontSize": 14,
                                               "fontWeight": "normal"
                                             }
                                           ]
@@ -7485,7 +7485,7 @@
                               "fill": "$text-1",
                               "content": "2026-07-19",
                               "fontFamily": "$font-mono",
-                              "fontSize": 13,
+                              "fontSize": 15,
                               "fontWeight": "700"
                             },
                             {
@@ -7495,7 +7495,7 @@
                               "fill": "$text-2",
                               "content": "05:52 출항 → 16:20 입항",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "normal"
                             },
                             {
@@ -7535,7 +7535,7 @@
                                   "fill": "$text-2",
                                   "content": "승선 2명",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 13,
                                   "fontWeight": "600"
                                 }
                               ]
@@ -7595,7 +7595,7 @@
                               "fill": "$text-1",
                               "content": "2026-07-15",
                               "fontFamily": "$font-mono",
-                              "fontSize": 13,
+                              "fontSize": 15,
                               "fontWeight": "700"
                             },
                             {
@@ -7605,7 +7605,7 @@
                               "fill": "$text-2",
                               "content": "06:30 출항 → 18:02 입항",
                               "fontFamily": "$font-body",
-                              "fontSize": 12,
+                              "fontSize": 14,
                               "fontWeight": "normal"
                             },
                             {
@@ -7645,7 +7645,7 @@
                                   "fill": "$text-2",
                                   "content": "승선 3명",
                                   "fontFamily": "$font-body",
-                                  "fontSize": 11,
+                                  "fontSize": 13,
                                   "fontWeight": "600"
                                 }
                               ]

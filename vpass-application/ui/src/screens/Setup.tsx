@@ -68,8 +68,8 @@ export function Setup({ onDone }: { onDone: () => void }) {
             <Ship size={22} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontSize: 20, fontWeight: 700 }}>어선 최초 등록</span>
-            <span style={{ fontSize: 12, color: "var(--text-2)" }}>
+            <span style={{ fontSize: 22, fontWeight: 700 }}>어선 최초 등록</span>
+            <span style={{ fontSize: 14, color: "var(--text-2)" }}>
               모든 항목 입력 시 해양경찰청에 자동 등록됩니다
             </span>
           </div>
@@ -157,7 +157,7 @@ export function Setup({ onDone }: { onDone: () => void }) {
           </button>
         )}
 
-        <span style={{ fontSize: 10, color: "var(--text-3)" }}>
+        <span style={{ fontSize: 12, color: "var(--text-3)" }}>
           등록 완료 시 '해양경찰청에 자동 등록되었습니다' 메시지가 표시된 후 메인
           화면으로 이동합니다
         </span>

@@ -56,13 +56,13 @@ function DeviceCard({ device }: { device: DeviceState }) {
 
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 15, fontWeight: 700 }}>
+          <span style={{ fontSize: 17, fontWeight: 700 }}>
             {device.user_name ?? "미배정 장치"}
           </span>
           <span
             style={{
               fontFamily: "var(--font-mono)",
-              fontSize: 11,
+              fontSize: 13,
               color: "var(--text-3)",
             }}
           >
@@ -75,7 +75,7 @@ function DeviceCard({ device }: { device: DeviceState }) {
               display: "inline-flex",
               alignItems: "center",
               gap: 5,
-              fontSize: 11,
+              fontSize: 13,
               color: device.signal_ok ? "var(--text-2)" : "var(--red)",
             }}
           >
@@ -87,13 +87,13 @@ function DeviceCard({ device }: { device: DeviceState }) {
                 : "신호 없음"}
           </span>
           {device.last_fall !== "-" && (
-            <span style={{ fontSize: 11, color: "var(--orange)" }}>
+            <span style={{ fontSize: 13, color: "var(--orange)" }}>
               낙상 {device.last_fall}
               {device.fall_magnitude ? ` (${device.fall_magnitude}g)` : ""}
             </span>
           )}
           {device.mob && device.mob_at && (
-            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--red)" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--red)" }}>
               익수 판정 {device.mob_at} ·{" "}
               {device.mob_cause === "fall" ? "낙상 후 신호 두절" : "무선 신호 두절"}
             </span>
@@ -148,7 +148,7 @@ function SimPanel() {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <FlaskConical size={14} color="var(--text-2)" />
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)" }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-2)" }}>
           장치 시뮬레이터 (개발·시연용) — 실제 ESP8266 장치와 동일한 신호 경로
         </span>
       </div>
@@ -160,7 +160,7 @@ function SimPanel() {
           <input
             value={device}
             onChange={(e) => setDevice(e.target.value)}
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 14 }}
           />
         </div>
         {buttons.map((b) => (
@@ -173,7 +173,7 @@ function SimPanel() {
           </button>
         ))}
         {error && (
-          <span style={{ fontSize: 11, color: "var(--red)" }}>{error}</span>
+          <span style={{ fontSize: 13, color: "var(--red)" }}>{error}</span>
         )}
       </div>
     </div>
@@ -234,10 +234,10 @@ export function Lifejacket({ state }: { state: AppState }) {
           >
             <BluetoothSearching size={28} />
           </div>
-          <span style={{ fontSize: 15, fontWeight: 600 }}>
+          <span style={{ fontSize: 17, fontWeight: 600 }}>
             착용이 감지된 선원이 없습니다
           </span>
-          <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+          <span style={{ fontSize: 14, color: "var(--text-3)" }}>
             구명조끼 노드 디바이스가 연결되면 자동으로 표시됩니다
           </span>
         </div>

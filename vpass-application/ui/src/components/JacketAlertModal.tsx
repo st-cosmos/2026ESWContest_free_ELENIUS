@@ -38,7 +38,7 @@ export function JacketAlertModal({ alert }: { alert: JacketDoffAlert }) {
         <div
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: 800,
             letterSpacing: 2,
             color: "var(--orange)",
@@ -47,7 +47,7 @@ export function JacketAlertModal({ alert }: { alert: JacketDoffAlert }) {
           WARNING · LIFEJACKET
         </div>
 
-        <div style={{ fontSize: 20, fontWeight: 700, textAlign: "center" }}>
+        <div style={{ fontSize: 22, fontWeight: 700, textAlign: "center" }}>
           구명조끼 해제가 감지됐습니다!
           <br />
           다시 구명조끼를 착용하세요!
@@ -74,12 +74,12 @@ export function JacketAlertModal({ alert }: { alert: JacketDoffAlert }) {
               key={label}
               style={{ display: "flex", alignItems: "center", width: "100%" }}
             >
-              <span style={{ fontSize: 11, color: "var(--text-3)" }}>{label}</span>
+              <span style={{ fontSize: 13, color: "var(--text-3)" }}>{label}</span>
               <span
                 style={{
                   marginLeft: "auto",
                   fontFamily: "var(--font-mono)",
-                  fontSize: 12,
+                  fontSize: 14,
                 }}
               >
                 {value}
@@ -104,7 +104,7 @@ export function JacketAlertModal({ alert }: { alert: JacketDoffAlert }) {
         </button>
       </div>
 
-      <div style={{ fontSize: 11, color: "var(--text-3)" }}>
+      <div style={{ fontSize: 13, color: "var(--text-3)" }}>
         구명조끼를 다시 착용하면 이 경고는 자동으로 사라집니다
       </div>
     </div>

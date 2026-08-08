@@ -39,21 +39,21 @@ function CrewRow({ entry }: { entry: CrewEntry }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center" }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "var(--accent)" }}>
           {entry.name}
         </span>
         <span
           style={{
             marginLeft: "auto",
             fontFamily: "var(--font-mono)",
-            fontSize: 11,
+            fontSize: 13,
             color: "var(--text-3)",
           }}
         >
           {entry.time}
         </span>
       </div>
-      <span style={{ fontSize: 11, color: "var(--text-2)" }}>
+      <span style={{ fontSize: 13, color: "var(--text-2)" }}>
         얼굴 인식 완료 · 승선 확인
         {jacketLabel(entry)}
       </span>
@@ -89,8 +89,8 @@ function EngineAllowConfirm({
       <div className="modal fade-in-up">
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 18, fontWeight: 700 }}>승선 확인 · 시동 허용</span>
-            <span style={{ fontSize: 12, color: "var(--text-2)" }}>
+            <span style={{ fontSize: 20, fontWeight: 700 }}>승선 확인 · 시동 허용</span>
+            <span style={{ fontSize: 14, color: "var(--text-2)" }}>
               아래 승선 인원을 확인하고 시동을 허용합니다.
             </span>
           </div>
@@ -100,14 +100,14 @@ function EngineAllowConfirm({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)" }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-2)" }}>
             승선 인원
           </span>
           <span
             style={{
               marginLeft: "auto",
               fontFamily: "var(--font-mono)",
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               color: "var(--accent)",
             }}
@@ -140,7 +140,7 @@ function EngineAllowConfirm({
                 borderRadius: 10,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--accent)" }}>
                 {c.name}
               </span>
               <span
@@ -157,7 +157,7 @@ function EngineAllowConfirm({
               <span
                 style={{
                   fontFamily: "var(--font-mono)",
-                  fontSize: 11,
+                  fontSize: 13,
                   color: "var(--text-3)",
                 }}
               >
@@ -218,8 +218,8 @@ function ArrivalConfirm({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-backdrop">
       <div className="modal fade-in-up" style={{ width: 400 }}>
-        <span style={{ fontSize: 18, fontWeight: 700 }}>수동 입항 신고</span>
-        <span style={{ fontSize: 13, color: "var(--text-2)" }}>
+        <span style={{ fontSize: 20, fontWeight: 700 }}>수동 입항 신고</span>
+        <span style={{ fontSize: 15, color: "var(--text-2)" }}>
           보통은 지오펜스 안으로 들어오면 자동으로 입항 처리됩니다. 지금 바로
           운항을 종료하려면 확정하세요. 시동이 다시 잠기고 승선 목록이 초기화됩니다.
         </span>
@@ -312,7 +312,7 @@ export function Departure({ state }: { state: AppState }) {
               <span
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: 10,
+                  fontSize: 12,
                   letterSpacing: 1,
                 }}
               >
@@ -363,7 +363,7 @@ export function Departure({ state }: { state: AppState }) {
                 >
                   <ScanFace size={16} color={overlay.color} />
                   <span
-                    style={{ fontSize: 13, fontWeight: 700, color: overlay.color }}
+                    style={{ fontSize: 15, fontWeight: 700, color: overlay.color }}
                   >
                     {overlay.text}
                   </span>
@@ -392,7 +392,7 @@ export function Departure({ state }: { state: AppState }) {
                   opacity: 0.85,
                 }}
               />
-              <span style={{ fontSize: 12, color: "var(--text-2)" }}>
+              <span style={{ fontSize: 14, color: "var(--text-2)" }}>
                 구명조끼를 착용하고 얼굴을 안내선 안에 맞춰 주세요
               </span>
             </div>
@@ -401,7 +401,7 @@ export function Departure({ state }: { state: AppState }) {
               style={{
                 position: "relative",
                 marginTop: "auto",
-                fontSize: 11,
+                fontSize: 13,
                 color: "var(--text-3)",
               }}
             >
@@ -441,7 +441,7 @@ export function Departure({ state }: { state: AppState }) {
                   background: "var(--accent-soft)",
                   borderRadius: 6,
                   fontFamily: "var(--font-mono)",
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: 700,
                   color: "var(--accent)",
                 }}
@@ -470,7 +470,7 @@ export function Departure({ state }: { state: AppState }) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 12,
+                    fontSize: 14,
                     color: "var(--text-3)",
                   }}
                 >
@@ -535,7 +535,7 @@ export function Departure({ state }: { state: AppState }) {
                 )}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ fontSize: 14, fontWeight: 700 }}>
+                <span style={{ fontSize: 16, fontWeight: 700 }}>
                   {cardState === "killed"
                     ? "엔진 비상 정지됨"
                     : cardState === "sailing"
@@ -544,7 +544,7 @@ export function Departure({ state }: { state: AppState }) {
                         ? "시동 허용됨 · 출항 대기"
                         : "시동 잠금 중"}
                 </span>
-                <span style={{ fontSize: 11, color: "var(--text-2)" }}>
+                <span style={{ fontSize: 13, color: "var(--text-2)" }}>
                   {cardState === "killed"
                     ? (engine.kill_reason ?? "킬 스위치 작동")
                     : cardState === "sailing"
@@ -566,7 +566,7 @@ export function Departure({ state }: { state: AppState }) {
                 >
                   승선 확인 · 시동 허용
                 </button>
-                <span style={{ fontSize: 10, color: "var(--text-3)" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
                   시동 잠금만 해제됩니다 · 출항 신고는 지오펜스 통과 시 자동 접수
                 </span>
               </>
@@ -590,7 +590,7 @@ export function Departure({ state }: { state: AppState }) {
                   <Anchor size={15} />
                   {manualBusy ? "신고 중…" : "수동 출항 신고"}
                 </button>
-                <span style={{ fontSize: 10, color: "var(--text-3)" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
                   지오펜스를 사용하지 않을 때만 사용하세요
                 </span>
               </>
@@ -606,7 +606,7 @@ export function Departure({ state }: { state: AppState }) {
                   <Anchor size={15} />
                   수동 입항 신고
                 </button>
-                <span style={{ fontSize: 10, color: "var(--text-3)" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
                   지오펜스 안으로 들어오면 자동으로 입항 처리됩니다
                 </span>
               </>
