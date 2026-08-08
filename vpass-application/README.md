@@ -47,8 +47,12 @@ uv run vpass --kiosk         # chromium 키오스크 모드(라즈베리파이�
 | `VPASS_COMPASS_HEADING_ALPHA` | `0.25` | 침로 저역통과 필터 계수(0 < alpha <= 1) |
 | `VPASS_DEMO_SERVER_URL` | (없음) | 설정 시 데모 관제 서버와 연동(텔레메트리/신고/출입항 전송·관할 기상 수신). 미설정 시 독립 동작 |
 | `VPASS_JACKET_VISION` | `1` | 승선 시 구명조끼 카메라 시각 확인 사용 여부 (`0` 비활성) |
-| `VPASS_JACKET_COLORS` | `orange,lime,red` | 구명조끼 색상 프리셋(`orange`/`red`/`yellow`/`lime`, 쉼표 구분) |
-| `VPASS_JACKET_MIN_RATIO` | `0.4` | 상체 ROI 에서 구명조끼 색 픽셀 비율 판정 기준 |
+| `VPASS_JACKET_METHOD` | `auto` | 판정 방법 — `auto`(모델 있으면 ml)/`ml`/`hsv` |
+| `VPASS_JACKET_MODEL` | `models/jacket_classifier.tflite` | 가슴 ROI 이진 분류 TFLite 모델 경로 |
+| `VPASS_JACKET_ML_THRESHOLD` | `0.5` | ML 착용 확률 판정 기준 |
+| `VPASS_JACKET_CAPTURE` | `0` | `1` 이면 스캔 중 가슴 ROI 크롭을 학습 데이터로 저장 |
+| `VPASS_JACKET_COLORS` | `orange,lime,red` | (hsv 폴백) 색상 프리셋(`orange`/`red`/`yellow`/`lime`, 쉼표 구분) |
+| `VPASS_JACKET_MIN_RATIO` | `0.4` | (hsv 폴백) 상체 ROI 구명조끼 색 픽셀 비율 판정 기준 |
 
 ## 주요 동작 흐름
 
@@ -121,13 +125,15 @@ POST /api/fall    {"device": "jacket-1", "magnitude": 3.2}
 `구명조끼 장치 ID` 필드는 선택 사항이며, 승선 매칭이 없을 때 익수 알림의
 이름 해석 폴백으로만 사용됩니다.
 
-## 구명조끼 착용 시각 확인 (임시 구현)
+## 구명조끼 착용 시각 확인
 
 모듈(홀센서) 신호만으로는 구명조끼를 입지 않은 채 버클만 채워 착용으로
 위장할 수 있어, 승선 등록(얼굴 인식) 시 카메라 확인을 함께 요구합니다.
 
-- 현재 구현: 얼굴 아래 상체 ROI 의 **HSV 색상 비율 검사**(`jacketvision.py`).
-  구명조끼 색 픽셀이 기준 비율(`VPASS_JACKET_MIN_RATIO`) 이상이면 착용으로 판정
+- 판정(`jacketvision.py`): 얼굴 아래 가슴 ROI 를 **TFLite 이진 분류기**로
+  검사합니다(`models/jacket_classifier.tflite`, 착용 확률 ≥ `VPASS_JACKET_ML_THRESHOLD`).
+  모델 파일이나 tflite 런타임이 없으면 기존 **HSV 색상 비율 검사**로 자동
+  폴백합니다 (`VPASS_JACKET_METHOD=hsv` 로 강제 가능).
 - 카메라 확인을 통과해도 **모듈 착용 신호가 함께 있어야** 승선됩니다.
   모듈 신호는 장치-선원 동적 매칭으로 확인하며, 스캔 시점에 미매칭 착용 장치 중
   가장 최근 착용된 장치를 해당 선원에게 매칭합니다(같은 세션에서 재사용 불가,
@@ -135,8 +141,20 @@ POST /api/fall    {"device": "jacket-1", "magnitude": 3.2}
 - 상체가 화면 밖이면 "상체가 화면에 나오게 서 주세요" 안내 후 승선을 보류
   (판단 불가를 통과시키면 치팅 구멍이 되므로)
 - 출항 화면 카메라에 상체 박스와 `JACKET 42%` 형태의 판정 근거가 표시됩니다
-- **임시 구현입니다** — 추후 구명조끼 객체 검출 모델을 학습해
-  `jacketvision.py` 만 교체할 예정입니다. `VPASS_JACKET_VISION=0` 으로 끌 수 있습니다.
+- `VPASS_JACKET_VISION=0` 으로 시각 확인 자체를 끌 수 있습니다.
+
+### 분류 모델 학습·배포
+
+1. **데이터 수집** — 실제 설치 환경에서 `VPASS_JACKET_CAPTURE=1 uv run vpass` 로
+   앱을 켜 두면 스캔 중 가슴 ROI 크롭이 `data/jacket_dataset/unsorted/` 에
+   1초 간격으로 저장됩니다. 착용/미착용(주황색 일반 옷 포함) 상황을 골고루 수집합니다.
+2. **라벨링** — 크롭을 `data/jacket_dataset/jacket/` 과 `no_jacket/` 으로 분류
+   (클래스당 200장 이상 권장, 파일명의 점수는 참고용)
+3. **학습 (PC)** — `pip install "tensorflow>=2.16"` 후
+   `python tools/train_jacket_classifier.py --data data/jacket_dataset`
+   → `models/jacket_classifier.tflite` 생성 (MobileNetV3-Small 전이학습, int8 양자화)
+4. **배포 (라즈베리파이)** — 모델 파일을 같은 경로에 복사하고 `uv sync --extra ml`
+   로 tflite 런타임을 설치. 앱 시작 로그에 `[jacketvision] TFLite 모델 로드` 확인.
 
 ## GPS / 지자계 연동
 
@@ -210,7 +228,7 @@ vpass-application/
 │   ├── runtime.py          # 매니저 배선 + 출항/입항 확정 + 장치 시뮬레이터
 │   ├── camera.py           # 카메라 스레드 + MJPEG 스트림
 │   ├── facerec.py          # 얼굴 검출/인식(LBPH)
-│   ├── jacketvision.py     # 구명조끼 착용 시각 확인(임시 HSV, 모델 교체 예정)
+│   ├── jacketvision.py     # 구명조끼 착용 시각 확인(TFLite 분류기 + HSV 폴백)
 │   ├── gps.py              # NMEA GPS(UART) 읽기
 │   ├── compass.py          # QMC5883L 지자계(I2C) 읽기
 │   ├── boarding.py         # 승선(출석) 세션 + 로그
@@ -220,8 +238,11 @@ vpass-application/
 │   ├── telemetry.py        # GPS·지자계 통합 제공자 + 개발용 시뮬레이터
 │   ├── weather.py          # 해양 기상 제공자 (KMA 연동 자리)
 │   └── sos.py              # SOS 신고 관리
+├── tools/
+│   └── train_jacket_classifier.py  # 구명조끼 분류기 학습 (PC, tensorflow)
+├── models/                 # 배포용 TFLite 모델 (jacket_classifier.tflite)
 ├── tests/test_flow.py      # 핵심 안전 시나리오 테스트
 ├── ui/                     # React + TypeScript (Vite)
 │   └── src/screens/        # 홈/출항/운항기록지/사용자/구명조끼/어선정보/셋업
-└── data/                   # 런타임 데이터 (git 제외)
+└── data/                   # 런타임 데이터 (git 제외, 학습 데이터셋 포함)
 ```

@@ -76,11 +76,30 @@ REBOARD_MESSAGE_COOLDOWN = 6.0  # 같은 사람 중복 안내 최소 간격(초)
 
 # ── 구명조끼 시각 확인 (승선 등록 치팅 방지) ─────────────────────────────
 # 모듈(홀센서) 신호만 믿으면 조끼를 입지 않고 버클만 채우는 치팅이 가능하다.
-# 승선 등록 시 얼굴 아래 상체 ROI 의 HSV 색상 비율을 함께 검사한다.
-# 임시 구현(jacketvision.py) — 추후 전용 객체 검출 모델 학습 후 교체 예정.
+# 승선 등록 시 얼굴 아래 상체 ROI 를 카메라로 함께 검사한다.
+# 판정은 TFLite 분류 모델(ml)이 기본이고, 모델/런타임이 없으면 HSV 색 비율
+# 검사(hsv)로 폴백한다 — jacketvision.py 참고.
 JACKET_VISION_ENABLED = (
     os.environ.get("VPASS_JACKET_VISION", "1").strip().lower() not in ("0", "false", "off")
 )
+
+# 판정 방법: auto(모델 있으면 ml, 없으면 hsv) | ml(모델 필수) | hsv(색 검사 강제)
+JACKET_VISION_METHOD = os.environ.get("VPASS_JACKET_METHOD", "auto").strip().lower()
+# 가슴 ROI 이진 분류 TFLite 모델 경로 (tools/train_jacket_classifier.py 로 학습)
+JACKET_MODEL_PATH = Path(
+    os.environ.get("VPASS_JACKET_MODEL", APP_DIR / "models" / "jacket_classifier.tflite")
+)
+# 모델 출력(착용 확률)이 이 값 이상이면 착용으로 판정
+JACKET_ML_THRESHOLD = float(os.environ.get("VPASS_JACKET_ML_THRESHOLD", "0.5"))
+
+# 학습 데이터 수집: 스캔 중 가슴 ROI 크롭을 주기적으로 저장 (기본 꺼짐)
+JACKET_CAPTURE_ENABLED = (
+    os.environ.get("VPASS_JACKET_CAPTURE", "0").strip().lower() not in ("0", "false", "off", "")
+)
+JACKET_CAPTURE_DIR = Path(
+    os.environ.get("VPASS_JACKET_CAPTURE_DIR", DATA_DIR / "jacket_dataset" / "unsorted")
+)
+JACKET_CAPTURE_INTERVAL = float(os.environ.get("VPASS_JACKET_CAPTURE_INTERVAL", "1.0"))
 
 # 구명조끼 색상 프리셋 (OpenCV HSV: H 0-179, S/V 0-255)
 _JACKET_COLOR_PRESETS: dict[str, list[tuple]] = {
