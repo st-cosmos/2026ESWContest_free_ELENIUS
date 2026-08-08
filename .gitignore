@@ -10,8 +10,10 @@ venv/
 
 # ── vpass-application 특정 ──────────────────────────
 # 런타임 데이터 전체 제외 — 구명조끼 학습 데이터셋(data/jacket_dataset/)도 여기 포함된다.
-# 학습 이미지는 git 에 올리지 않는다 (배포용 모델은 models/*.tflite 로만 커밋).
+# 학습 이미지는 git 에 올리지 않는다.
 vpass-application/data/
+# 학습된 TFLite 모델은 저장소 밖에서 따로 관리한다 (models/README.md 참고)
+vpass-application/models/*.tflite
 
 # ── Node / React UI ─────────────────────────────────
 node_modules/
