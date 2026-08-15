@@ -171,7 +171,9 @@ export function SimulatorPage() {
             terminal={terminal}
             sos={sim.sos}
             onOpenBoundary={
-              sim.sos?.info ? () => navigate(`/boundary/${sim.sos.info!.report_id}`) : undefined
+              sim.sos?.info?.cause === "mob"
+                ? () => navigate(`/boundary/${sim.sos.info!.report_id}`)
+                : undefined
             }
             onVesselMove={onVesselMove}
             onRouteChange={onRouteChange}
@@ -289,7 +291,8 @@ export function SimulatorPage() {
               {sim.sos.info?.detail && <div className="sos-detail">{sim.sos.info.detail}</div>}
 
               <div className="sos-actions">
-                {sim.sos.info && (
+                {/* 익수 신고에만 요구조자가 있다 (수동 SOS 는 선내 버튼) */}
+                {sim.sos.info?.cause === "mob" && (
                   <button
                     className="btn btn-danger"
                     onClick={() => navigate(`/boundary/${sim.sos.info!.report_id}`)}

@@ -236,7 +236,8 @@ export function SimMap({
             <Waves size={13} />
             표류 {sos.drift_kn.toFixed(2)} kn · {sos.drift_bearing}° · 누적 {sos.drift_m} m
           </div>
-          {sos.info && onOpenBoundary && (
+          {/* 요구조자 예상 위치는 익수 신고 전용 (수동 SOS 는 요구조자가 없다) */}
+          {sos.info?.cause === "mob" && onOpenBoundary && (
             <button className="sim-boundarylink" onClick={onOpenBoundary}>
               <PersonStanding size={15} />
               요구조자 예상 위치 바운더리 열기

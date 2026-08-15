@@ -185,19 +185,11 @@
 .bd-ring.step.s60 { border-color: var(--cyan-border); }
 .bd-ring.step.s120 { border-color: var(--border); }
 
-.bd-ring-tag {
-  position: absolute;
-  left: 50%;
-  top: -9px;
-  transform: translateX(-50%);
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-2);
-  white-space: nowrap;
+/* 라벨 지시선 — 겹침을 피해 멀리 밀려난 라벨과 앵커를 잇는다 */
+.bd-leader {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
 }
 
 /* 마커 */
@@ -252,12 +244,15 @@
   100% { transform: scale(1.25); opacity: 0; }
 }
 
+/* 지도 라벨 — 위치는 mapLabels.ts 가 겹치지 않게 계산한다 */
 .bd-tag {
   position: absolute;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 10px;
+  height: 28px;
+  padding: 0 10px;
   border-radius: 8px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -267,18 +262,48 @@
   white-space: nowrap;
   pointer-events: none;
   transform: translate(-50%, -50%);
+  /* 흐름 애니메이션 위에서도 글자가 또렷하게 보이도록 */
+  box-shadow: 0 2px 10px #00000059;
+  z-index: 4;
 }
 
-.bd-tag.incident { margin-top: -30px; }
+.bd-tag .t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bd-tag.survivor {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  box-shadow: 0 0 18px var(--red-glow);
+  z-index: 6;
+}
+
+.bd-tag.incident {
+  color: var(--text-1);
+}
+
 .bd-tag.vessel {
-  margin-top: 34px;
   border-color: var(--orange-border);
   color: var(--orange);
 }
+
 .bd-tag.sector {
   background: var(--red-soft);
   border-color: var(--red-border);
   color: var(--red);
+}
+
+.bd-tag.step {
+  height: 22px;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3);
+  border-color: var(--border-subtle);
+  z-index: 3;
 }
 
 /* 지도 부가 정보 */

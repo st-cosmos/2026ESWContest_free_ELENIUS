@@ -83,20 +83,22 @@ export function ReportsModal({
 
         <div className="tabs-hint">
           <MousePointerClick size={12} />
-          신고 선박을 누르면 요구조자 예상 위치 페이지가 열립니다
+          익수(자동) 신고를 누르면 요구조자 예상 위치 페이지가 열립니다
         </div>
 
         <div className="modal-body">
           {filtered.length === 0 && <div className="empty">접수된 신고가 없습니다.</div>}
           {filtered.map((r) => {
+            // 요구조자 예상 위치는 익수 신고 전용이다. 수동 SOS 는 선내에서 버튼을
+            // 누른 것이라 물에 빠진 사람이 없어 표류를 예측할 대상이 없다.
             const mob = r.cause === "mob";
             const openBoundary = () => navigate(`/boundary/${r.id}`);
             return (
               <div
-                className={`report-card clickable${mob ? " mob" : ""}`}
+                className={`report-card${mob ? " mob clickable" : ""}`}
                 key={r.id}
-                onClick={openBoundary}
-                title="요구조자 예상 위치 · 표류 바운더리 보기"
+                onClick={mob ? openBoundary : undefined}
+                title={mob ? "요구조자 예상 위치 · 표류 바운더리 보기" : undefined}
               >
                 <div className="rc-top">
                   <span className={`rc-kind ${mob ? "mob" : "manual"}`}>
@@ -126,12 +128,14 @@ export function ReportsModal({
                   </div>
                 </div>
 
-                <button className="rc-boundary" onClick={openBoundary}>
-                  <PersonStanding size={14} />
-                  요구조자 예상 위치 · 표류 바운더리 보기
-                  <div className="spacer" />
-                  <ArrowRight size={14} />
-                </button>
+                {mob && (
+                  <button className="rc-boundary" onClick={openBoundary}>
+                    <PersonStanding size={14} />
+                    요구조자 예상 위치 · 표류 바운더리 보기
+                    <div className="spacer" />
+                    <ArrowRight size={14} />
+                  </button>
+                )}
 
                 {r.status === "new" && (
                   <div className="rc-actions">

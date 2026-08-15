@@ -14,6 +14,7 @@ import {
   Wind,
 } from "lucide-react";
 import { OceanField, rampSteps } from "./OceanField";
+import { layoutLabels, type LabelInput, type Obstacle } from "./mapLabels";
 import type { Boundary, OceanBBox, OceanFieldData } from "../types";
 
 const M_PER_DEG_LAT = 111_320;
@@ -128,6 +129,108 @@ export function BoundaryMap({
   const ringTone = ["r50", "r75", "r95"];
   const stepTones = ["s30", "s60", "s120"];
 
+  // ── 라벨 배치 ─────────────────────────────────────────────────────────
+  // 신고 직후에는 익수 지점·선박·요구조자가 한 점에 모이고, 시간이 지나면 확률
+  // 원들이 서로 겹친다. 고정 오프셋으로 붙이면 글자가 포개져 읽을 수 없으므로
+  // 마커를 장애물로 두고 서로 피하는 자리를 찾아 배치한다.
+  const bearingRad = (boundary.sector.bearing * Math.PI) / 180;
+  const bearingVec: [number, number] = [Math.sin(bearingRad), -Math.cos(bearingRad)];
+  const futureSteps = boundary.timeline.filter((row) => !row.current).slice(0, 3);
+
+  const labels = useMemo<LabelInput[]>(() => {
+    if (size.width < 10) return [];
+    const list: LabelInput[] = [
+      {
+        key: "survivor",
+        ax: centerPt.x,
+        ay: centerPt.y,
+        text: `요구조자 예상 위치 · +${Math.round(boundary.elapsed_min)}분`,
+        extraWidth: 20,
+        prefer: [bearingVec[0], bearingVec[1]],
+        gap: 46,
+        priority: 0,
+      },
+      {
+        key: "incident",
+        ax: incidentPt.x,
+        ay: incidentPt.y,
+        text: `익수 지점 ${boundary.report.time.slice(-8)}`,
+        extraWidth: 20,
+        // 표류 반대 방향으로 빼면 요구조자 라벨과 자연히 멀어진다
+        prefer: [-bearingVec[0], -bearingVec[1]],
+        gap: 34,
+        priority: 1,
+      },
+      {
+        key: "sector",
+        ax:
+          incidentPt.x + toPx(boundary.sector.radius_m * 0.72) * bearingVec[0],
+        ay:
+          incidentPt.y + toPx(boundary.sector.radius_m * 0.72) * bearingVec[1],
+        text: `탐색 우선 ${boundary.sector.bearing}° ±${boundary.sector.half_angle}°`,
+        extraWidth: 20,
+        prefer: [bearingVec[1], -bearingVec[0]], // 표류축과 직각으로 비켜 놓는다
+        gap: 30,
+        priority: 2,
+      },
+      {
+        key: "vessel",
+        ax: vesselPt.x,
+        ay: vesselPt.y,
+        text: `${boundary.report.vessel_name} · ${
+          boundary.vessel.locked ? "엔진 정지 · 표류중" : "운항중"
+        }`,
+        extraWidth: 20,
+        prefer: [0, 1],
+        gap: 34,
+        priority: 3,
+      },
+    ];
+
+    // 미래 시간대 경계는 표류 진행 방향의 원 둘레에 붙인다 (반지름이 달라 자연히 벌어짐)
+    futureSteps.forEach((row, i) => {
+      const c = project(row.center.lat, row.center.lon);
+      const r = toPx(row.radius_m);
+      list.push({
+        key: `step-${row.elapsed_min}`,
+        ax: c.x + r * bearingVec[0],
+        ay: c.y + r * bearingVec[1],
+        text: `+${Math.round(row.elapsed_min)}분 · ${fmtDistance(row.radius_m)}`,
+        prefer: [bearingVec[0], bearingVec[1]],
+        gap: 22,
+        priority: 4 + i,
+      });
+    });
+
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    size.width,
+    size.height,
+    centerPt.x,
+    centerPt.y,
+    incidentPt.x,
+    incidentPt.y,
+    vesselPt.x,
+    vesselPt.y,
+    metersPerPx,
+    boundary.elapsed_min,
+    boundary.sector.bearing,
+    boundary.report.vessel_name,
+    boundary.vessel.locked,
+  ]);
+
+  const placedLabels = useMemo(() => {
+    if (size.width < 10) return [];
+    // 마커 자체도 장애물로 둔다 (라벨이 아이콘을 덮지 않도록)
+    const obstacles: Obstacle[] = [
+      { x: centerPt.x, y: centerPt.y, width: 52, height: 52 },
+      { x: incidentPt.x, y: incidentPt.y, width: 34, height: 34 },
+      { x: vesselPt.x, y: vesselPt.y, width: 40, height: 40 },
+    ];
+    return layoutLabels(labels, obstacles, size);
+  }, [labels, size, centerPt.x, centerPt.y, incidentPt.x, incidentPt.y, vesselPt.x, vesselPt.y]);
+
   return (
     <div
       className="bd-map"
@@ -163,11 +266,7 @@ export function BoundaryMap({
                     width: r * 2,
                     height: r * 2,
                   }}
-                >
-                  <span className="bd-ring-tag">
-                    +{Math.round(row.elapsed_min)}분 · {fmtDistance(row.radius_m)}
-                  </span>
-                </div>
+                />
               );
             })}
 
@@ -198,23 +297,29 @@ export function BoundaryMap({
               x2={centerPt.x}
               y2={centerPt.y}
             />
+            {/* 자리를 크게 옮긴 라벨은 지시선으로 앵커와 이어 준다 */}
+            {placedLabels
+              .filter((l) => l.displaced)
+              .map((l) => (
+                <line
+                  key={`lead-${l.key}`}
+                  className="bd-leader"
+                  x1={l.ax}
+                  y1={l.ay}
+                  x2={l.x}
+                  y2={l.y}
+                />
+              ))}
           </svg>
 
           {/* 익수 지점 */}
           <div className="bd-incident" style={{ left: incidentPt.x, top: incidentPt.y }}>
             <Crosshair size={16} />
           </div>
-          <div className="bd-tag incident" style={{ left: incidentPt.x, top: incidentPt.y }}>
-            익수 지점 {boundary.report.time.slice(-8)}
-          </div>
 
           {/* 정지·표류 중인 선박 */}
           <div className="bd-vessel" style={{ left: vesselPt.x, top: vesselPt.y }}>
             <Ship size={16} />
-          </div>
-          <div className="bd-tag vessel" style={{ left: vesselPt.x, top: vesselPt.y }}>
-            {boundary.report.vessel_name} ·{" "}
-            {boundary.vessel.locked ? "엔진 정지 · 표류중" : "운항중"}
           </div>
 
           {/* 요구조자 예상 위치 */}
@@ -223,16 +328,20 @@ export function BoundaryMap({
             <PersonStanding size={20} />
           </div>
 
-          <div
-            className="bd-tag sector"
-            style={{
-              left: incidentPt.x + toPx(boundary.sector.radius_m * 0.55) * Math.sin((boundary.sector.bearing * Math.PI) / 180),
-              top: incidentPt.y - toPx(boundary.sector.radius_m * 0.55) * Math.cos((boundary.sector.bearing * Math.PI) / 180),
-            }}
-          >
-            <Search size={12} />
-            탐색 우선 {boundary.sector.bearing}° ±{boundary.sector.half_angle}°
-          </div>
+          {/* 라벨 — 서로 겹치지 않는 자리에 배치된다 */}
+          {placedLabels.map((l) => (
+            <div
+              key={l.key}
+              className={`bd-tag ${l.key.startsWith("step-") ? "step" : l.key}`}
+              style={{ left: l.x, top: l.y, width: l.width }}
+            >
+              {l.key === "survivor" && <PersonStanding size={12} />}
+              {l.key === "incident" && <Crosshair size={12} />}
+              {l.key === "sector" && <Search size={12} />}
+              {l.key === "vessel" && <Ship size={12} />}
+              <span className="t">{l.text}</span>
+            </div>
+          ))}
         </>
       )}
 

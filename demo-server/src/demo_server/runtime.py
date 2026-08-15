@@ -183,11 +183,16 @@ class Runtime:
         return 0.0
 
     def report_boundary(self, report_id: str, minutes: float | None = None) -> dict | None:
-        """신고 1건의 요구조자 예상 위치·확률 바운더리·시간별 탐색 구역."""
+        """신고 1건의 요구조자 예상 위치·확률 바운더리·시간별 탐색 구역.
+
+        익수(mob) 신고에만 의미가 있다. 수동 SOS 는 선내에서 버튼을 누른 것이라
+        물에 빠진 사람이 없으므로 표류할 요구조자도 없다. 이 경우 None 을 돌려
+        호출자가 404 로 처리하게 한다.
+        """
         report = next(
             (r for r in self.reports.list_public() if r.get("id") == report_id), None
         )
-        if report is None:
+        if report is None or report.get("cause") != "mob":
             return None
 
         lat, lon = self._report_origin(report)

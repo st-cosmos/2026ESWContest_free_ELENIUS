@@ -162,9 +162,17 @@ def report_boundary(report_id: str, request: Request, minutes: float | None = No
     """익수 지점 + 해류·풍압으로 계산한 예상 중심 좌표와 확률 반경.
 
     minutes 를 주면 해당 경과 시간(분)으로, 없으면 실제 경과 시간으로 계산한다.
+    **익수(mob) 신고 전용** — 수동 SOS 는 요구조자가 없어 404 를 돌려준다.
     """
-    result = rt(request).report_boundary(report_id, minutes)
+    runtime = rt(request)
+    result = runtime.report_boundary(report_id, minutes)
     if result is None:
+        report = runtime.reports.get(report_id)
+        if report is not None:
+            raise HTTPException(
+                status_code=404,
+                detail="수동 SOS 신고입니다. 요구조자 예상 위치는 익수 신고에만 제공됩니다.",
+            )
         raise HTTPException(status_code=404, detail="신고를 찾을 수 없습니다.")
     return result
 
