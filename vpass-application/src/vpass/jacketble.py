@@ -29,6 +29,7 @@ import asyncio
 import threading
 import time
 
+from . import blebus
 from .config import BLE_COMPANY_ID, BLE_ENABLED, JACKET_BATT_WARN_MV
 
 MAGIC = b"VJ"
@@ -49,8 +50,7 @@ class BleJacketScanner:
         self._registry = registry
         # (device_id, batt_mv) — 착용 중 배터리 교체요망 감지 시 1회 호출
         self._on_low_batt = on_low_batt
-        self._thread: threading.Thread | None = None
-        self._loop: asyncio.AbstractEventLoop | None = None
+        self._future = None
         self._running = False
         # 장치별 마지막 상태 {id: {worn, fall_count, last_ping, batt_mv, ...}}
         self._seen: dict[str, dict] = {}
@@ -58,24 +58,26 @@ class BleJacketScanner:
         self.status = "off" if not BLE_ENABLED else "starting"
 
     # ── 수명 주기 ────────────────────────────────────────────────────────
+    # BLE 코루틴은 blebus 의 공용 루프에서 실행한다. 스캐너와 킬 스위치가
+    # 각자 루프를 돌리면 bleak/BlueZ 전역 매니저가 첫 루프에 묶여 두 번째
+    # 루프가 교착된다 (blebus.py 참고).
     def start(self) -> None:
         if not BLE_ENABLED or self._running:
             return
         self._running = True
-        self._thread = threading.Thread(
-            target=self._run, name="ble-jacket", daemon=True
-        )
-        self._thread.start()
+        self._future = blebus.submit(self._run())
 
     def stop(self) -> None:
-        # loop.stop() 으로 끊으면 스캐너 정리(await scanner.stop()) 전에 루프가
-        # 닫혀 WinRT 콜백이 "Event loop is closed" 를 뿜는다. 플래그만 내리고
-        # 스캔 루프(0.5초 폴링)가 스스로 정리하고 끝나기를 기다린다.
+        # 루프를 세우지 않고 플래그만 내린다 — 스캔 루프(0.5초 폴링)가
+        # 스스로 스캐너를 정리(await scanner.stop())하고 끝난다.
         self._running = False
-        if self._thread:
-            self._thread.join(timeout=5)
+        if self._future:
+            try:
+                self._future.result(timeout=5)
+            except Exception:
+                pass
 
-    def _run(self) -> None:
+    async def _run(self) -> None:
         try:
             from bleak import BleakScanner  # noqa: F401
         except ImportError:
@@ -83,15 +85,11 @@ class BleJacketScanner:
             print(f"[jacketble] {self.status}")
             return
 
-        self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
         try:
-            self._loop.run_until_complete(self._scan_forever())
+            await self._scan_forever()
         except Exception as e:  # 어댑터 없음/권한 등
             self.status = f"error: {e}"
             print(f"[jacketble] 스캔 종료: {e}")
-        finally:
-            self._loop.close()
 
     async def _scan_forever(self) -> None:
         from bleak import BleakScanner
