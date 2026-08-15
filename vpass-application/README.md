@@ -182,6 +182,19 @@ POST /api/fall    {"device": "jacket-1", "magnitude": 3.2}
 4. **배포 (라즈베리파이)** — 모델 파일을 같은 경로에 복사하고 `uv sync --extra ml`
    로 tflite 런타임을 설치. 앱 시작 로그에 `[jacketvision] TFLite 모델 로드` 확인.
 
+## 사운드 효과
+
+주요 이벤트에 UI 가 사운드를 재생합니다 (`ui/src/useSoundEffects.ts`,
+파일·라이선스는 `ui/public/sounds/README.md`):
+
+- 승선 인식 / 출항 등록(수동·지오펜스) / 입항 등록(수동·지오펜스)
+- SOS 발보(익수 자동·수동 공통) — 신고가 떠 있는 동안 사이렌 반복 재생
+- 기상특보 발효, 하드웨어·통신 에러(4초 지속 시 1회)
+
+키오스크 chromium 은 `--autoplay-policy=no-user-gesture-required` 로 실행되어
+사용자 입력 없이도 재생됩니다. 일반 브라우저에서는 첫 클릭/키 입력 이후부터
+재생됩니다(자동재생 정책).
+
 ## GPS / 지자계 연동
 
 상위 `test-gps`에서 검증한 NMEA GPS와 QMC5883L 지자계 코드를 앱 구조에 맞게
