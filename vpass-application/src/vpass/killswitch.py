@@ -9,9 +9,21 @@
 
 from __future__ import annotations
 
+import asyncio
+import importlib.util
+import queue
 import threading
 
-from .config import IS_RASPBERRY_PI, KILLSWITCH_GPIO_PIN
+from .config import (
+    IS_RASPBERRY_PI,
+    KILLSWITCH_BLE_ADDRESS,
+    KILLSWITCH_BLE_CHARACTERISTIC_UUID,
+    KILLSWITCH_BLE_ENABLED,
+    KILLSWITCH_BLE_NAME,
+    KILLSWITCH_BLE_SERVICE_UUID,
+    KILLSWITCH_BLE_TIMEOUT_SEC,
+    KILLSWITCH_GPIO_PIN,
+)
 
 
 class _GpioOutput:
@@ -39,6 +51,93 @@ class _GpioOutput:
             self._device.off()
 
 
+class _BleOutput:
+    """ESP32-C3 BLE 릴레이 출력. 실패해도 앱 상태 머신은 계속 진행한다."""
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        address: str | None,
+        service_uuid: str,
+        characteristic_uuid: str,
+        timeout_sec: float,
+    ):
+        self.name = name
+        self.address = address
+        self.service_uuid = service_uuid
+        self.characteristic_uuid = characteristic_uuid
+        self.timeout_sec = timeout_sec
+        self.last_command: str | None = None
+        self.last_error: str | None = None
+        self._commands: queue.Queue[str | None] = queue.Queue(maxsize=1)
+        self._available = importlib.util.find_spec("bleak") is not None
+        self._thread: threading.Thread | None = None
+
+        if not self._available:
+            self.last_error = "bleak 미설치"
+            print("[killswitch] BLE 사용 불가: bleak 패키지가 설치되어 있지 않습니다.")
+            return
+
+        self._thread = threading.Thread(target=self._worker, daemon=True)
+        self._thread.start()
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    def set(self, cut_engine: bool) -> None:
+        if not self._available:
+            return
+        command = "ON" if cut_engine else "OFF"
+        try:
+            while True:
+                self._commands.get_nowait()
+        except queue.Empty:
+            pass
+        try:
+            self._commands.put_nowait(command)
+        except queue.Full:
+            pass
+
+    def _worker(self) -> None:
+        while True:
+            command = self._commands.get()
+            if command is None:
+                return
+            try:
+                asyncio.run(self._send(command))
+                self.last_command = command
+                self.last_error = None
+            except Exception as e:
+                self.last_error = str(e)
+                print(f"[killswitch] BLE 전송 실패({command}): {e}")
+
+    async def _send(self, command: str) -> None:
+        from bleak import BleakClient, BleakScanner  # type: ignore
+
+        target = self.address
+        if not target:
+            device = await BleakScanner.find_device_by_filter(
+                lambda d, ad: (
+                    d.name == self.name
+                    or self.service_uuid.lower()
+                    in {uuid.lower() for uuid in (ad.service_uuids or [])}
+                ),
+                timeout=self.timeout_sec,
+            )
+            if device is None:
+                raise RuntimeError(f"BLE 장치를 찾지 못했습니다: {self.name}")
+            target = device.address
+
+        async with BleakClient(target, timeout=self.timeout_sec) as client:
+            await client.write_gatt_char(
+                self.characteristic_uuid,
+                command.encode("utf-8"),
+                response=True,
+            )
+
+
 class EngineController:
     def __init__(self):
         self._lock = threading.Lock()
@@ -46,6 +145,17 @@ class EngineController:
         self.killed = False   # 비상 정지(익수 감지 등)
         self.kill_reason: str | None = None
         self._gpio = _GpioOutput(KILLSWITCH_GPIO_PIN) if IS_RASPBERRY_PI else None
+        self._ble = (
+            _BleOutput(
+                name=KILLSWITCH_BLE_NAME,
+                address=KILLSWITCH_BLE_ADDRESS,
+                service_uuid=KILLSWITCH_BLE_SERVICE_UUID,
+                characteristic_uuid=KILLSWITCH_BLE_CHARACTERISTIC_UUID,
+                timeout_sec=KILLSWITCH_BLE_TIMEOUT_SEC,
+            )
+            if KILLSWITCH_BLE_ENABLED
+            else None
+        )
         self._listeners: list = []
         self._apply()
 
@@ -57,6 +167,8 @@ class EngineController:
         engaged = self.locked or self.killed
         if self._gpio:
             self._gpio.set(engaged)
+        if self._ble:
+            self._ble.set(engaged)
         for fn in list(self._listeners):
             try:
                 fn(self.snapshot())
@@ -94,4 +206,7 @@ class EngineController:
             "kill_reason": self.kill_reason,
             "engaged": self.locked or self.killed,
             "gpio": bool(self._gpio and self._gpio.available),
+            "ble": bool(self._ble and self._ble.available),
+            "ble_last_command": self._ble.last_command if self._ble else None,
+            "ble_error": self._ble.last_error if self._ble else None,
         }

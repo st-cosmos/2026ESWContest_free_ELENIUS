@@ -36,6 +36,9 @@ export interface EngineState {
   kill_reason: string | null;
   engaged: boolean;
   gpio: boolean;
+  ble?: boolean;
+  ble_last_command?: string | null;
+  ble_error?: string | null;
 }
 
 export interface CrewEntry {

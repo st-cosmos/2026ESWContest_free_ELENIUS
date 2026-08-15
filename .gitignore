@@ -23,6 +23,7 @@ vpass-application/ui/dist/
 .pio/
 firmware/.pio/
 firmware/include/config.h
+kill-switch/.pio/
 
 # ── OS / 에디터 ──────────────────────────────────────
 .DS_Store

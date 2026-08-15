@@ -76,6 +76,10 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_JACKET_CAPTURE` | `0` | `1` 이면 스캔 중 가슴 ROI 크롭을 학습 데이터로 저장 |
 | `VPASS_JACKET_COLORS` | `orange,lime,red` | (hsv 폴백) 색상 프리셋(`orange`/`red`/`yellow`/`lime`, 쉼표 구분) |
 | `VPASS_JACKET_MIN_RATIO` | `0.4` | (hsv 폴백) 상체 ROI 구명조끼 색 픽셀 비율 판정 기준 |
+| `VPASS_KILLSWITCH_BLE` | `0` | `1`이면 ESP32-C3 BLE 킬 스위치로 릴레이 명령 전송 |
+| `VPASS_KILLSWITCH_BLE_NAME` | `VPass Kill Switch` | BLE 장치 이름 |
+| `VPASS_KILLSWITCH_BLE_ADDRESS` | (없음) | 장치 MAC/address를 알고 있으면 스캔 대신 직접 연결 |
+| `VPASS_KILLSWITCH_BLE_TIMEOUT` | `6` | BLE 스캔/연결 타임아웃(초) |
 
 ## 주요 동작 흐름
 
@@ -249,6 +253,12 @@ uv run python tests/test_flow.py
   ```bash
   uv add gpiozero   # 라즈베리파이에서만
   ```
+- BLE 킬 스위치(ESP32-C3 `kill-switch` 펌웨어)를 쓰는 경우:
+  ```bash
+  uv add bleak
+  VPASS_KILLSWITCH_BLE=1 uv run vpass --kiosk
+  ```
+  BLE 장치 스캔이 느리거나 같은 이름의 장치가 여러 개면 `VPASS_KILLSWITCH_BLE_ADDRESS`에 장치 address를 지정하세요.
 - 키오스크 자동 시작(예: `~/.config/autostart` 또는 systemd):
   ```bash
   uv run vpass --kiosk
