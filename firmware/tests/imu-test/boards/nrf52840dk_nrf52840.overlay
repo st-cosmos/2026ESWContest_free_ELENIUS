@@ -1,0 +1,2 @@
+/* 공통 보드 정의만 사용 (MCUboot 파티션 없음 — 0번지 링크). */
+#include "../../../boards/jacket_board.dtsi"

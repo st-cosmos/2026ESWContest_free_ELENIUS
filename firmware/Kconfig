@@ -1,0 +1,141 @@
+#
+# Smart lifejacket application options
+#
+
+menu "Smart lifejacket application"
+
+config JACKET_DEVICE_NUM
+	int "Device number carried in the advertising payload (1-255)"
+	default 1
+	range 1 255
+	help
+	  V-PASS 는 이 번호를 "jacket-<n>" 장치 ID 로 매핑한다. 조끼마다
+	  다르게 구워서 여러 개를 동시에 운용한다.
+
+comment "BLE advertising"
+
+config JACKET_ADV_INTERVAL_MS
+	int "Normal advertising interval while worn [ms]"
+	default 500
+	help
+	  V-PASS 쪽 신호 두절 판정(SIGNAL_LOSS_TIMEOUT 10 s) 대비 충분히
+	  촘촘하면 된다. 500 ms 면 두절 판정 전까지 약 20 번의 수신 기회.
+
+config JACKET_ADV_BURST_INTERVAL_MS
+	int "Burst advertising interval right after a fall [ms]"
+	default 100
+	help
+	  낙하 감지 직후 입수 전 공중 구간(0.3~0.7 s)이 사실상 마지막 송신
+	  기회라서 최대한 촘촘하게 쏜다. BLE 레거시 non-connectable 광고의
+	  스펙 하한이 100 ms 라 그 값을 기본으로 한다.
+
+config JACKET_ADV_BURST_DURATION_S
+	int "How long the burst rate is kept after a fall [s]"
+	default 5
+
+config JACKET_DOFF_ADV_TIMEOUT_S
+	int "Keep advertising worn=0 for this long after doffing [s]"
+	default 60
+	help
+	  탈의 알림이 유실되지 않도록 잠시 worn=0 을 계속 광고한 뒤 광고를
+	  멈춘다. USB 전원이 없으면 이어서 System OFF 로 들어가고 버클이
+	  다시 닫히는 순간 깨어난다.
+
+comment "Fall detection (IMU, software)"
+
+config JACKET_FREEFALL_THRESHOLD_MG
+	int "Free-fall acceleration magnitude threshold [mg]"
+	default 400
+	help
+	  |a| 가 이 값보다 작은 상태가 JACKET_FREEFALL_MIN_MS 이상 이어지면
+	  자유낙하(입수 낙하)로 판정한다. 정지 시 |a| ≈ 1000 mg.
+
+config JACKET_FREEFALL_MIN_MS
+	int "Minimum free-fall duration [ms]"
+	default 100
+	help
+	  100 ms ≈ 낙하 높이 5 cm. 갑판에서 물까지는 보통 0.3 s 이상이라
+	  여유가 있고, 걸음/파도 진동의 순간 저가속은 걸러진다.
+
+config JACKET_IMPACT_THRESHOLD_MG
+	int "Impact acceleration magnitude threshold [mg]"
+	default 2500
+	help
+	  ESP8266 버전의 낙상 임계값(2.5 g)과 동일. 자유낙하 없이 크게
+	  넘어지는 경우(갑판 위 낙상)를 잡는다.
+
+config JACKET_FALL_COOLDOWN_S
+	int "Minimum interval between reported fall events [s]"
+	default 3
+
+comment "Water detection (electrodes)"
+
+config JACKET_WATER_PERIOD_MS
+	int "Electrode measurement period, normal [ms]"
+	default 250
+
+config JACKET_WATER_FAST_PERIOD_MS
+	int "Electrode measurement period right after a fall [ms]"
+	default 50
+
+config JACKET_WATER_FAST_WINDOW_S
+	int "How long the fast rate is kept after a fall [s]"
+	default 30
+
+config JACKET_WATER_DELTA_PERMILLE
+	int "Wet threshold: rise above dry baseline, in 0.1% of VDD units"
+	default 20
+	help
+	  부팅 시 캡처한 건조 기준선 대비 증가분(Δ)이 이 값 이상이면 젖음.
+	  실측(2026-08-16, 수돗물 90초 스윕): 건조 Δ 0~3‰ + 간헐 블립 최대
+	  15‰, 젖음 Δ 28~55‰ (역방향 기준; 정방향은 이 보드에서 무반응).
+	  기본값 20‰(2.0%VDD)는 건조 블립과 젖음 신호의 정중앙.
+	  해수는 전도도가 훨씬 높아 신호가 더 크므로 그대로 잡힌다.
+
+config JACKET_WATER_CONFIRM_COUNT
+	int "Consecutive wet readings required"
+	default 2
+
+comment "MOB strobe"
+
+config JACKET_MOB_WINDOW_S
+	int "Fall→water association window for local MOB latch [s]"
+	default 10
+	help
+	  자유낙하/충격 이벤트 후 이 시간 안에 물이 감지되면 익수 확정으로
+	  보고 스트로브를 래치한다 (야간 구조용).
+
+config JACKET_STROBE_PERIOD_MS
+	int "Strobe flash period [ms]"
+	default 1000
+	help
+	  SOLAS 구명조끼등 요구(분당 50~70회 점멸) 대역인 1 Hz.
+
+config JACKET_STROBE_ON_MS
+	int "Strobe on-time per flash [ms]"
+	default 20
+	help
+	  20 ms 펄스 × 약 100 mA(5.1 V 레일, 22 Ω) 기준 유효광도가 SOLAS
+	  0.75 cd 를 충족하는 설계값 (Blondel-Rey 보정 약 1/11). 야간 실측
+	  후 시인거리가 부족하면 펄스 폭 또는 전류(R1)를 올린다.
+
+config JACKET_STROBE_DRY_RELEASE_S
+	int "Release the strobe latch after this long without water [s]"
+	default 300
+
+comment "Battery"
+
+config JACKET_LOW_BATT_MV
+	int "Low battery threshold, VDD [mV]"
+	default 2200
+	help
+	  이 아래로 떨어지면 광고 페이로드에 low-batt 플래그를 세우고
+	  스트로브 펄스 폭을 절반으로 줄여 브라운아웃을 예방한다.
+
+module = JACKET
+module-str = Smart lifejacket
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+source "Kconfig.zephyr"

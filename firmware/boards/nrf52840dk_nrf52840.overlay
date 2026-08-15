@@ -1,0 +1,9 @@
+/*
+ * 메인 펌웨어용 오버레이 — 공통 보드 정의 + MCUboot 플래시 레이아웃.
+ * 핀맵과 주변장치 설정은 jacket_board.dtsi 한 곳에서 관리한다.
+ */
+
+#include "jacket_board.dtsi"
+
+/* MCUboot 과 애플리케이션이 합의해야 하는 플래시 레이아웃 */
+#include "../partitions.dtsi"

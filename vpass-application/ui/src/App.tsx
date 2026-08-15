@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { JacketAlertModal } from "./components/JacketAlertModal";
+import { JacketBattModal } from "./components/JacketBattModal";
 import { NAV_ITEMS, Sidebar, type ScreenKey } from "./components/Sidebar";
 import { SosModal } from "./components/SosModal";
 import { StatusBar } from "./components/StatusBar";
@@ -74,7 +75,11 @@ export default function App() {
         {screen === "vessel-info" && <VesselInfo state={state} />}
       </div>
 
-      {/* SOS 모달이 해제 경고보다 위에 오도록 나중에 렌더링 */}
+      {/* SOS 모달이 경고들보다 위에 오도록 나중에 렌더링.
+          배터리 경고는 해제 경고와 겹치지 않게 해제 경고가 없을 때만 표시 */}
+      {!state.lifejacket.doff_alert && state.lifejacket.batt_alert && (
+        <JacketBattModal alert={state.lifejacket.batt_alert} />
+      )}
       {state.lifejacket.doff_alert && (
         <JacketAlertModal alert={state.lifejacket.doff_alert} />
       )}

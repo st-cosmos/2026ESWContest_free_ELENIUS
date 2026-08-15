@@ -10,6 +10,7 @@ dependencies = [
     "numpy>=1.26",
     "pyserial>=3.5",
     "smbus2>=0.4",
+    # BLE — 구명조끼 광고 수신(jacketble)과 BLE 킬 스위치가 함께 사용
     "bleak>=0.22",
 ]
 

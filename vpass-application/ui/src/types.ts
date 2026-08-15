@@ -70,12 +70,22 @@ export interface DeviceState {
   mob: boolean;
   mob_cause: "fall" | "signal_loss" | null;
   mob_at: string | null;
+  battery_mv: number | null;
+  battery_low: boolean;
 }
 
 // 운항 중 구명조끼 해제(버클 풀림) 경고 — 재착용 또는 확인 시 사라짐
 export interface JacketDoffAlert {
   device: string;
   who: string;
+  time: string;
+}
+
+// 배터리 교체요망 상태로 착용 감지 시 경고 — 탈의(교체) 또는 확인 시 사라짐
+export interface JacketBattAlert {
+  device: string;
+  who: string;
+  batt_mv: number;
   time: string;
 }
 
@@ -144,6 +154,7 @@ export interface AppState {
     worn_count: number;
     mob_alarm: boolean;
     doff_alert: JacketDoffAlert | null;
+    batt_alert: JacketBattAlert | null;
   };
   voyage: {
     active: boolean;

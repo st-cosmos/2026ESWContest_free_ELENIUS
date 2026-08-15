@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 
 from . import config
-from .boarding import COLOR_DANGER, COLOR_OK, BoardingManager, Overlay
+from .boarding import COLOR_DANGER, COLOR_OK, COLOR_WARN, BoardingManager, Overlay
 from .camera import CameraManager
 from .demo_bridge import DemoBridge
 from .facerec import (
@@ -18,6 +18,7 @@ from .facerec import (
     safe_filename,
 )
 from .killswitch import EngineController
+from .jacketble import BleJacketScanner
 from .lifejacket import DeviceRegistry
 from .sos import SosManager
 from .storage import JsonStore
@@ -37,11 +38,15 @@ class SimJacket:
     - resume:     신호 재개(구조 후)
     """
 
-    def __init__(self, registry: DeviceRegistry, device_id: str):
+    def __init__(self, registry: DeviceRegistry, device_id: str,
+                 set_battery=None, on_low_batt=None):
         self._registry = registry
+        self._set_battery = set_battery    # (device_id, mv) — 표시용 배터리 주입
+        self._on_low_batt = on_low_batt    # (device_id, mv) — 교체요망 경고
         self.device_id = device_id
         self.worn = False
         self.pinging = False
+        self.batt_mv: int | None = None
         self._thread: threading.Thread | None = None
         self._stop = False
 
@@ -57,6 +62,10 @@ class SimJacket:
             self.pinging = True
             self._registry.set_wearing(self.device_id, True)
             self._registry.ping(self.device_id)
+            # 교체요망 배터리 상태로 착용하면 경고 (BLE 경로와 동일 동작)
+            if (self.batt_mv and self.batt_mv < config.JACKET_BATT_WARN_MV
+                    and self._on_low_batt):
+                self._on_low_batt(self.device_id, self.batt_mv)
             if self._thread is None or not self._thread.is_alive():
                 self._stop = False
                 self._thread = threading.Thread(target=self._ping_loop, daemon=True)
@@ -76,6 +85,17 @@ class SimJacket:
         elif action == "resume":
             self.pinging = True
             self._registry.ping(self.device_id)
+        elif action == "lowbatt":
+            # 배터리 교체요망 상태 주입 (BLE 장치의 저전압 플래그와 동일 경로)
+            self.batt_mv = 2100
+            if self._set_battery:
+                self._set_battery(self.device_id, self.batt_mv)
+            if self.worn and self._on_low_batt:
+                self._on_low_batt(self.device_id, self.batt_mv)
+        elif action == "battok":
+            self.batt_mv = 3300
+            if self._set_battery:
+                self._set_battery(self.device_id, self.batt_mv)
         else:
             raise ValueError(f"알 수 없는 동작: {action}")
 
@@ -101,8 +121,14 @@ class Runtime:
         self.engine = EngineController()
         # 운항 중 구명조끼 해제(버클 풀림) 경고 — UI 모달용, 폴링으로 노출
         self.jacket_doff_alert: dict | None = None
+        # 배터리 교체요망 상태로 착용 감지 시 경고 — UI 모달용
+        self.jacket_batt_alert: dict | None = None
         self.devices = DeviceRegistry(
             on_mob=self._handle_mob, on_wearing=self._handle_wearing_change
+        )
+        # BLE 구명조끼 수신기 (nRF52840 펌웨어) — 광고 패킷을 레지스트리로 변환
+        self.jacket_ble = BleJacketScanner(
+            self.devices, on_low_batt=self._handle_low_batt
         )
         self.sos = SosManager(self.telemetry, self.vessel_store)
         self.boarding = BoardingManager(
@@ -140,6 +166,7 @@ class Runtime:
     def start(self) -> None:
         self.telemetry.start()
         self.devices.start()
+        self.jacket_ble.start()
         self.camera.start()
         self.voyage.start()
         if self.demo:
@@ -150,6 +177,7 @@ class Runtime:
             self.demo.stop()
         self.voyage.stop()
         self.camera.stop()
+        self.jacket_ble.stop()
         self.devices.stop()
         self.telemetry.stop()
 
@@ -187,6 +215,9 @@ class Runtime:
             if alert and alert["device"] == device_id:
                 self.jacket_doff_alert = None
             return
+        # 탈의 = 배터리 교체 중일 수 있으니 해당 장치의 배터리 경고는 해제
+        if self.jacket_batt_alert and self.jacket_batt_alert["device"] == device_id:
+            self.jacket_batt_alert = None
         if self.voyage.active_voyage() is None:
             return
         user = self.resolve_device_user(device_id)
@@ -203,6 +234,25 @@ class Runtime:
     def ack_jacket_alert(self) -> None:
         """구명조끼 해제 경고 확인(모달 닫기)."""
         self.jacket_doff_alert = None
+
+    def _handle_low_batt(self, device_id: str, batt_mv: int) -> None:
+        """배터리 교체요망 상태로 착용 감지 → 경고 (착용 세션당 1회)."""
+        user = self.resolve_device_user(device_id)
+        who = f"{user['name']} 님" if user else f"장치 {device_id}"
+        self.jacket_batt_alert = {
+            "device": device_id,
+            "who": who,
+            "batt_mv": batt_mv,
+            "time": datetime.now().strftime("%H:%M:%S"),
+        }
+        self.overlay.set(
+            f"구명조끼 배터리 교체 필요 · {who} ({batt_mv / 1000:.2f}V)", COLOR_WARN
+        )
+        print(f"[jacket] 배터리 교체요망 착용 감지: {who} ({device_id}, {batt_mv}mV)")
+
+    def ack_jacket_batt_alert(self) -> None:
+        """배터리 교체 경고 확인(모달 닫기)."""
+        self.jacket_batt_alert = None
 
     def _handle_departure(self, voyage: dict) -> None:
         """출항: 데모 관제 서버에 출항 이벤트 전송."""
@@ -410,7 +460,11 @@ class Runtime:
     # ── 시뮬레이터 ──────────────────────────────────────────────────────
     def sim_jacket(self, device_id: str) -> SimJacket:
         if device_id not in self.sim_jackets:
-            self.sim_jackets[device_id] = SimJacket(self.devices, device_id)
+            self.sim_jackets[device_id] = SimJacket(
+                self.devices, device_id,
+                set_battery=self.jacket_ble.sim_battery,
+                on_low_batt=self._handle_low_batt,
+            )
         return self.sim_jackets[device_id]
 
     # ── 통합 상태 (UI 1초 폴링용) ───────────────────────────────────────
@@ -420,6 +474,10 @@ class Runtime:
         for d in devices:
             user = self.resolve_device_user(d["device"])
             d["user_name"] = user["name"] if user else None
+            # BLE 광고(또는 시뮬레이터)로 수신한 배터리 상태를 합친다
+            batt = self.jacket_ble.battery_info(d["device"])
+            d["battery_mv"] = batt["mv"] if batt else None
+            d["battery_low"] = batt["low"] if batt else False
 
         active_voyage = self.voyage.active_voyage()
         latest = self.voyage.latest_summary()
@@ -441,6 +499,8 @@ class Runtime:
                 "worn_count": self.devices.worn_count(),
                 "mob_alarm": self.devices.any_mob(),
                 "doff_alert": self.jacket_doff_alert,
+                "batt_alert": self.jacket_batt_alert,
+                "ble": self.jacket_ble.snapshot(),
             },
             "voyage": {
                 "active": active_voyage is not None,
