@@ -145,6 +145,8 @@ VPASS_DEMO_SERVER_URL=http://localhost:8100 uv run vpass
 - 관제 대시보드에서 관할 기상 변경 → V-PASS 기상 표시에 자동 반영
 - **운항 시뮬레이터 좌표 → V-PASS GPS** (단말 실측 GPS 가 없을 때만 사용)
 - **지오펜스 통과 판정 → V-PASS 자동 출항/입항 신고**
+- **킬 스위치 원격 제어** — 시뮬레이터 페이지의 `엔진 비상 차단`/`차단 해제` 버튼이
+  V-PASS 단말의 엔진을 차단/복구하고, 단말이 BLE 로 킬 스위치 펌웨어(릴레이)까지 반영
 
 ## 운항 시뮬레이터 (`/simulator`)
 
@@ -175,7 +177,8 @@ POST /api/sim/speed       # 속력(kn) / 배속
 POST /api/sim/run         # start | pause | stop
 POST /api/sim/reset       # 항로·펜스·이벤트 초기화
 POST /api/sim/sos/release # SOS 위치 고정 해제 (시연 중 수동 복구)
-GET  /api/sim/terminal    # (단말용) 시뮬레이션 좌표 + 출입항 명령
+GET  /api/sim/terminal    # (단말용) 시뮬레이션 좌표 + 출입항/킬 스위치 명령
+POST /api/killswitch      # 킬 스위치 원격 제어 { action: "kill" | "restore" }
 ```
 
 ## 해양 환경 · 표류 예측 API

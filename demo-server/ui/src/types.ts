@@ -263,6 +263,13 @@ export interface SimState {
   command_seq: number;
   terminal: Vessel | null;
   sos: SimSos;
+  engine_command: EngineCommand | null;
+}
+
+export interface EngineCommand {
+  seq: number;
+  action: "kill" | "restore";
+  time: string;
 }
 
 export interface VesselForm {

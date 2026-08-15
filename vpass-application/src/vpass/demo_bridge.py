@@ -11,6 +11,7 @@ V-PASS 단말이 데모 관제 서버와 주고받는 통신을 담당한다.
     - 관할 해양 기상                                          → V-PASS 기상 표시에 반영
     - 운항 시뮬레이터 좌표                                    → 실측 GPS 가 없을 때만 사용
     - 지오펜스 출입항 명령                                    → 자동 출항/입항 기록
+    - 킬 스위치 원격 명령(kill/restore)                       → 엔진 차단/복구 + BLE 릴레이
 
 모든 네트워크 호출은 짧은 타임아웃 + 예외 무시로 처리해, 관제 서버가
 꺼져 있어도 V-PASS 본체 동작에는 전혀 영향을 주지 않는다.
@@ -30,14 +31,16 @@ TIMEOUT = 2.0
 
 class DemoBridge:
     def __init__(self, base_url: str, vessel_payload_provider,
-                 sim_feed=None, on_port_command=None):
+                 sim_feed=None, on_port_command=None, on_engine_command=None):
         # 윈도우에서 'localhost' 는 ::1 을 먼저 시도하다 IPv4 로 폴백하며 요청마다
         # 약 2초가 새는 경우가 있다. 데모 서버는 IPv4(0.0.0.0)로 열리므로 바로 지정한다.
         self._base = base_url.rstrip("/").replace("//localhost:", "//127.0.0.1:")
-        self._provider = vessel_payload_provider  # () -> dict | None
-        self._sim_feed = sim_feed                 # RemoteSimFeed
-        self._on_port_command = on_port_command   # (kind) -> None
+        self._provider = vessel_payload_provider      # () -> dict | None
+        self._sim_feed = sim_feed                     # RemoteSimFeed
+        self._on_port_command = on_port_command       # (kind) -> None
+        self._on_engine_command = on_engine_command   # (action) -> None
         self._last_command_seq: int | None = None
+        self._last_engine_seq: int | None = None
         self._cached_weather: dict | None = None
         self._lock = threading.Lock()
         self._running = False
@@ -121,16 +124,25 @@ class DemoBridge:
             telemetry = None
         self._sim_feed.set(telemetry)
 
+        # 지오펜스 출입항 명령 — 접속 직후에 남아 있던 마지막 명령은 재실행하지 않는다
         command = data.get("command")
         seq = int(command.get("seq", 0)) if command else 0
         if self._last_command_seq is None:
-            # 접속 직후에 남아 있던 마지막 명령은 다시 실행하지 않는다
             self._last_command_seq = seq
-            return
-        if command and seq > self._last_command_seq:
+        elif command and seq > self._last_command_seq:
             self._last_command_seq = seq
             if self._on_port_command:
                 self._on_port_command(command.get("kind", ""))
+
+        # 킬 스위치 원격 명령 — 같은 방식의 seq 래치로 새 명령만 실행한다
+        engine = data.get("engine_command")
+        engine_seq = int(engine.get("seq", 0)) if engine else 0
+        if self._last_engine_seq is None:
+            self._last_engine_seq = engine_seq
+        elif engine and engine_seq > self._last_engine_seq:
+            self._last_engine_seq = engine_seq
+            if self._on_engine_command:
+                self._on_engine_command(engine.get("action", ""))
 
     def _sync_weather(self) -> None:
         payload = self._provider()
