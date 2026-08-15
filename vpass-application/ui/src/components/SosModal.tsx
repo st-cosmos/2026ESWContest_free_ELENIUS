@@ -39,7 +39,7 @@ export function SosModal({ report }: { report: SosReport }) {
         <div
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: 800,
             letterSpacing: 2,
             color: "var(--red)",
@@ -48,13 +48,13 @@ export function SosModal({ report }: { report: SosReport }) {
           {isMob ? "EMERGENCY · MOB" : "EMERGENCY · SOS"}
         </div>
 
-        <div style={{ fontSize: 20, fontWeight: 700 }}>
+        <div style={{ fontSize: 22, fontWeight: 700 }}>
           해양경찰청에 신고가 완료되었습니다
         </div>
 
         <div
           style={{
-            fontSize: 13,
+            fontSize: 15,
             lineHeight: "21px",
             color: "var(--text-2)",
             textAlign: "center",
@@ -97,12 +97,12 @@ export function SosModal({ report }: { report: SosReport }) {
               key={label}
               style={{ display: "flex", alignItems: "center", width: "100%" }}
             >
-              <span style={{ fontSize: 11, color: "var(--text-3)" }}>{label}</span>
+              <span style={{ fontSize: 13, color: "var(--text-3)" }}>{label}</span>
               <span
                 style={{
                   marginLeft: "auto",
                   fontFamily: "var(--font-mono)",
-                  fontSize: 12,
+                  fontSize: 14,
                 }}
               >
                 {value}
@@ -127,7 +127,7 @@ export function SosModal({ report }: { report: SosReport }) {
         </button>
       </div>
 
-      <div style={{ fontSize: 11, color: "var(--text-3)" }}>
+      <div style={{ fontSize: 13, color: "var(--text-3)" }}>
         상태바의 SOS 버튼으로 어떤 페이지에서든 긴급 신고할 수 있습니다
       </div>
     </div>

@@ -79,10 +79,10 @@ function SosConfirm({ onClose }: { onClose: () => void }) {
           <Siren size={30} />
         </div>
 
-        <div style={{ fontSize: 19, fontWeight: 700 }}>SOS 긴급 신고</div>
+        <div style={{ fontSize: 21, fontWeight: 700 }}>SOS 긴급 신고</div>
         <div
           style={{
-            fontSize: 13,
+            fontSize: 15,
             lineHeight: "21px",
             color: "var(--text-2)",
             textAlign: "center",

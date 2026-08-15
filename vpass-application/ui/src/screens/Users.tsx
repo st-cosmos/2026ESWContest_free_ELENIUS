@@ -53,7 +53,7 @@ function Stepper({ step }: { step: Step }) {
                   background: lit ? "var(--accent)" : "var(--panel-2)",
                   color: lit ? "#0a0c11" : "var(--text-3)",
                   fontFamily: "var(--font-mono)",
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 700,
                 }}
               >
@@ -61,7 +61,7 @@ function Stepper({ step }: { step: Step }) {
               </span>
               <span
                 style={{
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: lit ? 700 : 500,
                   color: lit ? "var(--accent)" : "var(--text-3)",
                 }}
@@ -126,8 +126,8 @@ function RegisterModal({
       <div className="modal fade-in-up">
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 18, fontWeight: 700 }}>사용자 신규 등록</span>
-            <span style={{ fontSize: 12, color: "var(--text-2)" }}>
+            <span style={{ fontSize: 20, fontWeight: 700 }}>사용자 신규 등록</span>
+            <span style={{ fontSize: 14, color: "var(--text-2)" }}>
               {step === 1
                 ? "1단계 · 선원의 이름과 연락처를 입력해 주세요."
                 : "2단계 · 카메라를 보고 얼굴을 등록해 주세요."}
@@ -195,11 +195,11 @@ function RegisterModal({
               }}
             >
               <UserRound size={16} color="var(--text-3)" />
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{name}</span>
+              <span style={{ fontSize: 15, fontWeight: 700 }}>{name}</span>
               <span
                 style={{
                   fontFamily: "var(--font-mono)",
-                  fontSize: 12,
+                  fontSize: 14,
                   color: "var(--text-2)",
                 }}
               >
@@ -208,7 +208,7 @@ function RegisterModal({
               <span style={{ flex: 1 }} />
               <button
                 onClick={() => setStep(1)}
-                style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)" }}
+                style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}
               >
                 수정
               </button>
@@ -257,7 +257,7 @@ function RegisterModal({
               <span
                 style={{
                   position: "relative",
-                  fontSize: 11,
+                  fontSize: 13,
                   color: "var(--text-2)",
                   textShadow: "0 1px 4px #000",
                 }}
@@ -413,27 +413,27 @@ export function UsersScreen() {
                 }}
               >
                 <span
-                  style={{ fontSize: 15, fontWeight: 700, color: "var(--accent)" }}
+                  style={{ fontSize: 17, fontWeight: 700, color: "var(--accent)" }}
                 >
                   {user.name}
                 </span>
                 <span
                   style={{
                     fontFamily: "var(--font-mono)",
-                    fontSize: 11,
+                    fontSize: 13,
                     color: "var(--text-2)",
                   }}
                 >
                   {user.phone}
                 </span>
-                <span style={{ fontSize: 10, color: "var(--text-3)" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
                   등록일 {user.registered_at.split(" ")[0]}
                   {user.device_id ? ` · ${user.device_id}` : ""}
                 </span>
               </div>
               <button
                 className="btn btn-danger btn-sm"
-                style={{ padding: "6px 12px", fontSize: 11 }}
+                style={{ padding: "6px 12px", fontSize: 13 }}
                 onClick={() => setConfirmDelete(user)}
               >
                 삭제
@@ -458,7 +458,7 @@ export function UsersScreen() {
             }}
           >
             <Plus size={20} />
-            <span style={{ fontSize: 12 }}>신규 사용자 등록</span>
+            <span style={{ fontSize: 14 }}>신규 사용자 등록</span>
           </button>
         </div>
       </section>
@@ -470,8 +470,8 @@ export function UsersScreen() {
       {confirmDelete && (
         <div className="modal-backdrop">
           <div className="modal fade-in-up" style={{ width: 380 }}>
-            <span style={{ fontSize: 16, fontWeight: 700 }}>사용자 삭제</span>
-            <span style={{ fontSize: 13, color: "var(--text-2)" }}>
+            <span style={{ fontSize: 18, fontWeight: 700 }}>사용자 삭제</span>
+            <span style={{ fontSize: 15, color: "var(--text-2)" }}>
               '{confirmDelete.name}' 님의 정보와 얼굴 사진을 삭제할까요? 삭제 후에는
               얼굴 인식으로 승선할 수 없습니다.
             </span>

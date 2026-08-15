@@ -50,9 +50,9 @@ function WeatherCell({
     >
       <Icon size={18} color="var(--text-3)" />
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{ fontSize: 10, color: "var(--text-3)" }}>{label}</span>
+        <span style={{ fontSize: 12, color: "var(--text-3)" }}>{label}</span>
         <span
-          style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}
+          style={{ fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 600 }}
         >
           {value}
         </span>
@@ -82,12 +82,12 @@ function SideRow({
       }}
     >
       <Icon size={16} color="var(--text-3)" />
-      <span style={{ fontSize: 12, color: "var(--text-2)" }}>{label}</span>
+      <span style={{ fontSize: 14, color: "var(--text-2)" }}>{label}</span>
       <span
         style={{
           marginLeft: "auto",
           fontFamily: "var(--font-mono)",
-          fontSize: 13,
+          fontSize: 15,
           fontWeight: 600,
         }}
       >
@@ -139,8 +139,8 @@ function QuickCard({
         <Icon size={18} />
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{ fontSize: 11, color: "var(--text-3)" }}>{label}</span>
-        <span style={{ fontSize: 15, fontWeight: 700, color: valueColor }}>
+        <span style={{ fontSize: 13, color: "var(--text-3)" }}>{label}</span>
+        <span style={{ fontSize: 17, fontWeight: 700, color: valueColor }}>
           {value}
         </span>
       </div>
@@ -218,7 +218,7 @@ export function Home({
                 <span
                   style={{
                     fontFamily: "var(--font-display)",
-                    fontSize: 44,
+                    fontSize: 46,
                     fontWeight: 600,
                     letterSpacing: -1,
                     lineHeight: 1,
@@ -227,12 +227,12 @@ export function Home({
                   {w.temp_c}°C
                 </span>
                 <span
-                  style={{ fontSize: 16, fontWeight: 600, color: "var(--text-2)" }}
+                  style={{ fontSize: 18, fontWeight: 600, color: "var(--text-2)" }}
                 >
                   {w.condition}
                 </span>
               </div>
-              <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+              <span style={{ fontSize: 14, color: "var(--text-3)" }}>
                 체감 {w.feels_like_c}°C · 강수확률 {w.precip_prob}%
               </span>
             </div>
