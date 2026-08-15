@@ -98,6 +98,9 @@ export const api = {
   simRun: (action: "start" | "pause" | "stop") => post<Ok>("/api/sim/run", { action }),
   simReset: () => post<Ok>("/api/sim/reset"),
 
+  // 킬 스위치 원격 제어 (관제 → V-PASS 단말 → BLE 릴레이)
+  killswitch: (action: "kill" | "restore") => post<Ok>("/api/killswitch", { action }),
+
   reportSeen: (id: string) => post<Ok>(`/api/reports/${id}/seen`),
   reportDispatch: (id: string) => post<Ok>(`/api/reports/${id}/dispatch`),
   reportClose: (id: string) => post<Ok>(`/api/reports/${id}/close`),

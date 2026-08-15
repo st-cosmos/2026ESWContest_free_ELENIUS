@@ -11,10 +11,12 @@ import {
   LogIn,
   LogOut,
   Move,
+  OctagonX,
   PenTool,
   Pause,
   PersonStanding,
   Play,
+  Power,
   Repeat,
   RotateCcw,
   Ruler,
@@ -367,6 +369,40 @@ export function SimulatorPage() {
                   {departed ? "출항" : "입항"}
                 </span>
               </div>
+            </div>
+
+            <div className="sc-row">
+              <Power size={15} />
+              <b>킬 스위치 원격 제어</b>
+              <div className="spacer" />
+              {sim.engine_command && (
+                <span className="mono muted">
+                  {sim.engine_command.action === "kill" ? "차단" : "해제"} ·{" "}
+                  {sim.engine_command.time.split(" ")[1] ?? sim.engine_command.time}
+                </span>
+              )}
+            </div>
+            <div className="ks-actions">
+              <button
+                className="btn btn-danger"
+                disabled={!terminal}
+                onClick={() => {
+                  if (window.confirm("V-PASS 단말에 엔진 비상 차단 명령을 보낼까요?")) {
+                    send(api.killswitch("kill"));
+                  }
+                }}
+              >
+                <OctagonX size={15} />
+                엔진 비상 차단
+              </button>
+              <button
+                className="btn btn-secondary"
+                disabled={!terminal}
+                onClick={() => send(api.killswitch("restore"))}
+              >
+                <Power size={15} />
+                차단 해제
+              </button>
             </div>
           </section>
 

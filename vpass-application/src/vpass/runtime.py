@@ -130,6 +130,7 @@ class Runtime:
                 config.DEMO_SERVER_URL, self._demo_vessel_payload,
                 sim_feed=self.sim_feed,
                 on_port_command=self._handle_port_command,
+                on_engine_command=self._handle_engine_command,
             )
 
         # 엔진이 차단되면 배는 반드시 멈춘다
@@ -277,6 +278,26 @@ class Runtime:
                     print("[geofence] 지오펜스 진입 → 자동 입항 등록")
         except Exception as e:
             print(f"[geofence] 출입항 처리 실패: {e}")
+
+    def _handle_engine_command(self, action: str) -> None:
+        """킬 스위치 원격 명령(데모 관제 서버 → 단말)을 엔진에 반영한다.
+
+        EngineController 가 상태 변경 시 GPIO/BLE 출력까지 함께 밀어내므로
+        여기서는 kill/restore 만 호출하면 킬 스위치 펌웨어까지 전달된다.
+        """
+        try:
+            if action == "kill":
+                if not self.engine.snapshot()["killed"]:
+                    self.engine.kill("관제 센터 원격 차단")
+                    self.overlay.set("⚠ 관제 센터 원격 차단 — 엔진 비상 정지", COLOR_DANGER)
+                    print("[killswitch] 관제 센터 원격 차단 명령 수신")
+            elif action == "restore":
+                if self.engine.snapshot()["killed"]:
+                    self.engine.restore()
+                    self.overlay.set("관제 센터 차단 해제 — 엔진 복구", COLOR_OK)
+                    print("[killswitch] 관제 센터 차단 해제 명령 수신")
+        except Exception as e:
+            print(f"[killswitch] 원격 명령 처리 실패: {e}")
 
     def confirm_departure(self) -> dict:
         """수동 출항 신고 (지오펜스를 쓰지 않는 환경용 대체 경로)."""

@@ -9,9 +9,23 @@
 
 from __future__ import annotations
 
+import asyncio
+import importlib.util
+import queue
 import threading
+import time
 
-from .config import IS_RASPBERRY_PI, KILLSWITCH_GPIO_PIN
+from .config import (
+    IS_RASPBERRY_PI,
+    KILLSWITCH_BLE_ADAPTER,
+    KILLSWITCH_BLE_ADDRESS,
+    KILLSWITCH_BLE_CHARACTERISTIC_UUID,
+    KILLSWITCH_BLE_ENABLED,
+    KILLSWITCH_BLE_NAME,
+    KILLSWITCH_BLE_SERVICE_UUID,
+    KILLSWITCH_BLE_TIMEOUT_SEC,
+    KILLSWITCH_GPIO_PIN,
+)
 
 
 class _GpioOutput:
@@ -39,6 +53,170 @@ class _GpioOutput:
             self._device.off()
 
 
+# 워커의 명령 대기 타임아웃 표시용 (None 은 종료 신호로 이미 쓰인다)
+_IDLE = object()
+
+
+class _BleOutput:
+    """ESP32-C3 BLE 릴레이 출력. 실패해도 앱 상태 머신은 계속 진행한다.
+
+    비상 차단 지연을 줄이기 위해 연결을 미리 맺어 유지한다. 워커 스레드가
+    유휴 시간에도 연결 상태를 점검해 끊기면 자동 재접속하고, 명령이 오면
+    이미 열려 있는 연결에 write 만 한다.
+    """
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        address: str | None,
+        service_uuid: str,
+        characteristic_uuid: str,
+        timeout_sec: float,
+        adapter: str | None = None,
+    ):
+        self.name = name
+        self.address = address
+        self.service_uuid = service_uuid
+        self.characteristic_uuid = characteristic_uuid
+        self.timeout_sec = timeout_sec
+        self.adapter = adapter  # 리눅스(BlueZ) 어댑터 지정 (예: USB 동글 "hci1")
+        self.last_command: str | None = None
+        self.last_error: str | None = None
+        self.link_connected = False
+        self._commands: queue.Queue[str | None] = queue.Queue(maxsize=1)
+        self._available = importlib.util.find_spec("bleak") is not None
+        self._thread: threading.Thread | None = None
+
+        if not self._available:
+            self.last_error = "bleak 미설치"
+            print("[killswitch] BLE 사용 불가: bleak 패키지가 설치되어 있지 않습니다.")
+            return
+
+        self._thread = threading.Thread(target=self._worker, daemon=True)
+        self._thread.start()
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    def set(self, cut_engine: bool) -> None:
+        if not self._available:
+            return
+        command = "ON" if cut_engine else "OFF"
+        try:
+            while True:
+                self._commands.get_nowait()
+        except queue.Empty:
+            pass
+        try:
+            self._commands.put_nowait(command)
+        except queue.Full:
+            pass
+
+    def _worker(self) -> None:
+        while True:
+            try:
+                asyncio.run(self._run())
+                return  # 종료 신호(None)로 정상 종료
+            except Exception as e:
+                self.last_error = str(e)
+                print(f"[killswitch] BLE 워커 오류, 재시작: {e}")
+                time.sleep(2.0)
+
+    def _poll_command(self):
+        """명령을 1초까지 기다린다. 타임아웃이면 _IDLE (연결 상태 점검 기회)."""
+        try:
+            return self._commands.get(timeout=1.0)
+        except queue.Empty:
+            return _IDLE
+
+    async def _run(self) -> None:
+        loop = asyncio.get_running_loop()
+        client = None
+        try:
+            while True:
+                command = await loop.run_in_executor(None, self._poll_command)
+
+                if command is _IDLE:
+                    # 유휴: 연결이 없거나 끊겼으면 미리 다시 맺어 둔다
+                    if client is None or not client.is_connected:
+                        client = await self._reconnect(client)
+                    continue
+
+                if command is None:
+                    return  # 종료 신호
+
+                for attempt in (1, 2):
+                    try:
+                        if client is None or not client.is_connected:
+                            client = await self._reconnect(client)
+                            if client is None:
+                                raise RuntimeError(self.last_error or "BLE 연결 실패")
+                        await client.write_gatt_char(
+                            self.characteristic_uuid,
+                            command.encode("utf-8"),
+                            response=True,
+                        )
+                        self.last_command = command
+                        self.last_error = None
+                        break
+                    except Exception as e:
+                        self.last_error = str(e)
+                        client = await self._drop(client)
+                        if attempt == 2:
+                            print(f"[killswitch] BLE 전송 실패({command}): {e}")
+        finally:
+            await self._drop(client)
+
+    async def _drop(self, client):
+        self.link_connected = False
+        if client is not None:
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+        return None
+
+    async def _reconnect(self, client):
+        """기존 연결을 정리하고 새로 접속한다. 실패 시 None (에러는 last_error)."""
+        from bleak import BleakClient, BleakScanner  # type: ignore
+
+        client = await self._drop(client)
+
+        # BlueZ 어댑터 지정 — scanner 는 adapter=, client 는 bluez={"adapter": ...} 형식.
+        # 다른 백엔드(윈도우 등)에서는 bleak 이 해당 kwargs 를 무시한다.
+        scanner_kwargs = {"adapter": self.adapter} if self.adapter else {}
+        client_kwargs = {"bluez": {"adapter": self.adapter}} if self.adapter else {}
+
+        try:
+            target = self.address
+            if not target:
+                device = await BleakScanner.find_device_by_filter(
+                    lambda d, ad: (
+                        d.name == self.name
+                        or self.service_uuid.lower()
+                        in {uuid.lower() for uuid in (ad.service_uuids or [])}
+                    ),
+                    timeout=self.timeout_sec,
+                    **scanner_kwargs,
+                )
+                if device is None:
+                    raise RuntimeError(f"BLE 장치를 찾지 못했습니다: {self.name}")
+                target = device.address
+
+            new_client = BleakClient(target, timeout=self.timeout_sec, **client_kwargs)
+            await new_client.connect()
+            self.link_connected = True
+            self.last_error = None
+            print(f"[killswitch] BLE 연결 유지 시작: {target}")
+            return new_client
+        except Exception as e:
+            self.last_error = f"BLE 연결 실패: {e}"
+            await asyncio.sleep(2.0)  # 장치가 꺼져 있을 때 과도한 재시도 방지
+            return None
+
+
 class EngineController:
     def __init__(self):
         self._lock = threading.Lock()
@@ -46,6 +224,18 @@ class EngineController:
         self.killed = False   # 비상 정지(익수 감지 등)
         self.kill_reason: str | None = None
         self._gpio = _GpioOutput(KILLSWITCH_GPIO_PIN) if IS_RASPBERRY_PI else None
+        self._ble = (
+            _BleOutput(
+                name=KILLSWITCH_BLE_NAME,
+                address=KILLSWITCH_BLE_ADDRESS,
+                service_uuid=KILLSWITCH_BLE_SERVICE_UUID,
+                characteristic_uuid=KILLSWITCH_BLE_CHARACTERISTIC_UUID,
+                timeout_sec=KILLSWITCH_BLE_TIMEOUT_SEC,
+                adapter=KILLSWITCH_BLE_ADAPTER,
+            )
+            if KILLSWITCH_BLE_ENABLED
+            else None
+        )
         self._listeners: list = []
         self._apply()
 
@@ -57,6 +247,8 @@ class EngineController:
         engaged = self.locked or self.killed
         if self._gpio:
             self._gpio.set(engaged)
+        if self._ble:
+            self._ble.set(engaged)
         for fn in list(self._listeners):
             try:
                 fn(self.snapshot())
@@ -94,4 +286,8 @@ class EngineController:
             "kill_reason": self.kill_reason,
             "engaged": self.locked or self.killed,
             "gpio": bool(self._gpio and self._gpio.available),
+            "ble": bool(self._ble and self._ble.available),
+            "ble_connected": bool(self._ble and self._ble.link_connected),
+            "ble_last_command": self._ble.last_command if self._ble else None,
+            "ble_error": self._ble.last_error if self._ble else None,
         }

@@ -595,6 +595,12 @@
   color: var(--text-2);
 }
 
+.ks-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .gps-note {
   display: flex;
   align-items: center;

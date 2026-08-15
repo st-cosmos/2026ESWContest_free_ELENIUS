@@ -129,8 +129,26 @@ PING_INTERVAL = 3.0        # 펌웨어 ping 주기(초)
 FALL_PING_TIMEOUT = 5.0    # 낙상 후 이 시간 안에 ping 없으면 익수로 판단
 SIGNAL_LOSS_TIMEOUT = 10.0 # 착용 중 신호 두절 시 익수로 판단(3회 연속 유실)
 
-# ── 킬 스위치(GPIO) ──────────────────────────────────────────────────────
+# ── 킬 스위치(GPIO/BLE) ──────────────────────────────────────────────────
 KILLSWITCH_GPIO_PIN = int(os.environ.get("VPASS_KILLSWITCH_PIN", "17"))
+KILLSWITCH_BLE_ENABLED = (
+    os.environ.get("VPASS_KILLSWITCH_BLE", "0").strip().lower()
+    not in ("0", "false", "off", "")
+)
+KILLSWITCH_BLE_NAME = os.environ.get("VPASS_KILLSWITCH_BLE_NAME", "VPass Kill Switch")
+KILLSWITCH_BLE_ADDRESS = os.environ.get("VPASS_KILLSWITCH_BLE_ADDRESS", "").strip() or None
+KILLSWITCH_BLE_SERVICE_UUID = os.environ.get(
+    "VPASS_KILLSWITCH_BLE_SERVICE_UUID",
+    "8d4f2a10-5f5f-4c0b-9a8c-0f6f7f7b2a10",
+)
+KILLSWITCH_BLE_CHARACTERISTIC_UUID = os.environ.get(
+    "VPASS_KILLSWITCH_BLE_CHARACTERISTIC_UUID",
+    "8d4f2a11-5f5f-4c0b-9a8c-0f6f7f7b2a10",
+)
+KILLSWITCH_BLE_TIMEOUT_SEC = float(os.environ.get("VPASS_KILLSWITCH_BLE_TIMEOUT", "6"))
+# 사용할 블루투스 어댑터 (예: 라즈베리파이에서 USB 동글을 쓰려면 "hci1").
+# 미설정 시 시스템 기본 어댑터를 사용한다. 리눅스(BlueZ) 전용 옵션.
+KILLSWITCH_BLE_ADAPTER = os.environ.get("VPASS_KILLSWITCH_BLE_ADAPTER", "").strip() or None
 
 # ── 운항 기록 ───────────────────────────────────────────────────────────
 # 출항/입항은 속도로 자동 감지하지 않는다.

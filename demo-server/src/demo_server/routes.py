@@ -327,8 +327,23 @@ def sim_sos_release(request: Request):
 
 @router.get("/api/sim/terminal")
 def sim_terminal(request: Request):
-    """V-PASS 단말이 주기적으로 받아가는 시뮬레이션 좌표 + 출입항 명령."""
-    return rt(request).simulator.terminal_feed()
+    """V-PASS 단말이 주기적으로 받아가는 시뮬레이션 좌표 + 출입항/킬 스위치 명령."""
+    return rt(request).terminal_feed()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 킬 스위치 원격 제어 (관제 → V-PASS 단말 → BLE 릴레이)
+# ═══════════════════════════════════════════════════════════════════════
+class EngineCmd(BaseModel):
+    action: str  # kill | restore
+
+
+@router.post("/api/killswitch")
+def killswitch(cmd: EngineCmd, request: Request):
+    command = rt(request).send_engine_command(cmd.action)
+    if command is None:
+        raise HTTPException(status_code=400, detail="action 은 kill 또는 restore 여야 합니다.")
+    return {"success": True, "command": command}
 
 
 @router.post("/api/ingest/vessel")

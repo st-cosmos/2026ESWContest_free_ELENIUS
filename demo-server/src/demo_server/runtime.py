@@ -60,6 +60,11 @@ class Runtime:
 
         self._seed_vessels()
 
+        # 킬 스위치 원격 명령 (메모리 유지 — 단말은 새 seq 만 실행한다)
+        self.engine_command: dict | None = None
+        self.engine_seq = 0
+        self._engine_lock = threading.Lock()
+
         self._running = False
         self._thread: threading.Thread | None = None
 
@@ -218,6 +223,26 @@ class Runtime:
         })
         return result
 
+    # ── 킬 스위치 원격 제어 (관제 → V-PASS 단말 → BLE 릴레이) ──────────
+    def send_engine_command(self, action: str) -> dict | None:
+        if action not in ("kill", "restore"):
+            return None
+        with self._engine_lock:
+            self.engine_seq += 1
+            self.engine_command = {
+                "seq": self.engine_seq,
+                "action": action,
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            return dict(self.engine_command)
+
+    def terminal_feed(self) -> dict:
+        """시뮬레이터 좌표/출입항 명령에 킬 스위치 명령을 얹어 단말로 내려준다."""
+        feed = self.simulator.terminal_feed()
+        with self._engine_lock:
+            feed["engine_command"] = dict(self.engine_command) if self.engine_command else None
+        return feed
+
     # ── 운항 시뮬레이터 ─────────────────────────────────────────────────
     def linked_terminal(self) -> dict | None:
         """시뮬레이터가 좌표를 공급하는 V-PASS 단말(연결된 라이브 선박)."""
@@ -230,6 +255,8 @@ class Runtime:
         snapshot = self.simulator.snapshot()
         snapshot["time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         snapshot["terminal"] = self.linked_terminal()
+        with self._engine_lock:
+            snapshot["engine_command"] = dict(self.engine_command) if self.engine_command else None
         return snapshot
 
     # ── 통합 상태 (대시보드 1초 폴링용) ─────────────────────────────────
