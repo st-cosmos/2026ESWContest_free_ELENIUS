@@ -61,6 +61,10 @@ export function useSoundEffects(
     if (state.weather.advisory && state.weather.advisory !== p.weather.advisory)
       play("warning");
 
+    // 구명조끼 배터리 교체요망 착용 감지
+    if (state.lifejacket.batt_alert && !p.lifejacket.batt_alert)
+      play("warning");
+
     // 하드웨어/통신 에러 — 지속 확인 후 에러 상태당 1회만
     if (hardwareError(state)) {
       if (errorSince.current == null) {

@@ -2,6 +2,8 @@
 
 import {
   Activity,
+  BatteryFull,
+  BatteryWarning,
   BluetoothSearching,
   FlaskConical,
   LifeBuoy,
@@ -86,6 +88,26 @@ function DeviceCard({ device }: { device: DeviceState }) {
                 ? `신호 두절 ${device.seconds_since_ping.toFixed(0)}초`
                 : "신호 없음"}
           </span>
+          {device.battery_mv !== null && (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                fontSize: 11,
+                fontWeight: device.battery_low ? 700 : 400,
+                color: device.battery_low ? "var(--orange)" : "var(--text-2)",
+              }}
+            >
+              {device.battery_low ? (
+                <BatteryWarning size={13} />
+              ) : (
+                <BatteryFull size={13} />
+              )}
+              {(device.battery_mv / 1000).toFixed(2)}V
+              {device.battery_low ? " · 교체 필요" : ""}
+            </span>
+          )}
           {device.last_fall !== "-" && (
             <span style={{ fontSize: 13, color: "var(--orange)" }}>
               낙상 {device.last_fall}
@@ -130,6 +152,8 @@ function SimPanel() {
     { label: "익수(낙상+두절)", action: "overboard", danger: true },
     { label: "신호 두절", action: "silence", danger: true },
     { label: "신호 재개", action: "resume" },
+    { label: "배터리 부족", action: "lowbatt" },
+    { label: "배터리 정상", action: "battok" },
   ];
 
   return (

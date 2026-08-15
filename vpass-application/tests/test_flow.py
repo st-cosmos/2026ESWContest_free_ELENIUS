@@ -219,8 +219,27 @@ def main():
     check("재해제 시 경고 재발생", rt.jacket_doff_alert is not None)
     rt.ack_jacket_alert()
     check("확인(ack) 시 경고 해제", rt.jacket_doff_alert is None)
+
+    print("\n== 7-2) 배터리 교체요망 착용 경고 ==")
+    jacket.apply("lowbatt")  # 미착용 상태에서 배터리 부족 주입 — 경고 없음
+    check("미착용 시 경고 없음", rt.jacket_batt_alert is None)
+    jacket.apply("wear")     # 교체요망 상태로 착용 → 경고
+    alert = rt.jacket_batt_alert
+    check("착용 시 배터리 경고 발생", alert is not None and "홍길동" in alert["who"], str(alert))
+    snap_lj = rt.state_snapshot()["lifejacket"]
+    check("상태 스냅샷 노출", snap_lj["batt_alert"] is not None)
+    dev0 = snap_lj["devices"][0]
+    check("장치 배터리 표시", dev0["battery_mv"] == 2100 and dev0["battery_low"],
+          str((dev0["battery_mv"], dev0["battery_low"])))
+    jacket.apply("doff")     # 탈의(배터리 교체) → 자동 해제
+    check("탈의 시 배터리 경고 해제", rt.jacket_batt_alert is None)
+    jacket.apply("battok")   # 배터리 교체 완료
     jacket.apply("wear")
-    jacket.apply("doff")  # 입항 시 초기화 확인용으로 경고를 남겨둔다
+    check("정상 배터리 재착용 시 경고 없음", rt.jacket_batt_alert is None)
+    dev0 = rt.state_snapshot()["lifejacket"]["devices"][0]
+    check("정상 배터리 표시", dev0["battery_mv"] == 3300 and not dev0["battery_low"],
+          str((dev0["battery_mv"], dev0["battery_low"])))
+    jacket.apply("doff")  # 입항 시 초기화 확인용으로 해제 경고를 남겨둔다
 
     print("\n== 8) 지오펜스 진입 → 자동 입항 + 세션 초기화 + 재잠금 ==")
     rt._handle_port_command("arrival")

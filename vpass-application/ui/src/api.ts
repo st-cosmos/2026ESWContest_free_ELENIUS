@@ -68,6 +68,7 @@ export const api = {
 
   // 운항 중 구명조끼 해제 경고 모달 확인(닫기)
   ackJacketAlert: () => post<{ success: boolean }>("/api/jacket-alert/ack"),
+  ackJacketBattAlert: () => post<{ success: boolean }>("/api/jacket-batt-alert/ack"),
 
   // 하드웨어 없이 익수 시나리오를 시연하기 위한 구명조끼 장치 시뮬레이터
   devJacket: (device: string, action: string) =>

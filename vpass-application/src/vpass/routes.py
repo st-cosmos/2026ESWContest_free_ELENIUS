@@ -62,6 +62,12 @@ def device_ack(cmd: AckCmd, request: Request):
     return {"ok": True}
 
 
+@router.post("/api/jacket-batt-alert/ack")
+def ack_jacket_batt_alert(request: Request):
+    rt(request).ack_jacket_batt_alert()
+    return {"success": True}
+
+
 @router.post("/api/jacket-alert/ack")
 def ack_jacket_alert(request: Request):
     """운항 중 구명조끼 해제 경고 모달 확인(닫기) — UI 전용."""
@@ -277,7 +283,7 @@ def ack_sos(request: Request):
 # ═══════════════════════════════════════════════════════════════════════
 class SimJacketCmd(BaseModel):
     device: str = "jacket-1"
-    action: str  # wear | doff | fall | overboard | silence | resume
+    action: str  # wear | doff | fall | overboard | silence | resume | lowbatt | battok
 
 
 @router.post("/api/dev/jacket")
