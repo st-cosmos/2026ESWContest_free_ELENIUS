@@ -1,15 +1,19 @@
 // 상단 상태바: 로고 · 페이지 탭 · 관제 시각 · 연결 상태 · 테마 토글
 
-import { LayoutDashboard, Moon, Radar, Route, Sun } from "lucide-react";
+import { LayoutDashboard, LifeBuoy, Moon, Radar, Route, Sun } from "lucide-react";
 import { useAppState } from "../state";
 import { navigate, usePath } from "../route";
 
 function PageTabs() {
   const path = usePath();
   const sim = path.startsWith("/simulator");
+  const boundary = path.startsWith("/boundary/");
   return (
     <div className="page-tabs">
-      <button className={`page-tab${sim ? "" : " on"}`} onClick={() => navigate("/")}>
+      <button
+        className={`page-tab${sim || boundary ? "" : " on"}`}
+        onClick={() => navigate("/")}
+      >
         <LayoutDashboard size={15} />
         관제 대시보드
       </button>
@@ -20,6 +24,13 @@ function PageTabs() {
         <Route size={15} />
         운항 시뮬레이터
       </button>
+      {/* 요구조자 예상 위치는 신고 1건에 종속된 화면이라 진입했을 때만 노출한다 */}
+      {boundary && (
+        <button className="page-tab on danger">
+          <LifeBuoy size={15} />
+          요구조자 예상 위치
+        </button>
+      )}
     </div>
   );
 }

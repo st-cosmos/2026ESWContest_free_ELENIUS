@@ -1,8 +1,19 @@
 // 신고 접수 현황 모달 (전체 목록 조회) — 수동 / 자동(익수) 구분
 
 import { useState } from "react";
-import { BellRing, LifeBuoy, Ship, Siren, TriangleAlert, X } from "lucide-react";
+import {
+  ArrowRight,
+  BellRing,
+  LifeBuoy,
+  MousePointerClick,
+  PersonStanding,
+  Ship,
+  Siren,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { api } from "../api";
+import { navigate } from "../route";
 import type { Report } from "../types";
 
 type Tab = "all" | "manual" | "mob";
@@ -70,12 +81,25 @@ export function ReportsModal({
           ))}
         </div>
 
+        <div className="tabs-hint">
+          <MousePointerClick size={12} />
+          익수(자동) 신고를 누르면 요구조자 예상 위치 페이지가 열립니다
+        </div>
+
         <div className="modal-body">
           {filtered.length === 0 && <div className="empty">접수된 신고가 없습니다.</div>}
           {filtered.map((r) => {
+            // 요구조자 예상 위치는 익수 신고 전용이다. 수동 SOS 는 선내에서 버튼을
+            // 누른 것이라 물에 빠진 사람이 없어 표류를 예측할 대상이 없다.
             const mob = r.cause === "mob";
+            const openBoundary = () => navigate(`/boundary/${r.id}`);
             return (
-              <div className={`report-card${mob ? " mob" : ""}`} key={r.id}>
+              <div
+                className={`report-card${mob ? " mob clickable" : ""}`}
+                key={r.id}
+                onClick={mob ? openBoundary : undefined}
+                title={mob ? "요구조자 예상 위치 · 표류 바운더리 보기" : undefined}
+              >
                 <div className="rc-top">
                   <span className={`rc-kind ${mob ? "mob" : "manual"}`}>
                     {mob ? <LifeBuoy size={13} /> : <TriangleAlert size={13} />}
@@ -104,12 +128,33 @@ export function ReportsModal({
                   </div>
                 </div>
 
+                {mob && (
+                  <button className="rc-boundary" onClick={openBoundary}>
+                    <PersonStanding size={14} />
+                    요구조자 예상 위치 · 표류 바운더리 보기
+                    <div className="spacer" />
+                    <ArrowRight size={14} />
+                  </button>
+                )}
+
                 {r.status === "new" && (
                   <div className="rc-actions">
-                    <button className="btn btn-danger" onClick={() => act(api.reportDispatch(r.id))}>
+                    <button
+                      className="btn btn-danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        act(api.reportDispatch(r.id));
+                      }}
+                    >
                       <Siren size={15} /> 출동 지령
                     </button>
-                    <button className="btn btn-secondary" onClick={() => act(api.reportClose(r.id))}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        act(api.reportClose(r.id));
+                      }}
+                    >
                       상황 종료
                     </button>
                   </div>

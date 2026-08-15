@@ -819,3 +819,149 @@
   border-color: var(--cyan-border);
   color: var(--cyan);
 }
+
+/* ── SOS 접수 상태 (위치 고정 + 표류) ────────────────────────────────── */
+.sim-vessel.sos {
+  background: var(--red-soft);
+  border-color: var(--red);
+  color: var(--red);
+  box-shadow: 0 0 18px 0 var(--red-glow);
+}
+
+.sim-sosbanner {
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 0 24px 0 var(--red-glow);
+  z-index: 5;
+}
+
+.sim-drifttag {
+  position: absolute;
+  transform: translate(-50%, 26px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--orange-border);
+  color: var(--orange);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.sim-boundarylink {
+  position: absolute;
+  left: 16px;
+  bottom: 60px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--red-soft);
+  border: 1px solid var(--red);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  z-index: 5;
+}
+
+.sim-lockchip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--red-soft);
+  border: 1px solid var(--red-border);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sim-card.sos {
+  background: var(--red-soft);
+  border-color: var(--red);
+}
+
+.sos-kind {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sos-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.sos-m {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 10px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  border-radius: 8px;
+}
+
+.sos-m .l {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.sos-m .v {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sos-m .v.red { color: var(--red); }
+.sos-m .v.orange {
+  color: var(--orange);
+  font-family: var(--font-mono);
+}
+
+.sos-detail {
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+.sos-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sos-actions .btn {
+  flex: 1 1 0;
+  padding: 9px 0;
+  font-size: 12px;
+}

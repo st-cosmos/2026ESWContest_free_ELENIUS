@@ -835,6 +835,113 @@ input::placeholder {
   font-weight: 600;
 }
 
+/* ── 풍향·풍속·해류 편집 (요구조자 표류 예측 입력값) ─────────────────── */
+.wc-flowhead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.wc-flowhead .l {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.wc-flowhead .hint {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.wc-dirs {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.wc-dir {
+  padding: 8px 0;
+  border-radius: 7px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.wc-dir.on {
+  background: var(--orange-soft);
+  border-color: var(--orange);
+  color: var(--orange);
+  font-weight: 700;
+}
+
+.wc-steppers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.wc-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  border-radius: 8px;
+}
+
+.wc-stepper .l {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.wc-stepper .ctl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.wc-stepper .ctl button {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--cell-border);
+  color: var(--text-2);
+}
+
+.wc-stepper .ctl button:active {
+  transform: scale(0.92);
+}
+
+.wc-stepper .ctl .v {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wc-stepper .ctl .v.orange { color: var(--orange); }
+.wc-stepper .ctl .v.cyan { color: var(--cyan); }
+
+.wc-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
 /* ── 모달 공통 ──────────────────────────────────────────────────────── */
 .backdrop {
   position: fixed;
@@ -958,6 +1065,51 @@ input::placeholder {
 .report-card.mob {
   background: var(--red-soft);
   border-color: var(--red-border);
+}
+
+.report-card.clickable {
+  cursor: pointer;
+}
+
+.report-card.clickable:hover {
+  border-color: var(--red);
+}
+
+/* 요구조자 예상 위치 진입 (신고 접수 현황 → 표류 바운더리) */
+.tabs-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.rc-boundary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.report-card.mob .rc-boundary {
+  background: var(--red-soft);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.rc-boundary:hover {
+  border-color: var(--red);
+  color: var(--red);
 }
 
 .rc-top {

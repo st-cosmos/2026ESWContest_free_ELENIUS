@@ -77,3 +77,13 @@ class ReportInbox:
 
     def unread_count(self) -> int:
         return sum(1 for r in self._store.load() if r.get("status") == "new")
+
+    def active(self) -> list[dict]:
+        """아직 종료되지 않은 신고 (new · dispatched)."""
+        return [r for r in self._store.load() if r.get("status") != "closed"]
+
+    def get(self, report_id: str) -> dict | None:
+        for r in self._store.load():
+            if r.get("id") == report_id:
+                return r
+        return None

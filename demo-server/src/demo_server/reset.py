@@ -37,6 +37,11 @@ _SIM_PORT_STATE = {
     "events": [],
     "target_index": 1,
     "finished": False,
+    # 이전 실행의 SOS 위치 고정도 함께 되돌린다
+    "sos_locked": False,
+    "sos_info": None,
+    "drift_kn": 0.0,
+    "drift_m": 0.0,
 }
 
 
