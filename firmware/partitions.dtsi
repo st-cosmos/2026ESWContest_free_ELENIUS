@@ -1,0 +1,27 @@
+/*
+ * 플래시 레이아웃 — 애플리케이션과 MCUboot 이 공유한다.
+ * (smart-chemical-shelf/firmware 와 동일한 구성. 배경 설명은 그쪽
+ *  docs/build-and-flash.md §3.2 참고 — 어긋나면 부팅 불능.)
+ *
+ * 1 MB 전체:
+ *   boot     0x000000 +0x014000   80K   MCUboot (USB CDC 시리얼 리커버리 포함)
+ *   slot0    0x014000 +0x070000  448K   애플리케이션 (primary)
+ *   slot1    0x084000 +0x070000  448K   애플리케이션 (secondary, DFU)
+ *   storage  0x0f4000 +0x00c000   48K   settings/NVS
+ */
+
+&boot_partition {
+	reg = <0x00000000 0x00014000>;
+};
+
+&slot0_partition {
+	reg = <0x00014000 0x00070000>;
+};
+
+&slot1_partition {
+	reg = <0x00084000 0x00070000>;
+};
+
+&storage_partition {
+	reg = <0x000f4000 0x0000c000>;
+};

@@ -1,0 +1,203 @@
+/*
+ * 스마트 구명조끼 보드 (E73-2G4M08S1C / nRF52840) 공통 디바이스트리.
+ *
+ * 메인 펌웨어와 tests/ 의 테스트 앱이 같이 include 한다. 빌드 타깃은
+ * nRF52840 DK 보드 정의이고, 모듈이 다르게 쓰는 핀은 전부 여기서 덮어쓴다.
+ *
+ * ── 핀맵 (2026-08-15 실보드 확인) ───────────────────────────────────────
+ *
+ *   P0.13  LED_EN        단일 핀 — 부스트 EN + LED 스위치 공통. High = 점등
+ *                        (실기기 점등 확인 완료. LED 계통 전원은 배터리(VBAT)
+ *                        — 배터리 미장착 시 nRF 가 살아 있어도 LED 는 안 켜짐)
+ *   P0.02  전극 A        AIN0, 물 감지 (47k 직렬 + 470k 풀다운 + PESD TVS)
+ *   P0.03  전극 B        AIN1, 물 감지 (동일 회로, 극성 교대 구동)
+ *   P0.15  버클 스위치   COM-NO 마이크로스위치, 내부 풀업, 착용=닫힘=LOW
+ *   P0.20  IMU SDA       LSM6DSV16X, 4.7k 풀업, SA0=GND(0x6A), CS=VDD
+ *   P0.22  IMU SCL
+ *   (INT1  자유낙하 인터럽트 — 현재 펌웨어는 폴링 방식이라 미사용)
+ *
+ * 전원: AA 1.5V ×2 직렬 → Q1(역삽입 보호) → VBAT → D2(쇼트키) → VDD_SYS.
+ * 선반 보드와 달리 VDDH 를 쓰지 않는 normal-voltage 모드라서 UICR.REGOUT0
+ * 설정이 필요 없다. 배터리 전압은 SAADC 내부 VDD 채널로 무저항 측정.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/adc/nrf-adc.h>
+
+/ {
+	aliases {
+		strobe-led = &strobe_led;
+		buckle-sw = &buckle_sw;
+	};
+
+	jacket_leds: jacket-leds {
+		compatible = "gpio-leds";
+
+		strobe_led: strobe-led {
+			/*
+			 * LED_EN 단일 핀이 부스트 EN 과 LED 경로를 함께 제어한다.
+			 * High = 점등. 풀다운이 있어 리셋·슬립 중에는 확실히 꺼진다.
+			 * (2026-08-15 실기기 점등 확인)
+			 */
+			gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
+			label = "Strobe LED";
+		};
+	};
+
+	jacket_buttons: jacket-buttons {
+		compatible = "gpio-keys";
+
+		buckle_sw: buckle-sw {
+			/*
+			 * 마이크로스위치 COM-NO 배선: 버클을 채우면(착용) 닫혀서 핀이
+			 * GND 로 떨어진다. 외부 풀업 없음 — nRF52840 내부 풀업(~13k)
+			 * 사용 (보드에는 직렬 1k + 100nF 필터만 있음). 스위치 열림
+			 * (보관) 상태에서는 풀업 전류가 0 이라 전지를 먹지 않는다.
+			 */
+			gpios = <&gpio0 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			label = "Buckle switch";
+		};
+	};
+
+	zephyr,user {
+		/*
+		 * 물 감지 전극. 평상시 두 핀 모두 하이임피던스로 두고, 측정할 때만
+		 * 한쪽을 High 구동 + 반대쪽을 ADC 로 읽은 뒤 극성을 교대한다
+		 * (전기분해 부식 방지 — water.c 참고). 젖으면 비구동 전극이
+		 * 0.7×VDD 이상으로 뜨고, 마르면 470k 풀다운 때문에 0V.
+		 */
+		elec-a-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+		elec-b-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+
+		/* 0: 배터리(VDD), 1: 전극 A(AIN0), 2: 전극 B(AIN1) */
+		io-channels = <&adc 0>, <&adc 1>, <&adc 2>;
+	};
+
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+		zephyr,shell-uart = &cdc_acm_uart0;
+	};
+};
+
+/*
+ * 모듈 보드에는 UART 배선이 없다. 콘솔/셸은 전부 USB CDC ACM.
+ */
+&uart0 {
+	status = "disabled";
+};
+
+&uart1 {
+	status = "disabled";
+};
+
+/*
+ * REG0 은 VDDH→VDD 고전압 레귤레이터. 이 보드는 AA 2셀이 VDD 로 직접
+ * 들어가는 normal-voltage 모드라 REG0 을 쓰지 않지만, DK 보드 정의가
+ * 노드를 켜두면 soc.c 가 DC/DC(인덕터 필요)를 활성화하므로 꺼둔다.
+ * (선반 보드에서 실제로 VDD 1.8V 붕괴를 일으켰던 항목 — 그쪽 §10.2)
+ */
+&reg0 {
+	status = "disabled";
+};
+
+&i2c0 {
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_STANDARD>; /* 100k — 배선 마진 우선 */
+	pinctrl-0 = <&i2c0_jacket_default>;
+	pinctrl-1 = <&i2c0_jacket_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	imu: lsm6dsv16x@6a {
+		/* SA0=GND → 0x6A, CS=VDD → I2C 모드. 자체 경량 드라이버 사용
+		 * (src/lsm6dsv16x.c) — Zephyr 인트리 드라이버는 켜지 않는다. */
+		compatible = "st,lsm6dsv16x";
+		reg = <0x6a>;
+	};
+};
+
+&pinctrl {
+	i2c0_jacket_default: i2c0_jacket_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 20)>,
+				<NRF_PSEL(TWIM_SCL, 0, 22)>;
+		};
+	};
+
+	i2c0_jacket_sleep: i2c0_jacket_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 20)>,
+				<NRF_PSEL(TWIM_SCL, 0, 22)>;
+			low-power-enable;
+		};
+	};
+};
+
+&spi1 {
+	status = "disabled";
+};
+
+/* DK 의 MX25R64 QSPI 플래시는 이 보드에 없다 (부팅마다 JEDEC id 에러 방지). */
+&mx25r64 {
+	status = "disabled";
+};
+
+&qspi {
+	status = "disabled";
+};
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+&adc {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/*
+	 * 채널 0 — 배터리. SAADC 내부 VDD 입력, 게인 1/6 + 내부 0.6V 기준
+	 * → 풀스케일 3.6V. AA 리튬 2셀(최대 3.6V)이 정확히 들어온다.
+	 * 분압 저항이 없어 대기 소모 0.
+	 */
+	channel@0 {
+		reg = <0>;
+		zephyr,gain = "ADC_GAIN_1_6";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)>;
+		zephyr,input-positive = <NRF_SAADC_VDD>;
+		zephyr,resolution = <12>;
+		zephyr,oversampling = <4>;
+	};
+
+	/*
+	 * 채널 1/2 — 물 감지 전극. 기준을 VDD/4 로 잡아 레이시오메트릭 측정
+	 * (풀스케일 = VDD). 전극을 VDD 로 구동하므로 배터리 전압이 얼마든
+	 * "VDD 대비 몇 %" 로 읽혀 임계값이 전압 변동과 무관해진다.
+	 */
+	/*
+	 * 획득 시간 40 µs: 전극 노드의 소스 임피던스가 수백 kΩ(470k 풀다운,
+	 * 젖어도 47k+Rw+47k)라 nRF52 SAADC 최장 획득 시간이 필요하다.
+	 * 10 µs 로는 샘플 캐패시터가 충전되지 못해 이전 변환의 잔류 전하가
+	 * 그대로 읽힌다 (실측: 건조 상태에서 78% 고정 + 톱니 감쇠 패턴).
+	 */
+	channel@1 {
+		reg = <1>;
+		zephyr,gain = "ADC_GAIN_1_4";
+		zephyr,reference = "ADC_REF_VDD_1_4";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)>;
+		zephyr,input-positive = <NRF_SAADC_AIN0>;	/* P0.02 */
+		zephyr,resolution = <10>;
+	};
+
+	channel@2 {
+		reg = <2>;
+		zephyr,gain = "ADC_GAIN_1_4";
+		zephyr,reference = "ADC_REF_VDD_1_4";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)>;
+		zephyr,input-positive = <NRF_SAADC_AIN1>;	/* P0.03 */
+		zephyr,resolution = <10>;
+	};
+};

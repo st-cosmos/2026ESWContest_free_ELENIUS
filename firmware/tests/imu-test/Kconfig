@@ -1,0 +1,10 @@
+# lsm6dsv16x.c 가 쓰는 JACKET 로그 모듈 정의 (메인 앱 Kconfig 와 동일)
+menu "Jacket IMU test"
+
+module = JACKET
+module-str = Jacket
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+source "Kconfig.zephyr"
