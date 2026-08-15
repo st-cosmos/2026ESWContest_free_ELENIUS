@@ -125,9 +125,23 @@ JACKET_MIN_COLOR_RATIO = float(os.environ.get("VPASS_JACKET_MIN_RATIO", "0.4"))
 JACKET_ROI_MIN_VISIBLE = float(os.environ.get("VPASS_JACKET_ROI_MIN_VISIBLE", "0.35"))
 
 # ── 구명조끼 디바이스 / 익수 감지 ────────────────────────────────────────
-PING_INTERVAL = 3.0        # 펌웨어 ping 주기(초)
+PING_INTERVAL = 3.0        # (구 ESP HTTP 펌웨어) ping 주기(초)
 FALL_PING_TIMEOUT = 5.0    # 낙상 후 이 시간 안에 ping 없으면 익수로 판단
 SIGNAL_LOSS_TIMEOUT = 10.0 # 착용 중 신호 두절 시 익수로 판단(3회 연속 유실)
+
+# ── 구명조끼 BLE 수신 (nRF52840 펌웨어, firmware/) ──────────────────────
+# 조끼 장치가 BLE 광고(브로드캐스트)로 착용/생존/낙하를 보고한다.
+# auto: bleak 가 있으면 스캔 시작, 실패 시 조용히 비활성 (HTTP/SimJacket 병행)
+# off:  스캔하지 않음
+BLE_ENABLED = (
+    os.environ.get("VPASS_BLE", "auto").strip().lower() not in ("0", "false", "off")
+)
+# 펌웨어 광고 페이로드의 회사 ID (개발용 0xFFFF — firmware/src/jacket_adv.c)
+BLE_COMPANY_ID = int(os.environ.get("VPASS_BLE_COMPANY_ID", "0xFFFF"), 0)
+# 배터리 교체 경고 임계값(mV). AA 리튬 2셀은 방전 곡선이 평평해 % 환산이
+# 부정확하므로 전압 + 교체요망 판정으로만 표시한다. 펌웨어 자체 저전압
+# 플래그(동일 기본값)와 OR 로 판정.
+JACKET_BATT_WARN_MV = int(os.environ.get("VPASS_JACKET_BATT_WARN_MV", "2200"))
 
 # ── 킬 스위치(GPIO/BLE) ──────────────────────────────────────────────────
 KILLSWITCH_GPIO_PIN = int(os.environ.get("VPASS_KILLSWITCH_PIN", "17"))
