@@ -16,6 +16,7 @@ import threading
 
 from .config import (
     IS_RASPBERRY_PI,
+    KILLSWITCH_BLE_ADAPTER,
     KILLSWITCH_BLE_ADDRESS,
     KILLSWITCH_BLE_CHARACTERISTIC_UUID,
     KILLSWITCH_BLE_ENABLED,
@@ -62,12 +63,14 @@ class _BleOutput:
         service_uuid: str,
         characteristic_uuid: str,
         timeout_sec: float,
+        adapter: str | None = None,
     ):
         self.name = name
         self.address = address
         self.service_uuid = service_uuid
         self.characteristic_uuid = characteristic_uuid
         self.timeout_sec = timeout_sec
+        self.adapter = adapter  # 리눅스(BlueZ) 어댑터 지정 (예: USB 동글 "hci1")
         self.last_command: str | None = None
         self.last_error: str | None = None
         self._commands: queue.Queue[str | None] = queue.Queue(maxsize=1)
@@ -116,6 +119,11 @@ class _BleOutput:
     async def _send(self, command: str) -> None:
         from bleak import BleakClient, BleakScanner  # type: ignore
 
+        # BlueZ 어댑터 지정 — scanner 는 adapter=, client 는 bluez={"adapter": ...} 형식.
+        # 다른 백엔드(윈도우 등)에서는 bleak 이 해당 kwargs 를 무시한다.
+        scanner_kwargs = {"adapter": self.adapter} if self.adapter else {}
+        client_kwargs = {"bluez": {"adapter": self.adapter}} if self.adapter else {}
+
         target = self.address
         if not target:
             device = await BleakScanner.find_device_by_filter(
@@ -125,12 +133,13 @@ class _BleOutput:
                     in {uuid.lower() for uuid in (ad.service_uuids or [])}
                 ),
                 timeout=self.timeout_sec,
+                **scanner_kwargs,
             )
             if device is None:
                 raise RuntimeError(f"BLE 장치를 찾지 못했습니다: {self.name}")
             target = device.address
 
-        async with BleakClient(target, timeout=self.timeout_sec) as client:
+        async with BleakClient(target, timeout=self.timeout_sec, **client_kwargs) as client:
             await client.write_gatt_char(
                 self.characteristic_uuid,
                 command.encode("utf-8"),
@@ -152,6 +161,7 @@ class EngineController:
                 service_uuid=KILLSWITCH_BLE_SERVICE_UUID,
                 characteristic_uuid=KILLSWITCH_BLE_CHARACTERISTIC_UUID,
                 timeout_sec=KILLSWITCH_BLE_TIMEOUT_SEC,
+                adapter=KILLSWITCH_BLE_ADAPTER,
             )
             if KILLSWITCH_BLE_ENABLED
             else None

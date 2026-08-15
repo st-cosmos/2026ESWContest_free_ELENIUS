@@ -146,6 +146,9 @@ KILLSWITCH_BLE_CHARACTERISTIC_UUID = os.environ.get(
     "8d4f2a11-5f5f-4c0b-9a8c-0f6f7f7b2a10",
 )
 KILLSWITCH_BLE_TIMEOUT_SEC = float(os.environ.get("VPASS_KILLSWITCH_BLE_TIMEOUT", "6"))
+# 사용할 블루투스 어댑터 (예: 라즈베리파이에서 USB 동글을 쓰려면 "hci1").
+# 미설정 시 시스템 기본 어댑터를 사용한다. 리눅스(BlueZ) 전용 옵션.
+KILLSWITCH_BLE_ADAPTER = os.environ.get("VPASS_KILLSWITCH_BLE_ADAPTER", "").strip() or None
 
 # ── 운항 기록 ───────────────────────────────────────────────────────────
 # 출항/입항은 속도로 자동 감지하지 않는다.
