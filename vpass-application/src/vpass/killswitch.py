@@ -13,8 +13,8 @@ import asyncio
 import importlib.util
 import queue
 import threading
-import time
 
+from . import blebus
 from .config import (
     IS_RASPBERRY_PI,
     KILLSWITCH_BLE_ADAPTER,
@@ -86,15 +86,16 @@ class _BleOutput:
         self.link_connected = False
         self._commands: queue.Queue[str | None] = queue.Queue(maxsize=1)
         self._available = importlib.util.find_spec("bleak") is not None
-        self._thread: threading.Thread | None = None
 
         if not self._available:
             self.last_error = "bleak 미설치"
             print("[killswitch] BLE 사용 불가: bleak 패키지가 설치되어 있지 않습니다.")
             return
 
-        self._thread = threading.Thread(target=self._worker, daemon=True)
-        self._thread.start()
+        # 자체 스레드+asyncio.run 대신 공용 BLE 루프에서 실행한다.
+        # 구명조끼 광고 스캐너와 각자 루프를 돌리면 bleak/BlueZ 전역 매니저가
+        # 첫 루프에 묶여 이쪽 연결 시도가 에러 없이 영원히 멈춘다 (blebus.py).
+        self._future = blebus.submit(self._supervisor())
 
     @property
     def available(self) -> bool:
@@ -114,15 +115,15 @@ class _BleOutput:
         except queue.Full:
             pass
 
-    def _worker(self) -> None:
+    async def _supervisor(self) -> None:
         while True:
             try:
-                asyncio.run(self._run())
+                await self._run()
                 return  # 종료 신호(None)로 정상 종료
             except Exception as e:
                 self.last_error = str(e)
                 print(f"[killswitch] BLE 워커 오류, 재시작: {e}")
-                time.sleep(2.0)
+                await asyncio.sleep(2.0)
 
     def _poll_command(self):
         """명령을 1초까지 기다린다. 타임아웃이면 _IDLE (연결 상태 점검 기회)."""
