@@ -138,6 +138,11 @@ BLE_ENABLED = (
 )
 # 펌웨어 광고 페이로드의 회사 ID (개발용 0xFFFF — firmware/src/jacket_adv.c)
 BLE_COMPANY_ID = int(os.environ.get("VPASS_BLE_COMPANY_ID", "0xFFFF"), 0)
+# 조끼 광고를 수신할 블루투스 어댑터 (예: 라즈베리파이 USB 동글 "hci1").
+# 파이 내장 칩(hci0)은 Wi-Fi 와 안테나를 공유해 트래픽이 몰리면 수신 공백이
+# 생긴다 (2026-08-29 실측 최대 19초 → 익수 오경보). 미설정 시 시스템 기본
+# 어댑터를 사용한다. 리눅스(BlueZ) 전용 옵션.
+BLE_ADAPTER = os.environ.get("VPASS_BLE_ADAPTER", "").strip() or None
 # 배터리 교체 경고 임계값(mV). AA 리튬 2셀은 방전 곡선이 평평해 % 환산이
 # 부정확하므로 전압 + 교체요망 판정으로만 표시한다. 펌웨어 자체 저전압
 # 플래그(동일 기본값)와 OR 로 판정.
