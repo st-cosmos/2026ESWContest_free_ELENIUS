@@ -5,9 +5,10 @@
   POST /api/ping    {device}         ← 착용 중 3초 주기 생존 신호
   POST /api/fall    {device, magnitude} ← IMU 낙상 감지
 
-익수 판정(둘 중 하나):
+익수 판정(셋 중 하나):
   1) 낙상 신고 후 FALL_PING_TIMEOUT 동안 ping 없음      (낙상 + 신호 두절)
   2) 착용 중인데 SIGNAL_LOSS_TIMEOUT 동안 ping 없음     (수중 전파 차단 원리)
+  3) 낙하 + 물 감지 플래그 수신 → 즉시 (mob_confirm)   (BLE 펌웨어 로컬 확정)
 
 익수 판정 시 on_mob 콜백이 1회 호출되고(래치), 상황 확인(ack) 전까지 유지된다.
 착용 상태가 실제로 바뀔 때(착용↔해제 전환)는 on_wearing 콜백이 호출된다
@@ -49,7 +50,7 @@ class DeviceRegistry:
                 "last_fall": "-",
                 "fall_magnitude": None,
                 "mob": False,          # 익수 래치
-                "mob_cause": None,     # "fall" | "signal_loss"
+                "mob_cause": None,     # "fall" | "signal_loss" | "fall_water"
                 "mob_at": None,
                 "pings": deque(maxlen=50),
                 "falls": deque(maxlen=20),
@@ -97,6 +98,26 @@ class DeviceRegistry:
             d["last_fall"] = t
             d["fall_magnitude"] = round(magnitude, 2)
             d["falls"].append({"time": t, "magnitude": round(magnitude, 2)})
+
+    def mob_confirm(self, device_id: str, cause: str = "fall_water") -> None:
+        """장치가 스스로 익수를 확정해 보고한 경우(낙하 + 물 감지) 즉시 래치.
+
+        타임아웃을 기다리지 않는다 — 이 신호가 도달했다는 것 자체가 입수 전후의
+        마지막 송신 기회를 살린 것이므로. 이미 래치돼 있으면 무시(중복 발보 방지).
+        """
+        with self._lock:
+            d = self._get(device_id)
+            if d["mob"]:
+                return
+            d["mob"] = True
+            d["mob_cause"] = cause
+            d["mob_at"] = _now_str()
+            snap = self._snapshot_one(d, time.time())
+        if self._on_mob:
+            try:
+                self._on_mob(snap)
+            except Exception as e:
+                print(f"[lifejacket] on_mob 콜백 오류: {e}")
 
     def ack(self, device_id: str | None = None) -> None:
         """상황 확인: 익수 래치 해제 (device_id 미지정 시 전체)."""
