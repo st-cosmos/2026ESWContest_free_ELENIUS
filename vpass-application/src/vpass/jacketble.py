@@ -30,7 +30,7 @@ import threading
 import time
 
 from . import blebus
-from .config import BLE_COMPANY_ID, BLE_ENABLED, JACKET_BATT_WARN_MV
+from .config import BLE_ADAPTER, BLE_COMPANY_ID, BLE_ENABLED, JACKET_BATT_WARN_MV
 
 MAGIC = b"VJ"
 PROTO_VERSION = 1
@@ -94,13 +94,17 @@ class BleJacketScanner:
     async def _scan_forever(self) -> None:
         from bleak import BleakScanner
 
+        kwargs = {"detection_callback": self._on_adv}
+        if BLE_ADAPTER:
+            kwargs["adapter"] = BLE_ADAPTER
+
         while self._running:
             try:
-                scanner = BleakScanner(detection_callback=self._on_adv)
+                scanner = BleakScanner(**kwargs)
                 await scanner.start()
                 try:
-                    self.status = "scanning"
-                    print("[jacketble] BLE 스캔 시작")
+                    self.status = f"scanning ({BLE_ADAPTER or 'default'})"
+                    print(f"[jacketble] BLE 스캔 시작 (adapter={BLE_ADAPTER or 'default'})")
                     while self._running:
                         await asyncio.sleep(0.5)
                 finally:
