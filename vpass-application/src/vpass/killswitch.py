@@ -85,6 +85,7 @@ class _BleOutput:
         self.last_error: str | None = None
         self.link_connected = False
         self._commands: queue.Queue[str | None] = queue.Queue(maxsize=1)
+        self._desired: str | None = None  # 마지막 요구 상태 — 재접속 후 재전송용
         self._available = importlib.util.find_spec("bleak") is not None
 
         if not self._available:
@@ -104,7 +105,11 @@ class _BleOutput:
     def set(self, cut_engine: bool) -> None:
         if not self._available:
             return
-        command = "ON" if cut_engine else "OFF"
+        self._desired = "ON" if cut_engine else "OFF"
+        self._enqueue(self._desired)
+
+    def _enqueue(self, command: str) -> None:
+        """최신 명령 하나만 남긴다 (이전 미전송 명령은 버림)."""
         try:
             while True:
                 self._commands.get_nowait()
@@ -143,6 +148,11 @@ class _BleOutput:
                     # 유휴: 연결이 없거나 끊겼으면 미리 다시 맺어 둔다
                     if client is None or not client.is_connected:
                         client = await self._reconnect(client)
+                        # 재접속 직후 요구 상태를 다시 보낸다 — 장치가 리부팅하면
+                        # fail-safe(ON, 차단)로 돌아가 있어 앱 상태와 어긋난 채
+                        # 다음 상태 변화까지 방치된다 (2026-08-29 실측)
+                        if client is not None and self._desired is not None:
+                            self._enqueue(self._desired)
                     continue
 
                 if command is None:
@@ -206,7 +216,12 @@ class _BleOutput:
                     raise RuntimeError(f"BLE 장치를 찾지 못했습니다: {self.name}")
                 target = device.address
 
-            new_client = BleakClient(target, timeout=self.timeout_sec, **client_kwargs)
+            # 조끼 스캐너가 같은 어댑터에서 이미 본 장치면 BLEDevice 로 넘겨 bleak 의
+            # 자체 스캔(같은 프로세스 스캔과 충돌 → BlueZ InProgress)을 건너뛴다.
+            known = blebus.get_device(target, self.adapter)
+            new_client = BleakClient(
+                known or target, timeout=self.timeout_sec, **client_kwargs
+            )
             await new_client.connect()
             self.link_connected = True
             self.last_error = None

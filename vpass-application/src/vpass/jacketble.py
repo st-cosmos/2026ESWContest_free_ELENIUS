@@ -122,6 +122,7 @@ class BleJacketScanner:
 
     # ── 광고 수신 ────────────────────────────────────────────────────────
     def _on_adv(self, device, adv) -> None:
+        blebus.note_device(device)  # 킬 스위치 등 다른 BLE 클라이언트가 스캔 없이 쓰도록
         payload = adv.manufacturer_data.get(BLE_COMPANY_ID)
         if not payload or len(payload) < 9 or payload[:2] != MAGIC:
             return
