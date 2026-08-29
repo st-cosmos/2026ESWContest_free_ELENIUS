@@ -38,3 +38,28 @@ def _ensure_loop() -> asyncio.AbstractEventLoop:
 def submit(coro: Coroutine) -> concurrent.futures.Future:
     """코루틴을 공용 BLE 루프에 제출한다 (스레드 안전, 논블로킹)."""
     return asyncio.run_coroutine_threadsafe(coro, _ensure_loop())
+
+
+# ── 스캔 결과 공유 ──────────────────────────────────────────────────────
+# bleak(BlueZ)는 주소 문자열로 연결하면 먼저 자체 스캔을 돌리는데, 같은
+# 프로세스에서 이미 그 어댑터로 스캔 중이면 BlueZ 가 InProgress 로 거절해
+# 연결이 영원히 안 된다 (2026-08-29 실측, 킬 스위치 + 조끼 스캐너 동시 사용).
+# 스캐너 콜백이 본 BLEDevice 를 여기 남겨 두면 연결 쪽은 스캔 없이 바로 쓴다.
+_devices: dict[str, object] = {}
+
+
+def note_device(device) -> None:
+    """스캐너 콜백에서 호출: 발견한 BLEDevice 를 주소로 보관 (최신으로 갱신)."""
+    _devices[device.address.upper()] = device
+
+
+def get_device(address: str, adapter: str | None = None):
+    """보관된 BLEDevice. adapter 가 주어지면 그 어댑터에서 본 것만 돌려준다."""
+    device = _devices.get(address.upper())
+    if device is None:
+        return None
+    if adapter:
+        path = getattr(device, "details", {}).get("path", "")
+        if not path.startswith(f"/org/bluez/{adapter}/"):
+            return None
+    return device
