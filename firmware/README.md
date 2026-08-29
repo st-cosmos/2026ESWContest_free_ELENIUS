@@ -102,6 +102,10 @@ NCS 환경 셸에서 (툴체인 함정·해결법은 [선반 build-and-flash.md 
 cd C:\Users\seadmisk\workspace\smart-vpass-system\firmware
 west build -b nrf52840dk/nrf52840 --sysbuild -p always .
 
+# 조끼별 장치 번호 (V-PASS 의 jacket-<n>). 기본 빌드는 1 — 여러 개를 동시에
+# 운용하려면 보드마다 다른 번호로 빌드한다. MCUboot 는 번호와 무관하게 동일.
+west build -b nrf52840dk/nrf52840 --sysbuild -p always -d build-jacket2 . -- -Dfirmware_CONFIG_JACKET_DEVICE_NUM=2
+
 # 테스트 앱 (MCUboot 없음 — SWD 전용, 브링업 단계)
 west build -b nrf52840dk/nrf52840 -p always tests/led-test -d tests/led-test/build
 west build -b nrf52840dk/nrf52840 -p always tests/imu-test -d tests/imu-test/build

@@ -1,5 +1,6 @@
 # Zephyr / west 빌드 산출물
 build/
+build-*/
 tests/*/build/
 
 # OS / 에디터
