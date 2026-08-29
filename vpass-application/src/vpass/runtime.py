@@ -80,6 +80,11 @@ class SimJacket:
         elif action == "overboard":
             self._registry.fall(self.device_id, 4.8)
             self.pinging = False
+        elif action == "drown":
+            # 펌웨어 로컬 익수 확정(낙하 + 물 감지 플래그)과 동일 경로
+            self._registry.fall(self.device_id, 4.8)
+            self._registry.mob_confirm(self.device_id, "fall_water")
+            self.pinging = False
         elif action == "silence":
             self.pinging = False
         elif action == "resume":
@@ -194,9 +199,10 @@ class Runtime:
         device_id = device_snap["device"]
         user = self.resolve_device_user(device_id)
         who = f"{user['name']} 님" if user else f"장치 {device_id}"
-        cause_txt = (
-            "낙상 후 신호 두절" if device_snap["mob_cause"] == "fall" else "무선 신호 두절"
-        )
+        cause_txt = {
+            "fall": "낙상 후 신호 두절",
+            "fall_water": "낙하 + 물 감지",
+        }.get(device_snap["mob_cause"], "무선 신호 두절")
         self.engine.kill(f"익수 감지 — {who} ({cause_txt})")
         report = self.sos.trigger("mob", detail=f"{who} 익수 의심 ({cause_txt})")
         self._report_to_demo(report)

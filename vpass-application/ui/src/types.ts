@@ -68,7 +68,7 @@ export interface DeviceState {
   fall_magnitude: number | null;
   fall_pending: boolean;
   mob: boolean;
-  mob_cause: "fall" | "signal_loss" | null;
+  mob_cause: "fall" | "signal_loss" | "fall_water" | null;
   mob_at: string | null;
   battery_mv: number | null;
   battery_low: boolean;

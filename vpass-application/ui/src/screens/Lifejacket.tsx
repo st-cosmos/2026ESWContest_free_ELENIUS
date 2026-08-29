@@ -117,7 +117,11 @@ function DeviceCard({ device }: { device: DeviceState }) {
           {device.mob && device.mob_at && (
             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--red)" }}>
               익수 판정 {device.mob_at} ·{" "}
-              {device.mob_cause === "fall" ? "낙상 후 신호 두절" : "무선 신호 두절"}
+              {device.mob_cause === "fall"
+                ? "낙상 후 신호 두절"
+                : device.mob_cause === "fall_water"
+                  ? "낙하 + 물 감지"
+                  : "무선 신호 두절"}
             </span>
           )}
         </div>
@@ -150,6 +154,7 @@ function SimPanel() {
     { label: "탈의", action: "doff" },
     { label: "낙상(복귀)", action: "fall" },
     { label: "익수(낙상+두절)", action: "overboard", danger: true },
+    { label: "익수(낙하+물감지)", action: "drown", danger: true },
     { label: "신호 두절", action: "silence", danger: true },
     { label: "신호 재개", action: "resume" },
     { label: "배터리 부족", action: "lowbatt" },

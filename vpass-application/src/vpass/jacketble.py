@@ -18,6 +18,7 @@ HTTP → 레지스트리 매핑과 동일한 의미로 변환한다:
                         SIGNAL_LOSS_TIMEOUT 로직을 그대로 사용
   worn 플래그 전환    = set_wearing (승선 게이트/탈의 경고)
   낙하 카운터 증가    = fall (이후 두절 시 FALL_PING_TIMEOUT 로 익수 판정)
+  낙하 + 물 플래그    = mob_confirm (펌웨어 로컬 익수 확정 → 즉시 익수 판정)
 
 bleak 미설치·블루투스 어댑터 부재 시에는 상태만 남기고 조용히 비활성화된다
 — 기존 HTTP 경로(/api/wearing 등)와 SimJacket 은 그대로 병행 동작한다.
@@ -174,6 +175,12 @@ class BleJacketScanner:
                 address=device.address,
             )
 
+        # 낙하 + 물 감지 = 펌웨어 로컬 익수 확정. STROBE 는 펌웨어가 그 조건에서만
+        # 켜므로 단독으로도 충분하고, FALL 래치(30초) + WATER 동시 수신도 같은 뜻.
+        fall_water = bool(flags & FLAG_STROBE) or (
+            bool(flags & FLAG_FALL) and bool(flags & FLAG_WATER)
+        )
+
         # 레지스트리 반영은 락 밖에서 (콜백 체인이 길 수 있음)
         if worn_changed:
             self._registry.set_wearing(device_id, worn)
@@ -182,6 +189,8 @@ class BleJacketScanner:
             self._registry.ping(device_id)  # 낙하 직후 광고 = 아직 생존
         elif do_ping:
             self._registry.ping(device_id)
+        if worn and fall_water:
+            self._registry.mob_confirm(device_id, "fall_water")
         if warn_batt and self._on_low_batt:
             try:
                 self._on_low_batt(device_id, batt_mv)
