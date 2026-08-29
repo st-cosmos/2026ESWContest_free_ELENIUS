@@ -284,10 +284,13 @@ int main(void)
 			k_mutex_lock(&st_lock, K_FOREVER);
 			st.doff_ms = 0;
 			k_mutex_unlock(&st_lock);
-			if (!usb_powered()) {
+			if (!IS_ENABLED(CONFIG_JACKET_STORAGE_SLEEP)) {
+				LOG_INF("보관 슬립 비활성 — 깨어 있음 (버클 닫으면 광고 재개)");
+			} else if (!usb_powered()) {
 				enter_storage_sleep();	/* 복귀하지 않음 */
+			} else {
+				LOG_INF("USB 전원 감지 — 슬립 생략 (개발 모드)");
 			}
-			LOG_INF("USB 전원 감지 — 슬립 생략 (개발 모드)");
 		}
 
 		/* ── 1초 주기: 시퀀스/배터리 갱신 + 광고 데이터 푸시 ── */

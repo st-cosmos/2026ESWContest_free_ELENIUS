@@ -41,6 +41,15 @@ config JACKET_DOFF_ADV_TIMEOUT_S
 	  멈춘다. USB 전원이 없으면 이어서 System OFF 로 들어가고 버클이
 	  다시 닫히는 순간 깨어난다.
 
+config JACKET_STORAGE_SLEEP
+	bool "Enter System OFF (storage sleep) after the doff advertising timeout"
+	default y
+	help
+	  보관 시 소비전류를 수 µA 로 낮추는 프로덕션 동작. 비활성화하면
+	  배터리 구동이어도 잠들지 않고 깨어 있는 채 광고만 멈추며, 버클을
+	  다시 채우면 즉시 광고가 재개된다 — SENSE 웨이크업이 불안정한
+	  보드의 디버깅이나 시연(배터리 재삽입 없이 재착용) 용도.
+
 comment "Fall detection (IMU, software)"
 
 config JACKET_FREEFALL_THRESHOLD_MG
