@@ -8,7 +8,9 @@ Manufacturer Specific Data(회사 ID 0xFFFF)에 상태를 실어 브로드캐스
   [2] 버전 (1)
   [3] 장치 번호       → "jacket-<n>" 장치 ID 로 매핑 (ESP 버전과 동일 체계)
   [4] 플래그          b0 착용, b1 물 감지, b2 낙하 래치, b3 저전압, b4 스트로브
-  [5] 시퀀스          1초마다 증가 (BlueZ 중복 필터 무력화 겸용)
+  [5] 시퀀스          1초마다 증가 (데이터 변화 표시 — 단, BlueZ 능동 스캔의
+                        컨트롤러 중복 필터는 주소 기준이라 이것만으론 못 뚫는다.
+                        리눅스에선 패시브 스캔 + 패턴 모니터를 쓴다, config.BLE_SCAN_MODE)
   [6] 낙하 카운터     이벤트마다 증가 — 증가분을 보고 새 낙하를 식별
   [7] 낙하 크기       0.1 g 단위
   [8] 배터리          VDD [mV] / 20
@@ -27,11 +29,21 @@ bleak 미설치·블루투스 어댑터 부재 시에는 상태만 남기고 조
 from __future__ import annotations
 
 import asyncio
+import sys
 import threading
 import time
+import uuid
 
 from . import blebus
-from .config import BLE_ADAPTER, BLE_COMPANY_ID, BLE_ENABLED, JACKET_BATT_WARN_MV
+from .config import (
+    BLE_ADAPTER,
+    BLE_COMPANY_ID,
+    BLE_ENABLED,
+    BLE_SCAN_MODE,
+    JACKET_BATT_WARN_MV,
+    KILLSWITCH_BLE_ENABLED,
+    KILLSWITCH_BLE_SERVICE_UUID,
+)
 
 MAGIC = b"VJ"
 PROTO_VERSION = 1
@@ -92,26 +104,72 @@ class BleJacketScanner:
             self.status = f"error: {e}"
             print(f"[jacketble] 스캔 종료: {e}")
 
+    @staticmethod
+    def _passive_patterns() -> list:
+        """BlueZ 패시브 스캔(AdvertisementMonitor)용 광고 패턴.
+
+        패턴에 걸린 광고만 올라오므로 조끼(회사 ID + "VJ" 매직)와, 같은 프로세스의
+        킬 스위치가 스캔 없이 연결할 수 있도록(blebus.note_device) 킬 스위치의
+        128비트 서비스 UUID 도 함께 등록한다. 킬 스위치 이름은 스캔 응답에 있어
+        패시브로는 안 보이니 UUID 로 잡는다.
+        """
+        from bleak.assigned_numbers import AdvertisementDataType as ADT
+
+        try:
+            from bleak.args.bluez import OrPattern
+        except ImportError:  # bleak < 1.0
+            from bleak.backends.bluezdbus.advertisement_monitor import OrPattern
+
+        company = BLE_COMPANY_ID.to_bytes(2, "little")
+        patterns = [OrPattern(0, ADT.MANUFACTURER_SPECIFIC_DATA, company + MAGIC)]
+        if KILLSWITCH_BLE_ENABLED:
+            ks = uuid.UUID(KILLSWITCH_BLE_SERVICE_UUID).bytes[::-1]  # AD 는 LE 순서
+            patterns.append(OrPattern(0, ADT.COMPLETE_LIST_SERVICE_UUID128, ks))
+            patterns.append(OrPattern(0, ADT.INCOMPLETE_LIST_SERVICE_UUID128, ks))
+        return patterns
+
     async def _scan_forever(self) -> None:
         from bleak import BleakScanner
 
-        kwargs = {"detection_callback": self._on_adv}
-        if BLE_ADAPTER:
-            kwargs["adapter"] = BLE_ADAPTER
+        # 리눅스(BlueZ) 능동 스캔은 디스커버리 주기(10.24초)마다 장치당 1~2건만
+        # 콜백되므로 패시브 + 패턴 모니터를 우선 쓴다 (config.BLE_SCAN_MODE 참고).
+        use_passive = sys.platform == "linux" and BLE_SCAN_MODE in ("auto", "passive")
 
         while self._running:
+            # 매 시도마다 다시 해석 — hciN 번호는 부팅/핫플러그로 바뀔 수 있다 (blebus).
+            adapter = blebus.resolve_adapter(BLE_ADAPTER)
+            mode = "passive" if use_passive else "active"
+            kwargs = {"detection_callback": self._on_adv}
+            bluez = {"adapter": adapter} if adapter else {}
+            if use_passive:
+                kwargs["scanning_mode"] = "passive"
+                bluez["or_patterns"] = self._passive_patterns()
+            if bluez:
+                kwargs["bluez"] = bluez
+            label = f"{BLE_ADAPTER}→{adapter}" if adapter != BLE_ADAPTER else (adapter or "default")
             try:
                 scanner = BleakScanner(**kwargs)
                 await scanner.start()
                 try:
-                    self.status = f"scanning ({BLE_ADAPTER or 'default'})"
-                    print(f"[jacketble] BLE 스캔 시작 (adapter={BLE_ADAPTER or 'default'})")
+                    self.status = f"scanning ({label}, {mode})"
+                    print(f"[jacketble] BLE 스캔 시작 (adapter={label}, mode={mode})")
                     while self._running:
                         await asyncio.sleep(0.5)
                 finally:
                     await scanner.stop()
                 return
             except Exception as e:
+                if use_passive and BLE_SCAN_MODE == "auto":
+                    # BlueZ Experimental 꺼짐 / 구버전 등 — 능동 스캔으로 폴백
+                    # (수신 주기 10초 → SIGNAL_LOSS_TIMEOUT 오경보 가능, 로그로 알린다)
+                    use_passive = False
+                    self.status = f"passive 불가 → active 폴백: {e}"
+                    print(
+                        "[jacketble] 패시브 스캔 실패 → 능동 스캔으로 폴백 "
+                        f"(수신이 10초 간격이 되어 익수 오경보 가능. "
+                        f"/etc/bluetooth/main.conf 에 Experimental = true 권장): {e}"
+                    )
+                    continue
                 # 어댑터가 아직 없거나 일시 오류 — 10초 후 재시도
                 self.status = f"retrying: {e}"
                 print(f"[jacketble] 스캔 실패, 10초 후 재시도: {e}")

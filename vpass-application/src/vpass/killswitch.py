@@ -80,7 +80,7 @@ class _BleOutput:
         self.service_uuid = service_uuid
         self.characteristic_uuid = characteristic_uuid
         self.timeout_sec = timeout_sec
-        self.adapter = adapter  # 리눅스(BlueZ) 어댑터 지정 (예: USB 동글 "hci1")
+        self.adapter = adapter  # 리눅스(BlueZ) 어댑터 지정 ("usb"/"uart"/hciN/BD주소)
         self.last_command: str | None = None
         self.last_error: str | None = None
         self.link_connected = False
@@ -195,10 +195,12 @@ class _BleOutput:
 
         client = await self._drop(client)
 
-        # BlueZ 어댑터 지정 — scanner 는 adapter=, client 는 bluez={"adapter": ...} 형식.
-        # 다른 백엔드(윈도우 등)에서는 bleak 이 해당 kwargs 를 무시한다.
-        scanner_kwargs = {"adapter": self.adapter} if self.adapter else {}
-        client_kwargs = {"bluez": {"adapter": self.adapter}} if self.adapter else {}
+        # BlueZ 어댑터 지정 — 매 접속마다 다시 해석한다 (hciN 번호는 부팅마다
+        # 바뀔 수 있음, blebus.resolve_adapter). 다른 백엔드(윈도우 등)에서는
+        # bleak 이 bluez kwargs 를 무시한다.
+        adapter = blebus.resolve_adapter(self.adapter)
+        scanner_kwargs = {"bluez": {"adapter": adapter}} if adapter else {}
+        client_kwargs = {"bluez": {"adapter": adapter}} if adapter else {}
 
         try:
             target = self.address
@@ -218,7 +220,7 @@ class _BleOutput:
 
             # 조끼 스캐너가 같은 어댑터에서 이미 본 장치면 BLEDevice 로 넘겨 bleak 의
             # 자체 스캔(같은 프로세스 스캔과 충돌 → BlueZ InProgress)을 건너뛴다.
-            known = blebus.get_device(target, self.adapter)
+            known = blebus.get_device(target, adapter)
             new_client = BleakClient(
                 known or target, timeout=self.timeout_sec, **client_kwargs
             )
