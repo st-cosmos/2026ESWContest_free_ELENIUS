@@ -40,12 +40,17 @@ def create_app() -> FastAPI:
             name="assets",
         )
 
+        # index.html 은 항상 재검증하게 한다. 캐시 헤더가 없으면 chromium 이
+        # 휴리스틱으로 오래 캐시해, UI 를 새로 배포해도 키오스크가 예전 번들을
+        # 계속 여는 일이 생긴다. /assets 는 해시 파일명이라 그대로 둬도 된다.
+        no_cache = {"Cache-Control": "no-cache, must-revalidate"}
+
         @app.get("/{path:path}", include_in_schema=False)
         def spa(path: str):
             candidate = UI_DIST_DIR / path
             if path and candidate.is_file():
-                return FileResponse(candidate)
-            return FileResponse(UI_DIST_DIR / "index.html")
+                return FileResponse(candidate, headers=no_cache)
+            return FileResponse(UI_DIST_DIR / "index.html", headers=no_cache)
 
     else:
 
