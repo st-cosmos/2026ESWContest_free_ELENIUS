@@ -15,6 +15,9 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import os
+import re
+import subprocess
 import threading
 from collections.abc import Coroutine
 
@@ -38,6 +41,84 @@ def _ensure_loop() -> asyncio.AbstractEventLoop:
 def submit(coro: Coroutine) -> concurrent.futures.Future:
     """코루틴을 공용 BLE 루프에 제출한다 (스레드 안전, 논블로킹)."""
     return asyncio.run_coroutine_threadsafe(coro, _ensure_loop())
+
+
+# ── 어댑터 이름 해석 ────────────────────────────────────────────────────
+# 리눅스의 hciN 번호는 부팅마다 USB 동글과 내장(UART) 칩 중 먼저 잡히는
+# 쪽이 hci0 이 되어 뒤바뀔 수 있다 (2026-08-30 파이 실측: 동글 hci0, 내장
+# hci1). 그래서 환경변수는 번호 대신 버스 종류("usb"/"uart")나 어댑터
+# BD 주소로도 받고, 쓸 때마다 /sys 를 봐서 실제 hciN 으로 바꾼다.
+_SYS_BT = "/sys/class/bluetooth"
+_MAC_RE = re.compile(r"^([0-9a-f]{2}:){5}[0-9a-f]{2}$", re.I)
+
+
+def _adapter_bus(name: str) -> str:
+    """hciN 의 버스 종류 — /sys/class/bluetooth/hciN 실경로에 usb 가 있으면 usb."""
+    try:
+        real = os.path.realpath(os.path.join(_SYS_BT, name))
+    except OSError:
+        return "unknown"
+    return "usb" if "/usb" in real else "uart"
+
+
+def _adapter_addresses() -> dict[str, str]:
+    """{hciN: BD 주소}. sysfs 에는 주소가 없어 `hciconfig` 출력을 읽는다 (bluez 패키지,
+    /usr/sbin — 파이 non-login 셸 PATH 에 없을 수 있어 직접 보탠다)."""
+    env = dict(os.environ)
+    env["PATH"] = env.get("PATH", "") + os.pathsep + "/usr/sbin" + os.pathsep + "/sbin"
+    try:
+        out = subprocess.run(
+            ["hciconfig"], capture_output=True, text=True, timeout=3, env=env
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    result: dict[str, str] = {}
+    current = None
+    for line in out.splitlines():
+        m = re.match(r"^(hci\d+):", line)
+        if m:
+            current = m.group(1)
+            continue
+        m = re.search(r"BD Address:\s*(([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})", line)
+        if m and current:
+            result[current] = m.group(1).upper()
+    return result
+
+
+def list_adapters() -> list[tuple[str, str, str]]:
+    """(hciN, BD 주소, 버스) 목록. /sys 가 없는 플랫폼(윈도우 등)은 빈 목록."""
+    try:
+        names = sorted(n for n in os.listdir(_SYS_BT) if n.startswith("hci"))
+    except OSError:
+        return []
+    addrs = _adapter_addresses()
+    return [(name, addrs.get(name, ""), _adapter_bus(name)) for name in names]
+
+
+def resolve_adapter(spec: str | None) -> str | None:
+    """어댑터 지정 문자열을 실제 hciN 이름으로 바꾼다.
+
+    spec: "hci1" (그대로), "usb"/"uart" (버스 종류), "AA:BB:CC:DD:EE:FF" (BD 주소).
+    매칭되는 어댑터가 없으면 spec 을 그대로 돌려준다 — 이후 bleak 오류 메시지로
+    드러나고 호출 쪽 재시도 루프가 다시 이 함수를 부른다 (핫플러그 대응).
+    """
+    if not spec:
+        return None
+    spec = spec.strip()
+    if re.fullmatch(r"hci\d+", spec):
+        return spec
+    adapters = list_adapters()
+    if _MAC_RE.match(spec):
+        for name, addr, _bus in adapters:
+            if addr == spec.upper():
+                return name
+        return spec
+    if spec.lower() in ("usb", "uart"):
+        for name, _addr, bus in adapters:
+            if bus == spec.lower():
+                return name
+        return spec
+    return spec
 
 
 # ── 스캔 결과 공유 ──────────────────────────────────────────────────────
