@@ -1,6 +1,9 @@
 #!/bin/bash
 # V-PASS 서버 시작 (라즈베리파이) — USB 블루투스 동글 사용, 로그 /tmp/vpass.log
 # 파이 홈에 복사해 두고 `~/vpass-start.sh` 로 실행한다.
+# 인자는 vpass 에 그대로 전달된다:
+#   ~/vpass-start.sh --reset-all   # 선원·얼굴·어선 정보까지 전부 지우고 최초 구동
+#   ~/vpass-start.sh --reset       # 운항·승선 기록만 초기화
 cd ~/workspace/smart-vpass-system/vpass-application || exit 1
 "$(dirname "$0")/vpass-stop.sh" >/dev/null
 export PYTHONUNBUFFERED=1                 # nohup 리다이렉트 시 로그 버퍼링 방지
@@ -48,5 +51,5 @@ else
   echo "demo server: $VPASS_DEMO_SERVER_URL (env)"
 fi
 
-nohup ~/.local/bin/uv run vpass > /tmp/vpass.log 2>&1 &
+nohup ~/.local/bin/uv run vpass "$@" > /tmp/vpass.log 2>&1 &
 echo "vpass started (pid $!) - tail -f /tmp/vpass.log"
