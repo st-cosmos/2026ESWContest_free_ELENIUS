@@ -16,12 +16,15 @@ import "@fontsource/jetbrains-mono/700.css";
 
 import "./theme.css";
 import App from "./App";
+import { VirtualKeyboard } from "./components/VirtualKeyboard";
 import { AppStateProvider } from "./state";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppStateProvider>
       <App />
+      {/* 터치 키오스크용 가상 키보드 — 셋업 화면에서도 쓰이므로 App 밖에 둔다 */}
+      <VirtualKeyboard />
     </AppStateProvider>
   </StrictMode>,
 );
