@@ -825,3 +825,84 @@ input::placeholder {
 .fade-in-up {
   animation: fadeInUp 0.25s ease-out;
 }
+
+/* ── 가상 키보드 (터치 키오스크) ─────────────────────────────────────── */
+/* 키보드가 열리면 화면을 그 높이만큼 줄여 입력창이 가려지지 않게 한다 */
+body.kb-open #root {
+  height: calc(100% - var(--kb-h, 260px));
+}
+/* 모달은 남은 영역 안에서 위쪽 정렬 + 스크롤 (키보드보다 긴 폼 대비) */
+body.kb-open .modal-backdrop {
+  bottom: var(--kb-h, 260px);
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+
+.vk {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--kb-h, 260px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -12px 40px 0 #00000080;
+  z-index: 300;
+  touch-action: none;
+}
+
+.vk-row {
+  display: flex;
+  flex: 1 1 0;
+  gap: 8px;
+  min-height: 0;
+}
+
+.vk-key {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text-1);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  touch-action: none;
+}
+
+.vk-key:active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.vk-fn {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--panel);
+}
+
+.vk-fn.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.vk-enter {
+  color: #0a0c11;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.vk-ghost {
+  visibility: hidden;
+}

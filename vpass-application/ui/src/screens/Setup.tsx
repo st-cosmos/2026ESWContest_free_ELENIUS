@@ -98,6 +98,7 @@ export function Setup({ onDone }: { onDone: () => void }) {
           <div className="field-box mono">
             <input
               value={vesselId}
+              inputMode="numeric"
               onChange={(e) => setVesselId(e.target.value)}
               placeholder="예: 2607-001-461100-3"
             />
