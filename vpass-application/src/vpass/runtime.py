@@ -11,6 +11,7 @@ from . import config
 from .boarding import COLOR_DANGER, COLOR_OK, COLOR_WARN, BoardingManager, Overlay
 from .camera import CameraManager
 from .demo_bridge import DemoBridge
+from .demo_transport import HttpDemoTransport, LoraDemoTransport
 from .facerec import (
     detect_largest_face,
     imwrite_unicode,
@@ -151,9 +152,24 @@ class Runtime:
 
         # 데모 관제 서버 연동 (선택)
         self.demo: DemoBridge | None = None
-        if config.DEMO_SERVER_URL:
+        demo_transport = config.DEMO_TRANSPORT
+        if demo_transport == "auto":
+            demo_transport = "http" if config.DEMO_SERVER_URL else "off"
+
+        transport = None
+        if demo_transport == "http" and config.DEMO_SERVER_URL:
+            transport = HttpDemoTransport(config.DEMO_SERVER_URL)
+        elif demo_transport == "lora":
+            transport = LoraDemoTransport(
+                config.LORA_PORT,
+                baudrate=config.LORA_BAUDRATE,
+                timeout=config.LORA_TIMEOUT_SEC,
+                retries=config.LORA_RETRIES,
+            )
+
+        if transport is not None:
             self.demo = DemoBridge(
-                config.DEMO_SERVER_URL, self._demo_vessel_payload,
+                transport, self._demo_vessel_payload,
                 sim_feed=self.sim_feed,
                 on_port_command=self._handle_port_command,
                 on_engine_command=self._handle_engine_command,
