@@ -37,6 +37,16 @@ SIM_TICK_SEC = 0.2
 
 DEFAULT_PORT = int(os.environ.get("DEMO_PORT", "8100"))
 
+# ── V-PASS 단말 LoRa 수신 (선택) ────────────────────────────────────────
+# E220-900T22D 같은 투명 UART LoRa 모듈을 관제 서버에 연결한 경우 켠다.
+LORA_ENABLED = (
+    os.environ.get("DEMO_LORA", "0").strip().lower()
+    not in ("0", "false", "off", "")
+)
+LORA_PORT = os.environ.get("DEMO_LORA_PORT", "/dev/ttyUSB0").strip()
+LORA_BAUDRATE = int(os.environ.get("DEMO_LORA_BAUDRATE", "9600"))
+LORA_TIMEOUT_SEC = float(os.environ.get("DEMO_LORA_TIMEOUT", "2.5"))
+
 # ── 국립해양조사원(KHOA) 공공데이터 연동 (선택) ──────────────────────────
 # data.go.kr 에서 활용 신청 후 발급받은 인증키를 넣으면 실측/예측 해류·바람을
 # 가져와 벡터 필드와 표류 예측에 사용한다. 미설정 시 관제사가 설정한 값으로

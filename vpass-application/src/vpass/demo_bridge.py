@@ -1,6 +1,6 @@
 """데모 관제 서버 연동 브리지 (선택적).
 
-환경변수 `VPASS_DEMO_SERVER_URL` 이 설정된 경우에만 활성화된다.
+환경변수/실행 옵션으로 데모 전송 계층이 설정된 경우에만 활성화된다.
 V-PASS 단말이 데모 관제 서버와 주고받는 통신을 담당한다.
 
   단말 → 관제 서버
@@ -19,22 +19,17 @@ V-PASS 단말이 데모 관제 서버와 주고받는 통신을 담당한다.
 
 from __future__ import annotations
 
-import json
 import threading
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 
-TIMEOUT = 2.0
+from .demo_transport import DemoTransport
 
 
 class DemoBridge:
-    def __init__(self, base_url: str, vessel_payload_provider,
+    def __init__(self, transport: DemoTransport, vessel_payload_provider,
                  sim_feed=None, on_port_command=None, on_engine_command=None):
-        # 윈도우에서 'localhost' 는 ::1 을 먼저 시도하다 IPv4 로 폴백하며 요청마다
-        # 약 2초가 새는 경우가 있다. 데모 서버는 IPv4(0.0.0.0)로 열리므로 바로 지정한다.
-        self._base = base_url.rstrip("/").replace("//localhost:", "//127.0.0.1:")
+        self._transport = transport
         self._provider = vessel_payload_provider      # () -> dict | None
         self._sim_feed = sim_feed                     # RemoteSimFeed
         self._on_port_command = on_port_command       # (kind) -> None
@@ -64,6 +59,7 @@ class DemoBridge:
         for thread in (self._thread, self._sim_thread):
             if thread:
                 thread.join(timeout=2)
+        self._transport.close()
 
     def _loop(self) -> None:
         while self._running:
@@ -82,24 +78,12 @@ class DemoBridge:
                 pass
             time.sleep(1.0)
 
-    # ── 내부 HTTP 헬퍼 ──────────────────────────────────────────────────
+    # ── 내부 전송 헬퍼 ──────────────────────────────────────────────────
     def _post(self, path: str, payload: dict) -> None:
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            self._base + path, data=data,
-            headers={"Content-Type": "application/json"}, method="POST",
-        )
-        try:
-            urllib.request.urlopen(req, timeout=TIMEOUT).close()
-        except (urllib.error.URLError, OSError, ValueError):
-            pass
+        self._transport.post(path, payload)
 
     def _get(self, path: str) -> dict | None:
-        try:
-            with urllib.request.urlopen(self._base + path, timeout=TIMEOUT) as resp:
-                return json.loads(resp.read().decode("utf-8"))
-        except (urllib.error.URLError, OSError, ValueError, json.JSONDecodeError):
-            return None
+        return self._transport.get(path)
 
     # ── 주기 동기화 ─────────────────────────────────────────────────────
     def _sync_vessel(self) -> None:

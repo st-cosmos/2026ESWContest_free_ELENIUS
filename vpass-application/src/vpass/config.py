@@ -43,9 +43,24 @@ def is_raspberry_pi() -> bool:
 IS_RASPBERRY_PI = is_raspberry_pi()
 
 # ── 데모 관제 서버 연동 (선택) ──────────────────────────────────────────
-# 설정 시 텔레메트리/신고/출입항을 데모 관제 서버로 전송하고 관할 기상을 받아온다.
+# transport:
+#   auto: URL 이 있으면 HTTP, 없으면 비활성(기존 동작)
+#   http: Wi-Fi/LAN HTTP 통신 강제
+#   lora: E220 등 투명 UART LoRa 통신 강제
+#   off:  데모 관제 서버 연동 비활성
+DEMO_TRANSPORT = os.environ.get("VPASS_DEMO_TRANSPORT", "auto").strip().lower()
+if DEMO_TRANSPORT not in ("auto", "http", "lora", "off"):
+    DEMO_TRANSPORT = "auto"
+
+# HTTP 설정 시 텔레메트리/신고/출입항을 데모 관제 서버로 전송하고 관할 기상을 받아온다.
 # 미설정 시 V-PASS 는 기존과 동일하게 독립 동작한다.
 DEMO_SERVER_URL = os.environ.get("VPASS_DEMO_SERVER_URL", "").strip() or None
+
+# LoRa(E220-900T22D 투명 UART) 설정. 실제 배선에 맞게 포트를 지정한다.
+LORA_PORT = os.environ.get("VPASS_LORA_PORT", "/dev/ttyUSB0").strip()
+LORA_BAUDRATE = int(os.environ.get("VPASS_LORA_BAUDRATE", "9600"))
+LORA_TIMEOUT_SEC = float(os.environ.get("VPASS_LORA_TIMEOUT", "2.5"))
+LORA_RETRIES = int(os.environ.get("VPASS_LORA_RETRIES", "1"))
 
 # ── 카메라 ──────────────────────────────────────────────────────────────
 CAMERA_INDEX = int(os.environ.get("VPASS_CAMERA_INDEX", "0"))

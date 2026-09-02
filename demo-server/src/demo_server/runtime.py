@@ -9,6 +9,7 @@ from datetime import datetime
 from . import config, drift
 from .geo import parse_position
 from .khoa import KhoaClient
+from .lora_bridge import LoraBridge
 from .ocean import OceanField, region_for
 from .portlog import PortLog
 from .reports import ReportInbox
@@ -67,6 +68,14 @@ class Runtime:
 
         self._running = False
         self._thread: threading.Thread | None = None
+        self.lora: LoraBridge | None = None
+        if config.LORA_ENABLED:
+            self.lora = LoraBridge(
+                self,
+                config.LORA_PORT,
+                baudrate=config.LORA_BAUDRATE,
+                timeout=config.LORA_TIMEOUT_SEC,
+            )
 
     def _seed_vessels(self) -> None:
         if not self.vessels_store.load():
@@ -80,9 +89,13 @@ class Runtime:
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
+        if self.lora:
+            self.lora.start()
 
     def stop(self) -> None:
         self._running = False
+        if self.lora:
+            self.lora.stop()
         if self._thread:
             self._thread.join(timeout=2)
 

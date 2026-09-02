@@ -63,6 +63,7 @@ npm run build        # → ui/dist 생성
 cd demo-server
 uv run demo-server                 # 서버 시작 + 브라우저 자동 열기 (기본 포트 8100)
 uv run demo-server --no-browser    # 서버만
+uv run demo-server --lora --lora-port /dev/ttyUSB0
 ```
 
 - 접속: `http://localhost:8100` (대시보드), `http://localhost:8100/simulator` (운항 시뮬레이터),
@@ -95,6 +96,10 @@ uv run demo-server --reset-all   # 시뮬레이터 항로·펜스, 관할 기상
 | --- | --- | --- |
 | `DEMO_PORT` | `8100` | 서버 포트 |
 | `DEMO_DATA_DIR` | `demo-server/data` | 선박/신고/출입항/기상 JSON 저장 위치 |
+| `DEMO_LORA` | `0` | `1`이면 LoRa UART로 V-PASS 단말 메시지를 수신 |
+| `DEMO_LORA_PORT` | `/dev/ttyUSB0` | LoRa 모듈 UART 장치 경로 |
+| `DEMO_LORA_BAUDRATE` | `9600` | LoRa 모듈 UART baudrate |
+| `DEMO_LORA_TIMEOUT` | `2.5` | LoRa write timeout/응답 처리 기준 시간(초) |
 | `DEMO_KHOA_API_KEY` | (없음) | 국립해양조사원 공공데이터 인증키. 설정 시 실측·예측 해류/바람을 가져옵니다 |
 | `DEMO_KHOA_BASE` | `http://www.khoa.go.kr/api/oceangrid` | KHOA OpenAPI 베이스 |
 | `DEMO_KHOA_ROMS_URL` 등 | 베이스 기준 | 서비스별 경로 개별 지정 (활용 승인 후 확정된 경로로 교체) |
@@ -136,6 +141,23 @@ V-PASS 애플리케이션을 아래 환경변수와 함께 실행하면 데모 �
 cd vpass-application
 VPASS_DEMO_SERVER_URL=http://localhost:8100 uv run vpass
 ```
+
+Wi-Fi/LAN 대신 E220-900T22D LoRa UART를 사용할 수도 있습니다. 이 경우 관제
+서버와 V-PASS 단말 양쪽에 LoRa 모듈이 연결되어 있어야 하며, 관제 서버를 먼저
+LoRa 수신 모드로 실행합니다.
+
+```bash
+# 관제 서버
+cd demo-server
+uv run demo-server --lora --lora-port /dev/ttyUSB0 --lora-baudrate 9600
+
+# V-PASS 단말
+cd ../vpass-application
+uv run vpass --demo-transport lora --lora-port /dev/ttyUSB0 --lora-baudrate 9600
+```
+
+HTTP 연동을 명시적으로 선택하려면 `uv run vpass --demo-transport http
+--demo-server-url http://관제서버:8100` 형태로 실행합니다.
 
 연동 시 동작:
 

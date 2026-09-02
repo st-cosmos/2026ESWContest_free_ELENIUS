@@ -67,8 +67,12 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_COMPASS_X_OFFSET`, `VPASS_COMPASS_Y_OFFSET` | `0` | 지자계 고정 offset 값 |
 | `VPASS_COMPASS_X_SCALE`, `VPASS_COMPASS_Y_SCALE` | `1` | 지자계 고정 scale 값 |
 | `VPASS_COMPASS_HEADING_ALPHA` | `0.25` | 침로 저역통과 필터 계수(0 < alpha <= 1) |
+| `VPASS_DEMO_TRANSPORT` | `auto` | 데모 관제 서버 통신 방식: `auto`/`http`/`lora`/`off`. `auto`는 URL이 있으면 HTTP, 없으면 비활성 |
 | `VPASS_DEMO_SERVER_URL` | (없음) | 설정 시 데모 관제 서버와 연동(텔레메트리/신고/출입항 전송·관할 기상 수신). 미설정 시 독립 동작 |
 | | | 관할 기상에는 풍향(`wind_dir`)·풍속(`wind_speed_ms`)·해류(`current_dir`/`current_kn`)가 포함되며, 관제 서버의 요구조자 표류 예측과 **같은 값**이 표시됩니다 |
+| `VPASS_LORA_PORT` | `/dev/ttyUSB0` | LoRa 모듈 UART 장치 경로. GPIO UART에 연결했다면 `/dev/serial0` 등으로 지정 |
+| `VPASS_LORA_BAUDRATE` | `9600` | LoRa 모듈 UART baudrate |
+| `VPASS_LORA_TIMEOUT` | `2.5` | LoRa 요청 응답 대기 시간(초) |
 | `VPASS_JACKET_VISION` | `1` | 승선 시 구명조끼 카메라 시각 확인 사용 여부 (`0` 비활성) |
 | `VPASS_JACKET_METHOD` | `auto` | 판정 방법 — `auto`(모델 있으면 ml)/`ml`/`hsv` |
 | `VPASS_JACKET_MODEL` | `models/jacket_classifier.tflite` | 가슴 ROI 이진 분류 TFLite 모델 경로 |
@@ -138,6 +142,27 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
   데모 관제 서버의 `운항 시뮬레이터`(`/simulator`)에서 항로를 그려 배를 움직이면
   지오펜스 통과 시점에 출항/입항이 자동으로 기록됩니다.
   데모 서버 없이 시연할 때는 `[수동 출항 신고]` / `[수동 입항 신고]` 를 사용합니다.
+
+## 데모 관제 서버 통신 방식
+
+기존 Wi-Fi/LAN HTTP 연동은 그대로 유지됩니다.
+
+```bash
+VPASS_DEMO_SERVER_URL=http://localhost:8100 uv run vpass
+# 또는
+uv run vpass --demo-transport http --demo-server-url http://localhost:8100
+```
+
+E220-900T22D를 투명 UART 모드로 쓰는 LoRa 연동은 단말과 관제 서버 양쪽에
+LoRa 모듈이 연결되어 있어야 합니다. 단말 쪽은 아래처럼 실행합니다.
+
+```bash
+uv run vpass --demo-transport lora --lora-port /dev/ttyUSB0 --lora-baudrate 9600
+```
+
+LoRa 프로토콜은 UTF-8 JSON 1줄 요청/응답이며, 기존 HTTP API와 같은 의미의
+`vessel/report/port` 전송 및 `weather/sim/kill-switch` 조회를 처리합니다.
+통신 실패는 기존 HTTP 브리지와 동일하게 무시되어 V-PASS 본체 동작을 막지 않습니다.
 
 ## 구명조끼 장치 연동
 
