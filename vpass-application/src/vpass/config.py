@@ -127,7 +127,12 @@ JACKET_ROI_MIN_VISIBLE = float(os.environ.get("VPASS_JACKET_ROI_MIN_VISIBLE", "0
 # ── 구명조끼 디바이스 / 익수 감지 ────────────────────────────────────────
 PING_INTERVAL = 3.0        # (구 ESP HTTP 펌웨어) ping 주기(초)
 FALL_PING_TIMEOUT = 5.0    # 낙상 후 이 시간 안에 ping 없으면 익수로 판단
-SIGNAL_LOSS_TIMEOUT = 10.0 # 착용 중 신호 두절 시 익수로 판단(3회 연속 유실)
+# 낙상(가속도) 감지 없이 착용 중 신호만 두절된 경우는 바로 익수로 판정하지 않고
+# 경고 단계를 거친다: SIGNAL_LOSS_TIMEOUT 초 두절 → 단말 경고음 + 모달 표시 →
+# SIGNAL_LOSS_WARNING_SEC 초 안에 모달을 터치해 끄면 정상 운용 유지, 응답이
+# 없으면 익수 판정(킬 스위치 + SOS). 신호가 다시 수신되면 경고는 자동 해제된다.
+SIGNAL_LOSS_TIMEOUT = 10.0 # 착용 중 신호 두절 → 경고 시작(3회 연속 유실)
+SIGNAL_LOSS_WARNING_SEC = float(os.environ.get("VPASS_SIGNAL_LOSS_WARNING_SEC", "20"))
 
 # ── 구명조끼 BLE 수신 (nRF52840 펌웨어, firmware/) ──────────────────────
 # 조끼 장치가 BLE 광고(브로드캐스트)로 착용/생존/낙하를 보고한다.

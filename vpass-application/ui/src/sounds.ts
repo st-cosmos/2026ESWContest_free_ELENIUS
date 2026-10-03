@@ -7,6 +7,7 @@ export type SoundName =
   | "arrival" // 입항 (지오펜스 진입 · 입항 완료)
   | "sos" // SOS 사이렌 (루프)
   | "warning" // 기상특보
+  | "signal_loss" // 구명조끼 신호 두절 경고 (익수 판정 전 카운트다운 동안 루프)
   | "error"; // 하드웨어/통신 에러
 
 const VOLUME: Record<SoundName, number> = {
@@ -15,7 +16,20 @@ const VOLUME: Record<SoundName, number> = {
   arrival: 0.8,
   sos: 1.0,
   warning: 0.9,
+  signal_loss: 1.0,
   error: 0.7,
+};
+
+// 사운드 이름 → 파일. 같은 파일을 쓰더라도 별도 Audio 인스턴스를 가지므로
+// 루프(신호 두절)와 단발(기상특보)이 서로를 끊지 않는다.
+const FILE: Record<SoundName, string> = {
+  boarding: "boarding",
+  departure: "departure",
+  arrival: "arrival",
+  sos: "sos",
+  warning: "warning",
+  signal_loss: "warning",
+  error: "error",
 };
 
 const cache = new Map<SoundName, HTMLAudioElement>();
@@ -23,7 +37,7 @@ const cache = new Map<SoundName, HTMLAudioElement>();
 function get(name: SoundName): HTMLAudioElement {
   let a = cache.get(name);
   if (!a) {
-    a = new Audio(`/sounds/${name}.mp3`);
+    a = new Audio(`/sounds/${FILE[name]}.mp3`);
     a.preload = "auto";
     a.volume = VOLUME[name];
     cache.set(name, a);

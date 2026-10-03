@@ -5,6 +5,7 @@
 //   출항 등록(수동/지오펜스) → departure
 //   입항 등록(수동/지오펜스) → arrival
 //   SOS 발보(자동/수동)   → sos (신고가 떠 있는 동안 루프)
+//   구명조끼 신호 두절 경고 → signal_loss (익수 판정 전 카운트다운 동안 루프)
 //   기상특보 발효         → warning
 //   하드웨어/통신 에러     → error (에러 상태 4초 지속 시 1회, 상태별 재무장)
 
@@ -41,6 +42,14 @@ export function useSoundEffects(
     if (sosActive) startLoop("sos");
     else stopLoop("sos");
   }, [sosActive]);
+
+  // 신호 두절 경고음 — 모달이 떠 있는 동안 반복. 터치로 끄거나 신호가 돌아오면
+  // 멈추고, 미응답으로 익수 판정되면 SOS 사이렌으로 넘어간다(겹치지 않게 중단).
+  const signalWarnActive = !!state?.lifejacket.signal_warning && !sosActive;
+  useEffect(() => {
+    if (signalWarnActive) startLoop("signal_loss");
+    else stopLoop("signal_loss");
+  }, [signalWarnActive]);
 
   useEffect(() => {
     if (!state) return;

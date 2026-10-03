@@ -34,7 +34,7 @@ class SimJacket:
     - wear/doff:  착용 토글(홀센서)
     - fall:       낙상 후 정상 복귀(ping 지속) → 오경보 아님
     - overboard:  낙상 + 신호 두절 → 익수 시나리오
-    - silence:    신호만 두절(수중 전파 차단) → 익수 시나리오
+    - silence:    신호만 두절(수중 전파 차단) → 경고 단계(모달·경고음) 후 익수
     - resume:     신호 재개(구조 후)
     """
 
@@ -129,7 +129,9 @@ class Runtime:
         # 배터리 교체요망 상태로 착용 감지 시 경고 — UI 모달용
         self.jacket_batt_alert: dict | None = None
         self.devices = DeviceRegistry(
-            on_mob=self._handle_mob, on_wearing=self._handle_wearing_change
+            on_mob=self._handle_mob,
+            on_wearing=self._handle_wearing_change,
+            on_signal_warning=self._handle_signal_warning,
         )
         # BLE 구명조끼 수신기 (nRF52840 펌웨어) — 광고 패킷을 레지스트리로 변환
         self.jacket_ble = BleJacketScanner(
@@ -208,6 +210,43 @@ class Runtime:
         self._report_to_demo(report)
         self.overlay.set(f"⚠ 익수 감지! {who} — 엔진 비상 정지", COLOR_DANGER)
         print(f"[MOB] {who} 익수 감지 → 킬 스위치 작동 + SOS 발보")
+
+    def _handle_signal_warning(self, device_id: str, active: bool) -> None:
+        """낙상 감지 없이 신호만 두절 → 익수 판정 전 경고 단계 시작/해제.
+
+        모달·경고음은 UI 가 state 폴링(lifejacket.signal_warning)으로 처리하고,
+        여기서는 카메라 오버레이와 콘솔 로그만 남긴다.
+        """
+        user = self.resolve_device_user(device_id)
+        who = f"{user['name']} 님" if user else f"장치 {device_id}"
+        if active:
+            self.overlay.set(
+                f"⚠ 구명조끼 신호 두절 · {who} — "
+                f"{config.SIGNAL_LOSS_WARNING_SEC:.0f}초 내 미응답 시 익수 판정",
+                COLOR_WARN,
+            )
+            print(f"[jacket] 신호 두절 경고 시작: {who} ({device_id}) — "
+                  f"{config.SIGNAL_LOSS_WARNING_SEC:.0f}초 내 확인 필요")
+        else:
+            print(f"[jacket] 신호 두절 경고 해제: {who} ({device_id})")
+
+    def ack_signal_warning(self, device_id: str | None = None) -> bool:
+        """신호 두절 경고 모달 터치(끄기) → 정상 운용 유지. 끈 경고가 있으면 True."""
+        dismissed = self.devices.dismiss_signal_warning(device_id)
+        if dismissed:
+            self.overlay.set("구명조끼 신호 두절 확인 — 정상 운용 유지", COLOR_OK)
+            print(f"[jacket] 신호 두절 경고 확인(정상 운용 유지): {device_id or '전체'}")
+        return dismissed
+
+    def _signal_warning_snapshot(self) -> dict | None:
+        """가장 급한(남은 시간이 적은) 신호 두절 경고 — UI 모달용."""
+        warnings = self.devices.signal_warnings()
+        if not warnings:
+            return None
+        w = warnings[0]
+        user = self.resolve_device_user(w["device"])
+        who = f"{user['name']} 님" if user else f"장치 {w['device']}"
+        return {**w, "who": who, "count": len(warnings)}
 
     def _handle_wearing_change(self, device_id: str, worn: bool) -> None:
         """운항 중 구명조끼 해제(버클 풀림) 경고 관리.
@@ -504,6 +543,8 @@ class Runtime:
                 "devices": devices,
                 "worn_count": self.devices.worn_count(),
                 "mob_alarm": self.devices.any_mob(),
+                # 낙상 없이 신호만 두절 → 익수 판정 전 경고(카운트다운) — 모달용
+                "signal_warning": self._signal_warning_snapshot(),
                 "doff_alert": self.jacket_doff_alert,
                 "batt_alert": self.jacket_batt_alert,
                 "ble": self.jacket_ble.snapshot(),

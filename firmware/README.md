@@ -11,7 +11,9 @@ BLE 브로드캐스트(광고 패킷)로 착용/생존/낙하 상태를 V-PASS(�
 
 1. **버클 스위치 (착용)** — 마이크로스위치가 닫히면(착용) BLE 광고를 500 ms 주기로
    송출한다. **광고 수신 자체가 생존 신호(핑)** 이고, 사람이 물에 빠지면 2.4 GHz
-   전파가 차단되어 광고가 끊긴다 → V-PASS 가 신호 두절 타임아웃으로 익수 판정.
+   전파가 차단되어 광고가 끊긴다 → V-PASS 가 신호 두절 타임아웃(10 s) 후 단말에
+   경고음·모달(20 s 카운트다운)을 띄우고, 선장이 끄지 않으면 익수로 판정한다
+   (낙하 감지가 함께 있으면 경고 없이 즉시 판정).
 2. **IMU 낙하 감지 (LSM6DSV16X)** — 자유낙하(|a| < 0.4 g, 100 ms)와 충격(> 2.5 g)을
    소프트웨어로 판정한다. 낙하 즉시 낙하 카운터를 올리고 **고속 광고 버스트**를
    시작한다 — 입수 전 공중 구간(0.3~0.7 s)이 마지막 송신 기회이기 때문.
@@ -172,8 +174,9 @@ V-PASS 실행 후 착용 토글·`jacket fall`·전극에 젖은 티슈로 통�
 
 `vpass-application` 은 시작 시 BLE 스캐너(`jacketble.py`, bleak)를 자동으로 띄운다.
 광고 수신 → 기존 `DeviceRegistry` (`set_wearing`/`ping`/`fall`) 로 변환되므로
-익수 판정 타임아웃(`FALL_PING_TIMEOUT` 5 s / `SIGNAL_LOSS_TIMEOUT` 10 s)과
-킬스위치·자동 SOS 흐름은 ESP HTTP 시절과 동일하게 동작한다.
+익수 판정 타임아웃(`FALL_PING_TIMEOUT` 5 s / `SIGNAL_LOSS_TIMEOUT` 10 s +
+경고 단계 `SIGNAL_LOSS_WARNING_SEC` 20 s)과 킬스위치·자동 SOS 흐름은
+ESP HTTP 시절과 동일하게 동작한다.
 HTTP 엔드포인트와 SimJacket 시뮬레이터도 그대로 병행 지원한다.
 
 환경 변수: `VPASS_BLE=off` (스캔 비활성), `VPASS_BLE_COMPANY_ID` (기본 0xFFFF).

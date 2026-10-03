@@ -11,7 +11,7 @@ Free License** 적용 — 상업적 사용 가능, 저작자 표기 불필요, �
 | `departure.mp3` | Clear announce tones (2861) | ② 수동 출항 확인 ③ 지오펜스 이탈(자동 출항) |
 | `arrival.mp3` | Happy bells notification (937) | ⑤ 지오펜스 진입(자동 입항) ⑥ 입항 완료(재잠금) |
 | `sos.mp3` | City alert siren loop (1008) | ④ SOS 발보 — 익수 자동신고·수동신고 공통 (반복 재생용 루프) |
-| `warning.mp3` | Alert alarm (1005) | ⑦ 기상특보 발효 |
+| `warning.mp3` | Alert alarm (1005) | ⑦ 기상특보 발효 ⑨ 구명조끼 신호 두절 경고 — 익수 판정 전 카운트다운(기본 20초) 동안 반복 재생, 모달 터치·신호 복귀 시 중단 |
 | `error.mp3` | Wrong answer bass buzzer (948) | ⑧ 하드웨어/통신 에러 |
 
 원본 페이지: `https://mixkit.co/free-sound-effects/` 의 alarm / notification /

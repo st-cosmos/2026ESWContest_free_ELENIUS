@@ -75,6 +75,17 @@ def ack_jacket_alert(request: Request):
     return {"success": True}
 
 
+class SignalWarningAckCmd(BaseModel):
+    device: str | None = None  # 미지정 시 떠 있는 모든 경고
+
+
+@router.post("/api/signal-warning/ack")
+def ack_signal_warning(request: Request, cmd: SignalWarningAckCmd | None = None):
+    """신호 두절 경고 모달 터치(끄기) — 익수 카운트다운 중단, 정상 운용 유지."""
+    dismissed = rt(request).ack_signal_warning(cmd.device if cmd else None)
+    return {"success": True, "dismissed": dismissed}
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # 통합 상태 / 기상
 # ═══════════════════════════════════════════════════════════════════════

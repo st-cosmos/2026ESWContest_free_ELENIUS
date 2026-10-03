@@ -67,11 +67,30 @@ export interface DeviceState {
   last_fall: string;
   fall_magnitude: number | null;
   fall_pending: boolean;
+  // 낙상 없이 신호만 두절 → 익수 판정 전 경고 카운트다운 (null = 경고 아님)
+  signal_warning: SignalWarningProgress | null;
+  // 선장이 경고를 꺼서 정상 운용으로 간주 중 (신호 복귀 전까지 재경고 없음)
+  signal_warning_dismissed: boolean;
   mob: boolean;
   mob_cause: "fall" | "signal_loss" | "fall_water" | null;
   mob_at: string | null;
   battery_mv: number | null;
   battery_low: boolean;
+}
+
+// 신호 두절 경고 진행 상태 (장치별)
+export interface SignalWarningProgress {
+  since: string; // 경고 시작 "HH:MM:SS"
+  elapsed_sec: number;
+  remaining_sec: number; // 0 이 되면 서버가 익수로 판정한다
+  total_sec: number; // SIGNAL_LOSS_WARNING_SEC
+}
+
+// 신호 두절 경고 모달 — 가장 급한 장치 1건 + 대상 선원. 터치(ack)·신호 복귀·익수 판정 시 사라짐
+export interface SignalWarning extends SignalWarningProgress {
+  device: string;
+  who: string;
+  count: number; // 동시에 경고 중인 장치 수
 }
 
 // 운항 중 구명조끼 해제(버클 풀림) 경고 — 재착용 또는 확인 시 사라짐
@@ -153,6 +172,7 @@ export interface AppState {
     devices: DeviceState[];
     worn_count: number;
     mob_alarm: boolean;
+    signal_warning: SignalWarning | null;
     doff_alert: JacketDoffAlert | null;
     batt_alert: JacketBattAlert | null;
   };
