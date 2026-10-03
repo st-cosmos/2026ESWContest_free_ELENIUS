@@ -42,6 +42,7 @@ def main():
     # 판정 시간을 테스트용으로 단축 (신호 두절 판정은 ping 주기 3초보다 길어야 함)
     import vpass.lifejacket as lj
     lj.SIGNAL_LOSS_TIMEOUT = 4.5
+    lj.SIGNAL_LOSS_WARNING_SEC = 3.0  # 운영값 20초 → 테스트용 단축
     lj.FALL_PING_TIMEOUT = 1.5
 
     rt = Runtime()
@@ -196,17 +197,66 @@ def main():
     check("익수 래치 해제", not rt.devices.any_mob())
     check("킬 스위치 복구", not rt.engine.snapshot()["killed"])
 
-    print("\n== 7) 신호 두절 단독 익수 시나리오 ==")
+    def wait_warning(active: bool, timeout: float) -> bool:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if bool(rt.devices.signal_warnings()) == active:
+                return True
+            time.sleep(0.1)
+        return False
+
+    print("\n== 7) 신호 두절 단독(낙상 없음) → 경고 단계 → 터치로 끄면 정상 운용 유지 ==")
     jacket.apply("resume")
     time.sleep(0.3)
     jacket.apply("silence")  # ping 만 중단 (낙상 이벤트 없음)
-    deadline = time.time() + 10
+    check("두절 직후엔 경고 없음", not rt.devices.signal_warnings())
+    check("두절 타임아웃 후 경고 시작(익수 아님)",
+          wait_warning(True, 8) and not rt.devices.any_mob())
+    sw = rt.state_snapshot()["lifejacket"]["signal_warning"]
+    check("상태 스냅샷에 경고 노출(대상·카운트다운)",
+          sw is not None and "홍길동" in sw["who"] and sw["device"] == "jacket-1"
+          and 0 < sw["remaining_sec"] <= 3.0 and sw["total_sec"] == 3.0, str(sw))
+    d = rt.devices.snapshot()[0]
+    check("장치 스냅샷에 경고 진행 노출", d["signal_warning"] is not None, str(d))
+    check("경고 중 오버레이 안내", "신호 두절" in rt.overlay.get()["text"], rt.overlay.get()["text"])
+    check("모달 터치(ack) → 경고 해제", rt.ack_signal_warning("jacket-1") is True
+          and not rt.devices.signal_warnings())
+    time.sleep(3.5)  # 경고 시간이 지나도록 기다린다 — 끈 뒤에는 익수로 가지 않아야 한다
+    check("끈 뒤 신호가 계속 없어도 익수 판정 없음(정상 운용 유지)", not rt.devices.any_mob())
+    check("끈 뒤 재경고 없음", not rt.devices.signal_warnings())
+    check("확인됨 상태 표시", rt.devices.snapshot()[0]["signal_warning_dismissed"] is True)
+    check("킬 스위치 미작동", not rt.engine.snapshot()["killed"])
+    check("빈 ack 는 False", rt.ack_signal_warning("jacket-1") is False)
+
+    print("\n== 7-a) 신호 복귀 → 유예 해제, 다음 두절은 다시 경고 ==")
+    jacket.apply("resume")
+    time.sleep(0.2)
+    check("신호 복귀 시 확인됨 상태 초기화",
+          rt.devices.snapshot()[0]["signal_warning_dismissed"] is False)
+    jacket.apply("silence")
+    check("재두절 시 경고 재발생", wait_warning(True, 8) and not rt.devices.any_mob())
+    jacket.apply("resume")
+    check("경고 중 신호 복귀 → 경고 자동 해제", wait_warning(False, 1) and not rt.devices.any_mob())
+
+    print("\n== 7-b) 경고 미응답 → 익수 판정 ==")
+    jacket.apply("silence")
+    check("경고 시작", wait_warning(True, 8))
+    deadline = time.time() + 6
     while time.time() < deadline and not rt.devices.any_mob():
         time.sleep(0.2)
-    check("신호 두절 익수 감지", rt.devices.any_mob())
+    check("미응답 시 익수(MOB) 판정", rt.devices.any_mob())
     d = rt.devices.snapshot()[0]
     check("원인=signal_loss", d["mob_cause"] == "signal_loss", str(d["mob_cause"]))
+    check("익수 판정 시 경고는 내려감(SOS 모달로 전환)",
+          d["signal_warning"] is None
+          and rt.state_snapshot()["lifejacket"]["signal_warning"] is None)
+    eng = rt.engine.snapshot()
+    check("킬 스위치 작동", eng["killed"], str(eng))
+    sos = rt.sos.active()
+    check("SOS 자동 발보", sos is not None and sos["cause"] == "mob", str(sos))
     rt.ack_sos()
+    check("상황 확인 후 경고 상태 초기화",
+          rt.devices.snapshot()[0]["signal_warning_dismissed"] is False)
     jacket.apply("doff")
 
     print("\n== 7-1) 운항 중 구명조끼 해제 경고 ==")

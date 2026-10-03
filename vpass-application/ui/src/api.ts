@@ -68,6 +68,11 @@ export const api = {
 
   // 운항 중 구명조끼 해제 경고 모달 확인(닫기)
   ackJacketAlert: () => post<{ success: boolean }>("/api/jacket-alert/ack"),
+  // 신호 두절 경고 모달 터치 → 익수 카운트다운 중단(정상 운용 유지). device 생략 시 전체
+  ackSignalWarning: (device?: string) =>
+    post<{ success: boolean; dismissed: boolean }>("/api/signal-warning/ack", {
+      device: device ?? null,
+    }),
   ackJacketBattAlert: () => post<{ success: boolean }>("/api/jacket-batt-alert/ack"),
 
   // 하드웨어 없이 익수 시나리오를 시연하기 위한 구명조끼 장치 시뮬레이터

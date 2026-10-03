@@ -15,13 +15,18 @@ import { api } from "../api";
 import type { AppState, DeviceState } from "../types";
 
 function DeviceCard({ device }: { device: DeviceState }) {
+  const warn = device.signal_warning;
   const status = device.mob
     ? { label: "익수 감지", cls: "danger" as const }
     : device.fall_pending
       ? { label: "낙상 확인 중", cls: "warn" as const }
-      : device.worn
-        ? { label: "착용 중", cls: "accent" as const }
-        : { label: "미착용", cls: "muted" as const };
+      : warn
+        ? { label: `신호 두절 · 익수 판정까지 ${Math.ceil(warn.remaining_sec)}초`, cls: "danger" as const }
+        : device.signal_warning_dismissed
+          ? { label: "신호 두절 · 확인됨", cls: "warn" as const }
+          : device.worn
+            ? { label: "착용 중", cls: "accent" as const }
+            : { label: "미착용", cls: "muted" as const };
 
   return (
     <div
@@ -32,8 +37,8 @@ function DeviceCard({ device }: { device: DeviceState }) {
         gap: 14,
         padding: 16,
         borderRadius: 10,
-        borderColor: device.mob ? "var(--red-border)" : undefined,
-        background: device.mob ? "var(--red-soft)" : undefined,
+        borderColor: device.mob ? "var(--red-border)" : warn ? "#ff9f0a66" : undefined,
+        background: device.mob ? "var(--red-soft)" : warn ? "#ff9f0a14" : undefined,
       }}
     >
       <div
@@ -128,7 +133,7 @@ function DeviceCard({ device }: { device: DeviceState }) {
       </div>
 
       <span className={`badge ${status.cls}`}>
-        <span className={`dot${device.mob ? " pulse" : ""}`} />
+        <span className={`dot${device.mob || warn ? " pulse" : ""}`} />
         {status.label}
       </span>
     </div>
@@ -155,7 +160,7 @@ function SimPanel() {
     { label: "낙상(복귀)", action: "fall" },
     { label: "익수(낙상+두절)", action: "overboard", danger: true },
     { label: "익수(낙하+물감지)", action: "drown", danger: true },
-    { label: "신호 두절", action: "silence", danger: true },
+    { label: "신호 두절(경고→익수)", action: "silence", danger: true },
     { label: "신호 재개", action: "resume" },
     { label: "배터리 부족", action: "lowbatt" },
     { label: "배터리 정상", action: "battok" },
