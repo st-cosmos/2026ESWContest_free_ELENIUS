@@ -1,6 +1,21 @@
 # models/
 
-구명조끼 착용 분류 TFLite 모델 배치 위치입니다.
+얼굴 인식 ONNX 모델과 구명조끼 착용 분류 TFLite 모델 배치 위치입니다.
+
+## 얼굴 인식 (OpenCV Zoo, Apache-2.0)
+
+- `face_detection_yunet_2023mar.onnx` — YuNet 얼굴 검출기 (약 230 KB)
+- `face_recognition_sface_2021dec.onnx` — SFace 임베딩 모델 (약 37 MB)
+
+```bash
+uv run python tools/fetch_face_models.py
+```
+
+두 파일이 있으면 `facerec.py` 가 SFace 엔진을 쓰고(앱 시작 로그 `[facerec] SFace 모델 로드`),
+없으면 Haar+LBPH 로 폴백합니다. `*.onnx` 는 `.gitignore` 에 걸려 있으니 라즈베리파이에는
+PC 에서 받은 파일을 `scp` 로 복사하거나, 파이에서 직접 위 스크립트를 실행합니다.
+
+## 구명조끼 착용 분류
 
 - `jacket_classifier.tflite` — `tools/train_jacket_classifier.py` 로 학습한
   가슴 ROI 이진 분류기. 이 파일이 있으면 `jacketvision.py` 가 자동으로

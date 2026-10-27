@@ -58,6 +58,12 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | --- | --- | --- |
 | `VPASS_DATA_DIR` | `vpass-application/data` | 사용자/기록 JSON·얼굴 사진 저장 위치 |
 | `VPASS_CAMERA_INDEX` | `0` | OpenCV 카메라 인덱스 |
+| `VPASS_FACE_METHOD` | `auto` | 얼굴 인식 엔진: `auto`(모델 있으면 sface)/`sface`/`lbph` |
+| `VPASS_FACE_THRESHOLD` | `0.363` | SFace 코사인 유사도 인정 임계값 (높일수록 엄격) |
+| `VPASS_FACE_MARGIN` | `0.08` | 1등과 2등 사용자 점수 차이 하한 (비슷한 얼굴 오인식 억제) |
+| `VPASS_FACE_VOTE_WINDOW`, `VPASS_FACE_VOTE_NEED` | `5`, `3` | 시간 투표: 최근 N회 검출 중 M회 일치 시 승선 확정 |
+| `VPASS_FACE_ENROLL_SAMPLES` | `5` | 등록 시 저장하는 얼굴 샘플 수 |
+| `VPASS_FACE_REJECT_DUPLICATE` | `1` | 이미 등록된 얼굴의 중복 등록 거부 |
 | `VPASS_KILLSWITCH_PIN` | `17` | 킬 스위치 릴레이 GPIO(BCM) 핀 |
 | `VPASS_TELEMETRY_PROVIDER` | `auto` | `auto`/`hardware`/`sim` — auto는 라즈베리파이에서 GPS·지자계 사용 |
 | `VPASS_GPS_PORT` | `/dev/serial0` | NEO-6M 등 NMEA GPS UART 장치 |
@@ -201,6 +207,47 @@ POST /api/fall    {"device": "jacket-1", "magnitude": 3.2}
 `구명조끼 장치 ID` 필드는 선택 사항이며, 승선 매칭이 없을 때 익수 알림의
 이름 해석 폴백으로만 사용됩니다.
 
+## 얼굴 인식
+
+승선 확인은 `facerec.py` 의 얼굴 엔진이 담당합니다. 기본 엔진은 **YuNet + SFace**
+(OpenCV 내장 DNN, 추가 패키지 없음)이고, 모델 파일이 없으면 이전 **Haar + LBPH** 로
+자동 폴백합니다. 모델은 한 번만 내려받으면 됩니다.
+
+```bash
+uv run python tools/fetch_face_models.py     # models/ 에 ONNX 2개 (약 37 MB)
+```
+
+| | YuNet + SFace (기본) | Haar + LBPH (폴백) |
+| --- | --- | --- |
+| 검출 | DNN, 5점 랜드마크로 얼굴 정렬, 측면·기울임에 강함 | Haar cascade, 정면 전용 |
+| 특징 | 128차원 임베딩, 코사인 유사도 | 히스토그램 패턴 거리 |
+| 판정 | 임계값 0.363 **+ 2등과의 마진 0.08** | confidence ≤ 52 |
+| 라즈베리파이 4 처리 시간 | 검출 ≈ 30 ms, 임베딩 ≈ 40 ms (3프레임마다 1회) | ≈ 20 ms |
+
+인식 품질을 위한 세 가지 장치:
+
+- **다중 샘플 등록** — 등록 화면에서 얼굴이 보이는 동안 0.35초 간격으로 프레임을
+  모아 두고, 등록 버튼을 누르면 현재 프레임과 함께 품질 게이트(검출 점수·크기·선명도·
+  정면성)를 통과한 최대 5장을 `data/faces/` 에 저장합니다(`users.json` 의 `photos`).
+  이미 등록된 얼굴이면 `이미 등록된 얼굴입니다` 로 거부합니다.
+- **마진 판정** — 가장 가까운 사용자 점수가 임계값을 넘어도 2등 사용자와의 차이가
+  마진보다 작으면 인정하지 않습니다(형제·닮은 선원 오인식 억제).
+- **시간 투표** — 연속 5회 검출 중 3회가 같은 사람일 때만 승선 처리합니다.
+  출항 화면에는 `VERIFYING 2/3` → `PASSENGER 0.71` 순서로 표시됩니다.
+
+### 인식 성능 평가 (보고서용)
+
+```bash
+uv run python tools/face_capture.py --person 홍길동 --count 20     # 사람별 20장
+uv run python tools/face_capture.py --person _unknown --count 30   # 미등록자
+uv run python tools/face_eval.py                                   # SFace vs LBPH 비교
+```
+
+`data/face_eval/<사람>/` 사진의 앞 5장으로 등록하고 나머지로 시험해, 본인 수락률(TAR)·
+본인 거부율(FRR)·타인 오인식률·미등록자 오수락률(FAR)과 임계값 스윕표를 마크다운으로
+출력합니다. 선원 3명 이상 + 미등록자 2명 이상, 조명(주간·야간·역광)과 모자·마스크
+조건을 섞어 찍으면 운용 임계값 선정 근거가 됩니다.
+
 ## 구명조끼 착용 시각 확인
 
 모듈(홀센서) 신호만으로는 구명조끼를 입지 않은 채 버클만 채워 착용으로
@@ -329,7 +376,7 @@ vpass-application/
 │   ├── routes.py           # HTTP API 전체
 │   ├── runtime.py          # 매니저 배선 + 출항/입항 확정 + 장치 시뮬레이터
 │   ├── camera.py           # 카메라 스레드 + MJPEG 스트림
-│   ├── facerec.py          # 얼굴 검출/인식(LBPH)
+│   ├── facerec.py          # 얼굴 검출/인식(YuNet+SFace, LBPH 폴백)
 │   ├── jacketvision.py     # 구명조끼 착용 시각 확인(TFLite 분류기 + HSV 폴백)
 │   ├── gps.py              # NMEA GPS(UART) 읽기
 │   ├── compass.py          # QMC5883L 지자계(I2C) 읽기
@@ -341,9 +388,12 @@ vpass-application/
 │   ├── weather.py          # 해양 기상 제공자 (KMA 연동 자리)
 │   └── sos.py              # SOS 신고 관리
 ├── tools/
-│   └── train_jacket_classifier.py  # 구명조끼 분류기 학습 (PC, tensorflow)
-├── models/                 # 배포용 TFLite 모델 (jacket_classifier.tflite)
-├── tests/test_flow.py      # 핵심 안전 시나리오 테스트
+│   ├── train_jacket_classifier.py  # 구명조끼 분류기 학습 (PC, tensorflow)
+│   ├── fetch_face_models.py        # YuNet/SFace ONNX 다운로드 (OpenCV Zoo)
+│   ├── face_capture.py             # 얼굴 평가용 사진 수집
+│   └── face_eval.py                # 얼굴 인식 정확도 평가 (SFace vs LBPH)
+├── models/                 # TFLite 분류기 + 얼굴 ONNX 모델 (git 제외)
+├── tests/                  # test_flow.py(안전 시나리오) · test_facerec.py(얼굴 엔진)
 ├── ui/                     # React + TypeScript (Vite)
 │   └── src/screens/        # 홈/출항/운항기록지/사용자/구명조끼/어선정보/셋업
 └── data/                   # 런타임 데이터 (git 제외, 학습 데이터셋 포함)

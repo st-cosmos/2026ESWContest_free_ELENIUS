@@ -174,5 +174,6 @@ export interface User {
   phone: string;
   device_id: string | null;
   photo: string | null;
+  photos?: string[]; // 다중 샘플 등록 사진(첫 장이 photo)
   registered_at: string;
 }
