@@ -376,7 +376,7 @@ vpass-application/
 │   ├── routes.py           # HTTP API 전체
 │   ├── runtime.py          # 매니저 배선 + 출항/입항 확정 + 장치 시뮬레이터
 │   ├── camera.py           # 카메라 스레드 + MJPEG 스트림
-│   ├── facerec.py          # 얼굴 검출/인식(LBPH)
+│   ├── facerec.py          # 얼굴 검출/인식(YuNet+SFace, LBPH 폴백)
 │   ├── jacketvision.py     # 구명조끼 착용 시각 확인(TFLite 분류기 + HSV 폴백)
 │   ├── gps.py              # NMEA GPS(UART) 읽기
 │   ├── compass.py          # QMC5883L 지자계(I2C) 읽기
@@ -388,9 +388,12 @@ vpass-application/
 │   ├── weather.py          # 해양 기상 제공자 (KMA 연동 자리)
 │   └── sos.py              # SOS 신고 관리
 ├── tools/
-│   └── train_jacket_classifier.py  # 구명조끼 분류기 학습 (PC, tensorflow)
-├── models/                 # 배포용 TFLite 모델 (jacket_classifier.tflite)
-├── tests/test_flow.py      # 핵심 안전 시나리오 테스트
+│   ├── train_jacket_classifier.py  # 구명조끼 분류기 학습 (PC, tensorflow)
+│   ├── fetch_face_models.py        # YuNet/SFace ONNX 다운로드 (OpenCV Zoo)
+│   ├── face_capture.py             # 얼굴 평가용 사진 수집
+│   └── face_eval.py                # 얼굴 인식 정확도 평가 (SFace vs LBPH)
+├── models/                 # TFLite 분류기 + 얼굴 ONNX 모델 (git 제외)
+├── tests/                  # test_flow.py(안전 시나리오) · test_facerec.py(얼굴 엔진)
 ├── ui/                     # React + TypeScript (Vite)
 │   └── src/screens/        # 홈/출항/운항기록지/사용자/구명조끼/어선정보/셋업
 └── data/                   # 런타임 데이터 (git 제외, 학습 데이터셋 포함)
