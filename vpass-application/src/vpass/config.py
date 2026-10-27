@@ -85,6 +85,36 @@ COMPASS_HEADING_ALPHA = float(os.environ.get("VPASS_COMPASS_HEADING_ALPHA", "0.2
 COMPASS_STALE_AFTER_SEC = float(os.environ.get("VPASS_COMPASS_STALE_AFTER_SEC", "5"))
 
 # ── 얼굴 인식 ────────────────────────────────────────────────────────────
+# 엔진: auto(모델 있으면 sface, 없으면 lbph) | sface(YuNet+SFace) | lbph(Haar+LBPH)
+FACE_METHOD = os.environ.get("VPASS_FACE_METHOD", "auto").strip().lower()
+# OpenCV Zoo ONNX 모델 — tools/fetch_face_models.py 로 내려받는다 (git 에는 올리지 않음)
+FACE_DET_MODEL_PATH = Path(
+    os.environ.get("VPASS_FACE_DET_MODEL", APP_DIR / "models" / "face_detection_yunet_2023mar.onnx")
+)
+FACE_REC_MODEL_PATH = Path(
+    os.environ.get("VPASS_FACE_REC_MODEL", APP_DIR / "models" / "face_recognition_sface_2021dec.onnx")
+)
+FACE_DET_SCORE_THRESHOLD = 0.8  # YuNet 검출 점수 하한
+FACE_MIN_SIZE_PX = 80           # 스캔 시 이보다 작은 얼굴은 무시(멀리 있는 사람)
+# SFace 코사인 유사도 판정: 임계값(OpenCV 권장 0.363) + 2등과의 마진
+FACE_SFACE_THRESHOLD = float(os.environ.get("VPASS_FACE_THRESHOLD", "0.363"))
+FACE_SFACE_MARGIN = float(os.environ.get("VPASS_FACE_MARGIN", "0.08"))
+# 시간 투표: 최근 FACE_VOTE_WINDOW 회(FACE_VOTE_SECONDS 초 이내) 중 FACE_VOTE_NEED 회 일치 시 확정
+FACE_VOTE_WINDOW = max(1, int(os.environ.get("VPASS_FACE_VOTE_WINDOW", "5")))
+FACE_VOTE_NEED = max(1, int(os.environ.get("VPASS_FACE_VOTE_NEED", "3")))
+FACE_VOTE_SECONDS = 2.0
+# 등록: 연속 프레임에서 최대 FACE_ENROLL_SAMPLES 장을 받고 품질 게이트를 통과한 것만 저장
+FACE_ENROLL_SAMPLES = max(1, int(os.environ.get("VPASS_FACE_ENROLL_SAMPLES", "5")))
+FACE_ENROLL_SAMPLE_INTERVAL = 0.35   # 등록 화면에서 샘플 프레임을 모으는 간격(초)
+FACE_ENROLL_MIN_SIZE_PX = 110
+FACE_ENROLL_MIN_SCORE = 0.9          # YuNet 검출 점수(정면·선명할수록 높음)
+FACE_ENROLL_BLUR_MIN = 40.0          # 라플라시안 분산 하한(흔들림·초점 불량 거름)
+FACE_ENROLL_YAW_MIN, FACE_ENROLL_YAW_MAX = 0.3, 0.7   # 코 위치 / 눈 사이 간격 비율(정면 ≈ 0.5)
+# 이미 등록된 얼굴과 일치하면 중복 등록을 거부한다 (VPASS_FACE_REJECT_DUPLICATE=0 으로 해제)
+FACE_REJECT_DUPLICATE = (
+    os.environ.get("VPASS_FACE_REJECT_DUPLICATE", "1").strip().lower() not in ("0", "false", "off")
+)
+# LBPH 폴백 전용
 FACE_SIZE = (200, 200)
 MATCH_THRESHOLD = 52.0          # LBPH confidence (작을수록 유사)
 REBOARD_MESSAGE_COOLDOWN = 6.0  # 같은 사람 중복 안내 최소 간격(초)

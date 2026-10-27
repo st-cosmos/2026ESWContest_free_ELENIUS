@@ -130,7 +130,7 @@ function RegisterModal({
             <span style={{ fontSize: 14, color: "var(--text-2)" }}>
               {step === 1
                 ? "1단계 · 선원의 이름과 연락처를 입력해 주세요."
-                : "2단계 · 카메라를 보고 얼굴을 등록해 주세요."}
+                : "2단계 · 카메라를 2~3초 정면으로 바라본 뒤 등록 버튼을 눌러 주세요."}
             </span>
           </div>
           <button onClick={onClose} style={{ color: "var(--text-3)" }}>
@@ -262,7 +262,7 @@ function RegisterModal({
                   textShadow: "0 1px 4px #000",
                 }}
               >
-                얼굴 영역만 인식합니다
+                정면으로 바라보면 여러 장이 자동으로 수집됩니다
               </span>
             </div>
           </>

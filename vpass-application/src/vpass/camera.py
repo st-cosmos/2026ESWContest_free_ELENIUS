@@ -7,6 +7,9 @@
 
 카메라는 scan/register 모드에서만 열리고, idle 로 돌아오면 해제된다.
 얼굴 검출은 DETECT_EVERY_N_FRAMES 프레임마다 1회만 수행한다.
+인식은 facerec 엔진(SFace, 없으면 LBPH)에 맡기고, 연속 검출의 시간 투표로
+확정된 사람만 BoardingManager 에 넘긴다. 등록 모드에서는 얼굴이 보이는 동안
+샘플 프레임을 모아 두어 다중 샘플 등록에 쓴다.
 
 카메라가 없는 개발 환경에서도 서버는 정상 동작하며 안내 프레임을 송출한다.
 """
@@ -26,15 +29,13 @@ from .config import (
     JACKET_CAPTURE_ENABLED,
     JACKET_CAPTURE_INTERVAL,
     JACKET_VISION_ENABLED,
-    MATCH_THRESHOLD,
+    FACE_ENROLL_SAMPLE_INTERVAL,
+    FACE_ENROLL_SAMPLES,
+    FACE_VOTE_NEED,
+    FACE_VOTE_SECONDS,
+    FACE_VOTE_WINDOW,
 )
-from .facerec import (
-    crop_face_roi,
-    detect_largest_face,
-    load_face_cascade,
-    normalize_face,
-    train_recognizer,
-)
+from .facerec import Gallery, Match, RecognitionVoter, create_engine
 from .jacketvision import assess_jacket
 
 GREEN = (163, 255, 0)   # BGR
@@ -55,9 +56,15 @@ class CameraManager:
         self.raw_register_frame = None    # 등록 촬영용 원본
         self.camera_ok = False
 
-        self._cascade = None  # 카메라 스레드 전용 — 다른 스레드와 공유 금지
-        self._recognizer = None
-        self._label_to_user: dict[int, dict] = {}
+        # 엔진과 갤러리는 train_model() 이 새 인스턴스로 만들어 lock 아래서 교체한다.
+        # cv2 검출기/인식기는 스레드 공유가 안전하지 않아 카메라 스레드만 사용한다.
+        self._engine = None
+        self._gallery = Gallery()
+        self.engine_name = "-"
+        self._voter = RecognitionVoter(FACE_VOTE_WINDOW, FACE_VOTE_NEED, FACE_VOTE_SECONDS)
+        self._last_face_seen = 0.0
+        self._register_samples: list[tuple[float, np.ndarray]] = []  # (시각, 원본 프레임)
+        self._last_sample = 0.0
 
         self._cap = None
         self._running = False
@@ -73,7 +80,6 @@ class CameraManager:
 
     # ── 수명 주기 ────────────────────────────────────────────────────────
     def start(self) -> None:
-        self._cascade = load_face_cascade()
         self.train_model()
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
@@ -87,17 +93,27 @@ class CameraManager:
             self._cap.release()
 
     def train_model(self) -> None:
+        """등록 사용자 사진으로 갤러리를 다시 만든다 (등록/삭제 후 호출).
+
+        HTTP 요청 스레드에서 불리므로 카메라 스레드가 쓰는 엔진을 건드리지 않고
+        새 엔진으로 만든 뒤 한 번에 교체한다.
+        """
         users = self._users_store.load()
-        recognizer, label_map = train_recognizer(users, self._base_dir)
+        engine = create_engine()
+        gallery = engine.build_gallery(users, self._base_dir)
         with self.lock:
-            self._recognizer = recognizer
-            self._label_to_user = label_map
+            self._engine = engine
+            self._gallery = gallery
+            self.engine_name = engine.name
+            self._voter.reset()
 
     def set_mode(self, mode: str) -> None:
         with self.lock:
             self.mode = mode
             if mode == "register":
                 self.raw_register_frame = None
+                self._register_samples = []
+            self._voter.reset()
             self._frame_no = 0
             self._scan_note = None
             self._jacket_note = None
@@ -105,9 +121,12 @@ class CameraManager:
         if mode in ("scan", "register"):
             self._last_open_try = 0.0  # 대기에서 복귀 시 3초 스로틀 없이 즉시 오픈
 
-    def get_register_frame(self):
+    def get_register_frames(self) -> list:
+        """등록용 프레임 목록: 현재 프레임 + 최근 샘플(최신 순). 카메라가 없으면 빈 목록."""
         with self.lock:
-            return None if self.raw_register_frame is None else self.raw_register_frame.copy()
+            frames = [] if self.raw_register_frame is None else [self.raw_register_frame.copy()]
+            frames += [f.copy() for _, f in reversed(self._register_samples)]
+        return frames
 
     # ── 메인 루프 ────────────────────────────────────────────────────────
     def _open_camera(self) -> None:
@@ -177,12 +196,20 @@ class CameraManager:
         display = frame.copy()
 
         if detect_now:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            box = detect_largest_face(self._cascade, gray)
+            with self.lock:
+                engine, gallery = self._engine, self._gallery
+            det = engine.detect_largest(frame) if engine is not None else None
             note = None
             jacket = None
             jacket_note = None
-            if box is not None:
+            now = time.time()
+            if det is None:
+                # 얼굴이 잠시 사라진 뒤 돌아오면 투표를 새로 시작한다
+                if now - self._last_face_seen > FACE_VOTE_SECONDS:
+                    self._voter.reset()
+            else:
+                self._last_face_seen = now
+                box = det.box
                 # 구명조끼 시각 확인(TFLite 분류기, 없으면 HSV 폴백) — 승선 판정과 화면 표시에 사용
                 if JACKET_VISION_ENABLED:
                     jacket = assess_jacket(frame, box)
@@ -193,24 +220,26 @@ class CameraManager:
                         if JACKET_CAPTURE_ENABLED:
                             self._maybe_capture_roi(frame, jacket)
 
-                with self.lock:
-                    recognizer = self._recognizer
-                    label_map = dict(self._label_to_user)
-
-                if recognizer is None:
+                if gallery.empty:
                     note = (box, WHITE, None, 1)
+                    self._voter.reset()
                     self._boarding.handle_no_model()
                 else:
-                    face = normalize_face(crop_face_roi(gray, box))
-                    label, confidence = recognizer.predict(face)
-                    if confidence <= MATCH_THRESHOLD and label in label_map:
-                        user = label_map[label]
-                        boarded = self._boarding.is_boarded(user.get("id") or user.get("name", ""))
-                        tag = "BOARDED" if boarded else f"PASSENGER ({confidence:.0f})"
+                    feat = engine.embed(frame, det)
+                    m = engine.match(feat, gallery) if feat is not None else Match(None, 0.0)
+                    uid = (m.user.get("id") or m.user.get("name", "")) if m.user else None
+                    confirmed, votes = self._voter.vote(uid)
+                    if confirmed is not None and confirmed in gallery.users:
+                        user = gallery.users[confirmed]
+                        boarded = self._boarding.is_boarded(confirmed)
+                        tag = "BOARDED" if boarded else f"PASSENGER {m.label}"
                         note = (box, GREEN, tag, 2)
                         self._boarding.handle_recognition(user, jacket)
+                    elif uid is not None or not self._voter.full:
+                        # 임계값은 넘었지만 아직 표가 모자람 — 확정 전
+                        note = (box, YELLOW, f"VERIFYING {votes}/{self._voter.need}", 2)
                     else:
-                        note = (box, RED, "UNKNOWN", 2)
+                        note = (box, RED, f"UNKNOWN {m.label}".rstrip(), 2)
                         self._boarding.handle_unknown()
             self._scan_note = note
             self._jacket_note = jacket_note
@@ -251,8 +280,20 @@ class CameraManager:
     def _process_register(self, frame, detect_now: bool) -> None:
         display = frame.copy()
         if detect_now:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            self._register_box = detect_largest_face(self._cascade, gray)
+            with self.lock:
+                engine = self._engine
+            det = engine.detect_largest(frame) if engine is not None else None
+            self._register_box = None if det is None else det.box
+            now = time.time()
+            with self.lock:
+                # 얼굴이 보이는 동안 일정 간격으로 원본 프레임을 모아 둔다(다중 샘플 등록)
+                if det is not None and now - self._last_sample >= FACE_ENROLL_SAMPLE_INTERVAL:
+                    self._last_sample = now
+                    self._register_samples.append((now, frame.copy()))
+                window = FACE_ENROLL_SAMPLE_INTERVAL * FACE_ENROLL_SAMPLES * 2
+                self._register_samples = [
+                    (t, f) for t, f in self._register_samples if now - t <= window
+                ][-FACE_ENROLL_SAMPLES * 2:]
         if self._register_box is not None:
             x, y, w, h = self._register_box
             cv2.rectangle(display, (x, y), (x + w, y + h), YELLOW, 2)

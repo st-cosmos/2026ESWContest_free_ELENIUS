@@ -12,12 +12,7 @@ from .boarding import COLOR_DANGER, COLOR_OK, COLOR_WARN, BoardingManager, Overl
 from .camera import CameraManager
 from .demo_bridge import DemoBridge
 from .demo_transport import HttpDemoTransport, LoraDemoTransport
-from .facerec import (
-    detect_largest_face,
-    imwrite_unicode,
-    load_face_cascade,
-    safe_filename,
-)
+from .facerec import create_engine, imwrite_unicode, safe_filename, user_photos
 from .killswitch import EngineController
 from .jacketble import BleJacketScanner
 from .lifejacket import DeviceRegistry
@@ -26,6 +21,14 @@ from .storage import JsonStore
 from .telemetry import RemoteSimFeed, TelemetryRouter, create_telemetry
 from .voyage import VoyageManager
 from .weather import get_weather
+
+
+def _photo_ref(path) -> str:
+    """users.json 에 적는 사진 경로: 앱 디렉터리 상대 경로, 밖이면(VPASS_DATA_DIR) 절대 경로."""
+    try:
+        return path.relative_to(config.APP_DIR).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 class SimJacket:
@@ -400,38 +403,69 @@ class Runtime:
 
     # ── 사용자 관리 ─────────────────────────────────────────────────────
     def register_user(self, name: str, phone: str, device_id: str | None = None) -> dict:
-        frame = self.camera.get_register_frame()
-        if frame is None:
+        """얼굴 등록: 현재 프레임 + 등록 화면에서 모아 둔 샘플에서 품질 게이트를
+        통과한 얼굴을 최대 FACE_ENROLL_SAMPLES 장 저장한다(다중 샘플 등록)."""
+        frames = self.camera.get_register_frames()
+        if not frames:
             raise ValueError("카메라 프레임을 읽을 수 없습니다. 카메라 연결을 확인해 주세요.")
 
-        import cv2
+        # 카메라 스레드의 엔진을 공유하면 cv2 객체가 경합한다 — 요청 전용 인스턴스 사용
+        engine = create_engine()
+        gallery = None
+        if config.FACE_REJECT_DUPLICATE and engine.name == "sface":
+            gallery = engine.build_gallery(self.users_store.load(), config.APP_DIR)
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # 카메라 스레드의 cascade 를 공유하면 detectMultiScale 이 경합한다 — 요청 전용 인스턴스 사용
-        box = detect_largest_face(load_face_cascade(), gray)
-        if box is None:
-            raise ValueError("얼굴이 감지되지 않았습니다. 카메라 정면을 응시해 주세요.")
-
-        x, y, w, h = box
-        h_img, w_img = frame.shape[:2]
-        pad_x, pad_y = int(w * 0.1), int(h * 0.1)
-        face_img = frame[
-            max(0, y - pad_y):min(h_img, y + h + pad_y),
-            max(0, x - pad_x):min(w_img, x + w + pad_x),
-        ]
+        samples: list[tuple] = []     # (frame, detection)
+        reasons: list[str] = []
+        for frame in frames:
+            det = engine.detect_largest(frame)
+            if det is None:
+                reasons.append("얼굴이 감지되지 않았습니다. 카메라 정면을 응시해 주세요.")
+                continue
+            ok, why = engine.quality_check(frame, det)
+            if not ok:
+                reasons.append(why)
+                continue
+            if gallery is not None and not gallery.empty:
+                feat = engine.embed(frame, det)
+                m = engine.match(feat, gallery) if feat is not None else None
+                if m is not None and m.user is not None:
+                    raise ValueError(
+                        f"이미 등록된 얼굴입니다 ('{m.user.get('name', '')}' 님). "
+                        "같은 사람을 두 번 등록할 수 없습니다."
+                    )
+            samples.append((frame, det))
+            if len(samples) >= config.FACE_ENROLL_SAMPLES:
+                break
+        if not samples:
+            raise ValueError(reasons[0] if reasons else "얼굴이 감지되지 않았습니다.")
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{safe_filename(name)}_{timestamp}.jpg"
-        saved_path = config.FACES_DIR / filename
-        if not imwrite_unicode(saved_path, face_img):
-            raise ValueError("사진 저장에 실패했습니다.")
+        base = f"{safe_filename(name)}_{timestamp}"
+        photos: list[str] = []
+        for i, (frame, det) in enumerate(samples):
+            x, y, w, h = det.box
+            h_img, w_img = frame.shape[:2]
+            # 재검출·정렬이 잘 되도록 여백을 넉넉히 둔다
+            pad_x, pad_y = int(w * 0.3), int(h * 0.3)
+            face_img = frame[
+                max(0, y - pad_y):min(h_img, y + h + pad_y),
+                max(0, x - pad_x):min(w_img, x + w + pad_x),
+            ]
+            saved_path = config.FACES_DIR / (f"{base}.jpg" if i == 0 else f"{base}_{i + 1}.jpg")
+            if not imwrite_unicode(saved_path, face_img):
+                if i == 0:
+                    raise ValueError("사진 저장에 실패했습니다.")
+                continue
+            photos.append(_photo_ref(saved_path))
 
         record = {
             "id": uuid.uuid4().hex[:12],
             "name": name,
             "phone": phone,
             "device_id": device_id or None,
-            "photo": saved_path.relative_to(config.APP_DIR).as_posix(),
+            "photo": photos[0],
+            "photos": photos,
             "registered_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         self.users_store.update(lambda users: users + [record])
@@ -444,8 +478,7 @@ class Runtime:
         if target is None:
             raise KeyError("삭제하려는 사용자를 찾을 수 없습니다.")
 
-        photo_rel = target.get("photo")
-        if photo_rel:
+        for photo_rel in user_photos(target):
             photo_path = config.APP_DIR / photo_rel
             if photo_path.exists():
                 try:
@@ -504,6 +537,7 @@ class Runtime:
             "vessel": self.vessel_store.load(),
             "engine": self.engine.snapshot(),
             "camera_ok": self.camera.camera_ok,
+            "face_engine": self.camera.engine_name,
             "camera_mode": self.camera.mode,
             "overlay": self.overlay.get(),
             "boarding": {

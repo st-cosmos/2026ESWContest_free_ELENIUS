@@ -14,6 +14,9 @@ venv/
 vpass-application/data/
 # 학습된 TFLite 모델은 저장소 밖에서 따로 관리한다 (models/README.md 참고)
 vpass-application/models/*.tflite
+# 얼굴 인식 ONNX 모델(OpenCV Zoo)은 tools/fetch_face_models.py 로 내려받는다
+vpass-application/models/*.onnx
+vpass-application/models/*.part
 
 # ── Node / React UI ─────────────────────────────────
 node_modules/
