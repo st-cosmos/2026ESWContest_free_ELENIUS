@@ -159,6 +159,7 @@ function RegisterModal({
               <div className="field-box mono">
                 <input
                   value={phone}
+                  inputMode="tel"
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="예: 010-1234-5678"
                 />

@@ -172,7 +172,12 @@ JACKET_ROI_MIN_VISIBLE = float(os.environ.get("VPASS_JACKET_ROI_MIN_VISIBLE", "0
 # ── 구명조끼 디바이스 / 익수 감지 ────────────────────────────────────────
 PING_INTERVAL = 3.0        # (구 ESP HTTP 펌웨어) ping 주기(초)
 FALL_PING_TIMEOUT = 5.0    # 낙상 후 이 시간 안에 ping 없으면 익수로 판단
-SIGNAL_LOSS_TIMEOUT = 10.0 # 착용 중 신호 두절 시 익수로 판단(3회 연속 유실)
+# 낙상(가속도) 감지 없이 착용 중 신호만 두절된 경우는 바로 익수로 판정하지 않고
+# 경고 단계를 거친다: SIGNAL_LOSS_TIMEOUT 초 두절 → 단말 경고음 + 모달 표시 →
+# SIGNAL_LOSS_WARNING_SEC 초 안에 모달을 터치해 끄면 정상 운용 유지, 응답이
+# 없으면 익수 판정(킬 스위치 + SOS). 신호가 다시 수신되면 경고는 자동 해제된다.
+SIGNAL_LOSS_TIMEOUT = 10.0 # 착용 중 신호 두절 → 경고 시작(3회 연속 유실)
+SIGNAL_LOSS_WARNING_SEC = float(os.environ.get("VPASS_SIGNAL_LOSS_WARNING_SEC", "20"))
 
 # ── 구명조끼 BLE 수신 (nRF52840 펌웨어, firmware/) ──────────────────────
 # 조끼 장치가 BLE 광고(브로드캐스트)로 착용/생존/낙하를 보고한다.
@@ -183,6 +188,24 @@ BLE_ENABLED = (
 )
 # 펌웨어 광고 페이로드의 회사 ID (개발용 0xFFFF — firmware/src/jacket_adv.c)
 BLE_COMPANY_ID = int(os.environ.get("VPASS_BLE_COMPANY_ID", "0xFFFF"), 0)
+# 조끼 광고를 수신할 블루투스 어댑터. "usb"/"uart"(버스 종류), "hci1"(번호),
+# 또는 어댑터 BD 주소. 라즈베리파이에서 USB 동글을 쓰려면 "usb" 권장 —
+# hciN 번호는 부팅마다 동글/내장 칩 순서가 뒤바뀔 수 있다 (2026-08-30 실측).
+# 파이 내장 칩은 Wi-Fi 와 안테나를 공유해 트래픽이 몰리면 수신 공백이 생긴다
+# (2026-08-29 실측 최대 19초 → 익수 오경보). 미설정 시 시스템 기본 어댑터를
+# 사용한다. 리눅스(BlueZ) 전용 옵션 (blebus.resolve_adapter 참고).
+BLE_ADAPTER = os.environ.get("VPASS_BLE_ADAPTER", "").strip() or None
+# 스캔 방식. 리눅스(BlueZ)는 능동 스캔 시 10.24초 디스커버리 주기마다 장치당
+# 광고 1~2건만 올려준다 (컨트롤러 주소 기반 중복 필터 — 2026-08-30 파이 실측,
+# 동글/내장 칩 동일). SIGNAL_LOSS_TIMEOUT(10초)과 겹쳐 익수 오경보 원인이었다.
+# 패시브 스캔 + 광고 패턴 모니터는 중복 필터를 끄므로 0.5초 광고를 전부 받는다
+# (15초에 14건 실측). /etc/bluetooth/main.conf 의 Experimental = true 필요.
+#   auto:    리눅스면 패시브 시도, 실패(Experimental 꺼짐 등) 시 능동으로 폴백
+#   passive: 패시브만 (실패 시 재시도)
+#   active:  기존 능동 스캔
+BLE_SCAN_MODE = os.environ.get("VPASS_BLE_SCAN_MODE", "auto").strip().lower()
+if BLE_SCAN_MODE not in ("auto", "passive", "active"):
+    BLE_SCAN_MODE = "auto"
 # 배터리 교체 경고 임계값(mV). AA 리튬 2셀은 방전 곡선이 평평해 % 환산이
 # 부정확하므로 전압 + 교체요망 판정으로만 표시한다. 펌웨어 자체 저전압
 # 플래그(동일 기본값)와 OR 로 판정.
@@ -205,7 +228,7 @@ KILLSWITCH_BLE_CHARACTERISTIC_UUID = os.environ.get(
     "8d4f2a11-5f5f-4c0b-9a8c-0f6f7f7b2a10",
 )
 KILLSWITCH_BLE_TIMEOUT_SEC = float(os.environ.get("VPASS_KILLSWITCH_BLE_TIMEOUT", "6"))
-# 사용할 블루투스 어댑터 (예: 라즈베리파이에서 USB 동글을 쓰려면 "hci1").
+# 사용할 블루투스 어댑터 — VPASS_BLE_ADAPTER 와 같은 형식("usb"/"uart"/hciN/BD주소).
 # 미설정 시 시스템 기본 어댑터를 사용한다. 리눅스(BlueZ) 전용 옵션.
 KILLSWITCH_BLE_ADAPTER = os.environ.get("VPASS_KILLSWITCH_BLE_ADAPTER", "").strip() or None
 

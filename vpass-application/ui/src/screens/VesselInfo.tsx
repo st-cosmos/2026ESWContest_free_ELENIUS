@@ -99,6 +99,7 @@ export function VesselInfo({ state }: { state: AppState }) {
           <div className="field-box mono">
             <input
               value={vesselId}
+              inputMode="numeric"
               onChange={(e) => setVesselId(e.target.value)}
               placeholder="예: 2607-001-461100-3"
             />

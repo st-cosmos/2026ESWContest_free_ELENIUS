@@ -12,6 +12,7 @@
     "@fontsource/jetbrains-mono": "^5.2.5",
     "@fontsource/noto-sans-kr": "^5.2.5",
     "@fontsource/outfit": "^5.2.5",
+    "hangul-js": "^0.2.6",
     "lucide-react": "^0.545.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
