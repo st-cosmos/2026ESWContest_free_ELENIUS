@@ -169,6 +169,30 @@ JACKET_MIN_COLOR_RATIO = float(os.environ.get("VPASS_JACKET_MIN_RATIO", "0.4"))
 # 상체 ROI 가 화면 밖으로 잘려 남은 면적이 이 비율 미만이면 판단 불가 처리
 JACKET_ROI_MIN_VISIBLE = float(os.environ.get("VPASS_JACKET_ROI_MIN_VISIBLE", "0.35"))
 
+# ── 구명조끼 자세 검증 (정면 → 옆모습, jacketturn.py) ─────────────────────
+# 가슴 ROI 한 장만 보면 조끼를 입지 않고 버클만 채운 채 몸 앞에 들고 있어도
+# 착용으로 보인다. 얼굴 인식 확정 뒤 정면에서 조끼를 확인하고, 몸을 한쪽으로
+# 돌린 옆모습에서도 조끼가 보여야 승선 처리한다(들고 있는 조끼는 옆에서 사라짐).
+# 자세는 YuNet 랜드마크로 판단하므로 LBPH 폴백에서는 자동으로 생략된다.
+JACKET_TURN_CHECK = (
+    os.environ.get("VPASS_JACKET_TURN_CHECK", "1").strip().lower() not in ("0", "false", "off")
+)
+# 단계마다 이만큼 연속 검출 프레임이 조건을 만족해야 통과
+JACKET_TURN_FRAMES = max(1, int(os.environ.get("VPASS_JACKET_TURN_FRAMES", "3")))
+# 정면 시작부터 옆모습 통과까지 허용 시간(초) — 넘기면 실패 안내 후 처음부터
+JACKET_TURN_TIMEOUT_SEC = float(os.environ.get("VPASS_JACKET_TURN_TIMEOUT", "10"))
+# 옆모습 판정: 코 위치 비율이 이 값 이하(또는 1-값 이상)면 옆으로 돌린 것으로 봄
+# (정면은 FACE_ENROLL_YAW_MIN~MAX = 0.3~0.7, 그 사이는 '돌리는 중')
+JACKET_TURN_SIDE_YAW = float(os.environ.get("VPASS_JACKET_TURN_SIDE_YAW", "0.22"))
+# 검증 중 얼굴이 이 시간(초) 이상 안 보이면 추적을 끊고 처음부터 다시
+JACKET_TURN_FACE_GAP_SEC = float(os.environ.get("VPASS_JACKET_TURN_FACE_GAP", "1.0"))
+# 정면 단계에서 어깨 좌우 패치에도 조끼 색이 보여야 통과 (가슴 앞에 들고 있는 조끼는
+# 어깨를 덮지 못한다). 패치가 화면 밖이면 판단 불가로 보고 이 조건만 건너뛴다.
+JACKET_SHOULDER_CHECK = (
+    os.environ.get("VPASS_JACKET_SHOULDER_CHECK", "1").strip().lower() not in ("0", "false", "off")
+)
+JACKET_SHOULDER_MIN_RATIO = float(os.environ.get("VPASS_JACKET_SHOULDER_MIN_RATIO", "0.2"))
+
 # ── 구명조끼 디바이스 / 익수 감지 ────────────────────────────────────────
 PING_INTERVAL = 3.0        # (구 ESP HTTP 펌웨어) ping 주기(초)
 FALL_PING_TIMEOUT = 5.0    # 낙상 후 이 시간 안에 ping 없으면 익수로 판단

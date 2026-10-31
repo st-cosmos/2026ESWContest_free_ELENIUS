@@ -76,6 +76,8 @@ class BoardingManager:
         구명조끼 착용은 두 관문을 모두 통과해야 인정한다.
           1) 카메라 시각 확인 — jacket_check(jacketvision.assess_jacket 결과).
              None 이면 시각 확인이 꺼진 것(config)으로 보고 이 관문만 건너뛴다.
+             jacket_check["turn"] 이 True 면 정면→옆모습 자세 검증(jacketturn)까지
+             통과한 것이다 — 승선 기록에 jacket_turn 으로 남긴다.
           2) 모듈 착용 신호 — 미매칭 착용 장치를 이 선원에게 동적으로 매칭한다.
         """
         user_id = user.get("id") or user.get("name", "")
@@ -107,6 +109,7 @@ class BoardingManager:
                     )
                 return
             jacket_visual = True if visual is True else None
+            jacket_turn = bool(jacket_check and jacket_check.get("turn"))
 
             # 2) 모듈 착용 신호 — 시각 확인을 통과한 뒤에만 장치를 매칭(소모)한다
             device = self._claim_device()
@@ -127,6 +130,7 @@ class BoardingManager:
                 "device_id": device,             # 이번 승선에서 매칭된 구명조끼 장치
                 "lifejacket": True,              # 모듈 착용 신호 확인됨
                 "jacket_visual": jacket_visual,  # True(카메라 확인) | None(시각 확인 꺼짐)
+                "jacket_turn": jacket_turn,      # 정면→옆모습 자세 검증 통과 여부
             }
             self._session.append(entry)
             self._boarded_ids.add(user_id)
@@ -147,11 +151,15 @@ class BoardingManager:
                     "device_id": device,
                     "lifejacket": True,
                     "jacket_visual": jacket_visual,
+                    "jacket_turn": jacket_turn,
                 }
             ]
         )
 
-        checked = "모듈·카메라" if jacket_visual else "모듈"
+        if jacket_turn:
+            checked = "모듈·카메라·자세"
+        else:
+            checked = "모듈·카메라" if jacket_visual else "모듈"
         self._overlay.set(f"{name} 님 환영합니다 · 승선 확인(구명조끼 {checked})", COLOR_OK)
 
         # 운항 중이라면 해당 운항의 승선 명단도 최신화한다
@@ -196,6 +204,14 @@ class BoardingManager:
         self._claimed_devices.add(newest["device"])
         return newest["device"]
 
+    def has_claimable_device(self) -> bool:
+        """지금 스캔하면 매칭될 착용 장치가 있는지 (자세 검증을 시작하기 전 선확인용 —
+        모듈 신호가 없으면 몸을 돌려 봐야 승선이 거부되므로 바로 안내한다)."""
+        with self._lock:
+            return any(
+                d["device"] not in self._claimed_devices for d in self._devices.worn_devices()
+            )
+
     def device_user(self, device_id: str) -> dict | None:
         """이번 승선 세션에서 device_id 를 매칭받은 선원 항목(없으면 None)."""
         with self._lock:
@@ -203,6 +219,10 @@ class BoardingManager:
                 if e.get("device_id") == device_id:
                     return dict(e)
         return None
+
+    def guide(self, text: str, color: str) -> None:
+        """진행 안내(자세 검증 단계 등) — 쿨다운 없이 오버레이를 바로 갱신한다."""
+        self._overlay.set(text, color)
 
     def handle_unknown(self) -> None:
         if self._cooldown_ok("unknown"):

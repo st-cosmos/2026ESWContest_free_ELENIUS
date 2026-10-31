@@ -11,6 +11,12 @@
 확정된 사람만 BoardingManager 에 넘긴다. 등록 모드에서는 얼굴이 보이는 동안
 샘플 프레임을 모아 두어 다중 샘플 등록에 쓴다.
 
+구명조끼 자세 검증(JACKET_TURN_CHECK): 얼굴 인식이 확정되면 바로 승선 처리하지
+않고 jacketturn.TurnVerifier 로 넘긴다 — 정면에서 조끼(가슴+어깨)를 확인하고,
+몸을 한쪽으로 돌린 옆모습에서도 조끼가 보여야 BoardingManager 에 넘긴다.
+검증 중에는 얼굴 박스 연속성으로 같은 사람임을 유지하고 신원 투표는 쉰다
+(옆모습은 인식률이 낮으므로). 랜드마크가 없는 LBPH 엔진에서는 건너뛴다.
+
 카메라가 없는 개발 환경에서도 서버는 정상 동작하며 안내 프레임을 송출한다.
 """
 
@@ -28,6 +34,8 @@ from .config import (
     JACKET_CAPTURE_DIR,
     JACKET_CAPTURE_ENABLED,
     JACKET_CAPTURE_INTERVAL,
+    JACKET_SHOULDER_CHECK,
+    JACKET_TURN_CHECK,
     JACKET_VISION_ENABLED,
     FACE_ENROLL_SAMPLE_INTERVAL,
     FACE_ENROLL_SAMPLES,
@@ -36,7 +44,11 @@ from .config import (
     FACE_VOTE_WINDOW,
 )
 from .facerec import Gallery, Match, RecognitionVoter, create_engine
-from .jacketvision import assess_jacket
+from .jacketturn import TurnVerifier
+from .jacketvision import assess_jacket, assess_shoulders
+
+# 자세 검증 실패 뒤 같은 사람을 다시 검증하기까지 두는 간격(초) — 실패 안내가 읽히게
+TURN_RETRY_HOLD_SEC = 2.0
 
 GREEN = (163, 255, 0)   # BGR
 RED = (95, 55, 255)
@@ -78,6 +90,11 @@ class CameraManager:
         self._register_box = None   # 마지막 검출 가이드 박스
         self._last_capture = 0.0    # 학습 데이터 수집(ROI 저장) 스로틀
 
+        # 구명조끼 자세 검증 (카메라 스레드 전용)
+        self._turn: TurnVerifier | None = None
+        self._turn_hold_until = 0.0     # 실패 직후 재시작 억제 만료 시각
+        self._turn_skip_logged = False  # LBPH 등 랜드마크 없음 안내 1회
+
     # ── 수명 주기 ────────────────────────────────────────────────────────
     def start(self) -> None:
         self.train_model()
@@ -118,6 +135,7 @@ class CameraManager:
             self._scan_note = None
             self._jacket_note = None
             self._register_box = None
+            self._turn = None
         if mode in ("scan", "register"):
             self._last_open_try = 0.0  # 대기에서 복귀 시 3초 스로틀 없이 즉시 오픈
 
@@ -207,6 +225,9 @@ class CameraManager:
                 # 얼굴이 잠시 사라진 뒤 돌아오면 투표를 새로 시작한다
                 if now - self._last_face_seen > FACE_VOTE_SECONDS:
                     self._voter.reset()
+                # 자세 검증 중 얼굴이 오래 사라지면 추적을 끊는다
+                if self._turn is not None and self._turn.lost(now):
+                    self._turn = None
             else:
                 self._last_face_seen = now
                 box = det.box
@@ -223,7 +244,11 @@ class CameraManager:
                 if gallery.empty:
                     note = (box, WHITE, None, 1)
                     self._voter.reset()
+                    self._turn = None
                     self._boarding.handle_no_model()
+                elif self._turn is not None:
+                    # 자세 검증 진행 중 — 신원 투표는 쉬고 연속성으로 같은 사람을 추적한다
+                    note = self._run_turn(det, jacket, frame, now)
                 else:
                     feat = engine.embed(frame, det)
                     m = engine.match(feat, gallery) if feat is not None else Match(None, 0.0)
@@ -232,9 +257,24 @@ class CameraManager:
                     if confirmed is not None and confirmed in gallery.users:
                         user = gallery.users[confirmed]
                         boarded = self._boarding.is_boarded(confirmed)
-                        tag = "BOARDED" if boarded else f"PASSENGER {m.label}"
-                        note = (box, GREEN, tag, 2)
-                        self._boarding.handle_recognition(user, jacket)
+                        if boarded:
+                            note = (box, GREEN, "BOARDED", 2)
+                            self._boarding.handle_recognition(user, jacket)
+                        elif now < self._turn_hold_until:
+                            # 자세 검증 실패 직후 — 안내가 읽히도록 잠시 뒤 다시 시작한다
+                            note = (box, YELLOW, "RETRY SOON", 2)
+                        elif (self._turn_check_applies(det, jacket)
+                              and self._boarding.has_claimable_device()):
+                            # 모듈 착용 신호가 있을 때만 자세 검증을 시작한다 — 없으면
+                            # 아래 handle_recognition 이 "착용 신호가 없습니다" 를 바로 안내
+                            self._turn = TurnVerifier(
+                                user, now,
+                                shoulder_check=assess_shoulders if JACKET_SHOULDER_CHECK else None,
+                            )
+                            note = self._run_turn(det, jacket, frame, now)
+                        else:
+                            note = (box, GREEN, f"PASSENGER {m.label}", 2)
+                            self._boarding.handle_recognition(user, jacket)
                     elif uid is not None or not self._voter.full:
                         # 임계값은 넘었지만 아직 표가 모자람 — 확정 전
                         note = (box, YELLOW, f"VERIFYING {votes}/{self._voter.need}", 2)
@@ -259,6 +299,44 @@ class CameraManager:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         self._publish(display)
+
+    # ── 구명조끼 자세 검증 ───────────────────────────────────────────────
+    def _turn_check_applies(self, det, jacket) -> bool:
+        """이 검출에 자세 검증을 적용할 수 있는지 (설정 켜짐 + 시각 확인 켜짐 + 랜드마크)."""
+        if not (JACKET_TURN_CHECK and JACKET_VISION_ENABLED and jacket is not None):
+            return False
+        if det.landmarks is None:
+            if not self._turn_skip_logged:
+                self._turn_skip_logged = True
+                print("[camera] 얼굴 랜드마크 없음(LBPH 엔진) — 구명조끼 자세 검증 생략")
+            return False
+        return True
+
+    def _run_turn(self, det, jacket, frame, now: float):
+        """검증기에 이번 검출을 넣고 결과에 따라 승선/실패/안내를 처리한다. 화면 주석을 돌려준다."""
+        turn = self._turn
+        st = turn.update(det, jacket, frame, now)
+        box = det.box
+        if st.state == "passed":
+            self._turn = None
+            check = dict(turn.front_jacket or jacket or {})
+            check["turn"] = True
+            check["side"] = turn.side
+            self._boarding.handle_recognition(turn.user, check)
+            return (box, GREEN, "PASSENGER TURN OK", 2)
+        if st.state == "failed":
+            self._turn = None
+            self._turn_hold_until = now + TURN_RETRY_HOLD_SEC
+            self._voter.reset()
+            self._boarding.guide(st.message, st.color)
+            return (box, RED, st.tag, 2)
+        if st.state == "lost":
+            # 다른 얼굴로 바뀌었거나 한참 사라졌다 — 신원 확인부터 다시
+            self._turn = None
+            self._voter.reset()
+            return (box, YELLOW, st.tag, 1)
+        self._boarding.guide(st.message, st.color)
+        return (box, YELLOW, st.tag, 2)
 
     def _maybe_capture_roi(self, frame, jacket: dict) -> None:
         """학습 데이터 수집: 가슴 ROI 크롭을 주기 제한으로 저장한다.
