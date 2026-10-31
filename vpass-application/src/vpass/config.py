@@ -185,12 +185,15 @@ JACKET_TURN_TIMEOUT_SEC = float(os.environ.get("VPASS_JACKET_TURN_TIMEOUT", "0")
 # 옆모습 판정: 코 위치 비율이 이 값 이하(또는 1-값 이상)면 옆으로 돌린 것으로 봄
 # (정면은 FACE_ENROLL_YAW_MIN~MAX = 0.3~0.7, 그 사이는 '돌리는 중')
 JACKET_TURN_SIDE_YAW = float(os.environ.get("VPASS_JACKET_TURN_SIDE_YAW", "0.22"))
-# 검증 중 얼굴이 이 시간(초) 이상 안 보이면 추적을 끊고 처음부터 다시
+# 정면 단계에서 얼굴이 이 시간(초) 이상 안 보이면 추적을 끊고 처음부터 다시
 JACKET_TURN_FACE_GAP_SEC = float(os.environ.get("VPASS_JACKET_TURN_FACE_GAP", "1.0"))
-# 정면 단계에서 어깨 좌우 패치에도 조끼 색이 보여야 통과 (가슴 앞에 들고 있는 조끼는
-# 어깨를 덮지 못한다). 패치가 화면 밖이면 판단 불가로 보고 이 조건만 건너뛴다.
+# 옆모습 단계는 얼굴 검출 없이 진행한다(옆얼굴은 검출기가 자주 놓침). 다만 얼굴이 이 시간(초)
+# 넘게 한 번도 안 보이면 자리를 떠난 것으로 보고 처음부터 다시. 0 이면 끊지 않음.
+JACKET_TURN_NOFACE_SEC = float(os.environ.get("VPASS_JACKET_TURN_NOFACE", "15"))
+# (선택) 정면 단계에서 어깨 좌우 패치에도 조끼 색이 보여야 통과. 기본 꺼짐 — 카메라 구도에
+# 따라 어깨가 잘려 오탐이 잦았다. 옆모습 샌드위치 판정이 '들고 있는 조끼'를 걸러낸다.
 JACKET_SHOULDER_CHECK = (
-    os.environ.get("VPASS_JACKET_SHOULDER_CHECK", "1").strip().lower() not in ("0", "false", "off")
+    os.environ.get("VPASS_JACKET_SHOULDER_CHECK", "0").strip().lower() not in ("0", "false", "off", "")
 )
 JACKET_SHOULDER_MIN_RATIO = float(os.environ.get("VPASS_JACKET_SHOULDER_MIN_RATIO", "0.2"))
 # 옆모습 단계 판정: 얼굴 아래 가로 띠(얼굴 중심 ±JACKET_SIDE_BAND_HALF_W 얼굴폭)를 열(column)
