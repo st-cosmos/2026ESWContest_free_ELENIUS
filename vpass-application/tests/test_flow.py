@@ -63,12 +63,14 @@ def main():
     rt.boarding.handle_recognition(user)
     check("착용 신호 없으면 승선 거부", rt.boarding.count() == 0)
     check("착용 신호 없음 경고", "착용 신호가 없습니다" in rt.overlay.get()["text"])
+    check("착용 장치 없음 → 자세 검증 시작 조건 미충족", rt.boarding.has_claimable_device() is False)
 
     # 구명조끼 착용 (시뮬레이터 = 실장치와 동일 경로)
     jacket = rt.sim_jacket("jacket-1")
     jacket.apply("wear")
     time.sleep(0.2)
     check("착용 인식", rt.devices.is_worn("jacket-1") is True)
+    check("착용 장치 있음 → 자세 검증 시작 가능", rt.boarding.has_claimable_device() is True)
 
     print("\n== 2-1) 구명조끼 시각 확인 (HSV 폴백 경로) ==")
     import numpy as np  # noqa: E402
@@ -127,11 +129,117 @@ def main():
     check("판단 불가 시 승선 보류", rt.boarding.count() == 0)
     check("판단 불가 안내", "상체가 화면에" in rt.overlay.get()["text"])
 
+    print("\n== 2-3) 구명조끼 자세 검증 (정면 → 옆모습, 들고 있는 조끼 걸러내기) ==")
+    from vpass.facerec import Detection  # noqa: E402
+    from vpass.jacketturn import TurnVerifier, pose_of, same_face  # noqa: E402
+
+    def det_at(x, y, w, h, rel):
+        """코 위치 비율 rel(0=한쪽 눈, 1=다른 쪽 눈)을 갖는 가짜 검출. 눈 간격 = 0.4w."""
+        re_x, le_x = x + w * 0.3, x + w * 0.7
+        nose_x = re_x + (le_x - re_x) * rel
+        lm = np.array([[re_x, y + h * 0.4], [le_x, y + h * 0.4], [nose_x, y + h * 0.6],
+                       [x + w * 0.35, y + h * 0.8], [x + w * 0.65, y + h * 0.8]], np.float32)
+        return Detection((x, y, w, h), 0.95, lm)
+
+    FB = (270, 80, 100, 100)
+    front, side_l, side_r = det_at(*FB, 0.5), det_at(*FB, 0.1), det_at(*FB, 0.95)
+    between = det_at(*FB, 0.26)
+    check("자세: 정면", pose_of(front) == "front")
+    check("자세: 한쪽 옆모습", pose_of(side_l) == "side")
+    check("자세: 반대쪽 옆모습", pose_of(side_r) == "side")
+    check("자세: 돌리는 중", pose_of(between) == "between")
+    check("자세: 랜드마크 없음(LBPH) → None", pose_of(Detection(FB)) is None)
+    check("연속성: 같은 자리의 얼굴", same_face(FB, (280, 85, 100, 100)))
+    check("연속성: 멀리 뛴 박스는 다른 사람", not same_face(FB, (30, 300, 100, 100)))
+
+    # 어깨 패치: 무채색 → 미확인 / 어깨만 주황 → 확인 / 얼굴이 화면 하단 → 판단 불가
+    sh0 = jacketvision.assess_shoulders(plain, FB)
+    check("어깨 무채색 → 미확인", sh0["visible"] is False and len(sh0["boxes"]) == 2, str(sh0))
+    shoulders = plain.copy()
+    for (sx, sy, sw, shh) in sh0["boxes"]:
+        shoulders[sy:sy + shh, sx:sx + sw] = (0, 128, 255)
+    sh1 = jacketvision.assess_shoulders(shoulders, FB)
+    check("어깨 주황 → 확인", sh1["visible"] is True and min(sh1["ratios"]) > 0.9, str(sh1))
+    check("어깨 화면 밖 → 판단 불가",
+          jacketvision.assess_shoulders(plain, (270, 420, 100, 100))["visible"] is None)
+
+    JK_ON = {"visible": True, "ratio": 0.6, "box": (225, 205, 190, 165), "method": "hsv"}
+    JK_OFF = {"visible": False, "ratio": 0.05, "box": (225, 205, 190, 165), "method": "hsv"}
+    JK_NA = {"visible": None, "ratio": 0.0, "box": None, "method": "hsv"}
+
+    def shoulder_ok(frame, box):
+        return {"visible": True}
+
+    def shoulder_bad(frame, box):
+        return {"visible": False}
+
+    def new_verifier(shoulder=shoulder_ok):
+        return TurnVerifier(user, t0, need=3, timeout=10, face_gap=1.0, shoulder_check=shoulder)
+
+    t0 = 1000.0
+    # (a) 정상 착용: 정면 3프레임 → 옆모습 3프레임 → 통과
+    v = new_verifier()
+    s1 = v.update(front, JK_ON, plain, t0 + 0.1)
+    s2 = v.update(front, JK_ON, plain, t0 + 0.2)
+    s3 = v.update(front, JK_ON, plain, t0 + 0.3)
+    check("정면 1·2프레임은 진행 중", s1.state == "front" and s2.state == "front" and s2.progress == 2)
+    check("정면 3프레임 → 옆모습 단계", s3.state == "side" and v.stage == "side" and v.front_jacket == JK_ON)
+    s4 = v.update(between, JK_ON, plain, t0 + 0.5)
+    check("돌리는 중에는 대기", s4.state == "side" and s4.progress == 0 and "돌려" in s4.message)
+    v.update(side_l, JK_ON, plain, t0 + 0.7)
+    v.update(side_l, JK_ON, plain, t0 + 0.8)
+    s5 = v.update(side_l, JK_ON, plain, t0 + 0.9)
+    check("옆모습 3프레임 → 통과", s5.state == "passed" and v.side in ("left", "right"), str(s5))
+
+    # (b) 치팅: 조끼를 들고 있음 — 정면은 통과하지만 옆에서 조끼가 사라짐 → 실패
+    v = new_verifier()
+    for i in range(3):
+        v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
+    v.update(side_r, JK_OFF, plain, t0 + 0.6)
+    v.update(side_r, JK_OFF, plain, t0 + 0.7)
+    s = v.update(side_r, JK_OFF, plain, t0 + 0.8)
+    check("옆모습에서 조끼 없음 3회 → 실패", s.state == "failed" and "옆에서" in s.message, str(s))
+
+    # (c) 정면에서 조끼가 안 보이면 카운트 초기화
+    v = new_verifier()
+    v.update(front, JK_ON, plain, t0 + 0.1)
+    v.update(front, JK_ON, plain, t0 + 0.2)
+    s = v.update(front, JK_OFF, plain, t0 + 0.3)
+    check("정면 조끼 미확인 → 처음부터", s.state == "front" and s.progress == 0 and v.count == 0)
+    s = v.update(front, JK_NA, plain, t0 + 0.4)
+    check("상체 화면 밖 → 안내", "상체가 화면에" in s.message)
+
+    # (d) 어깨에 조끼가 없으면 정면 통과 불가 (가슴 앞에 들고 있는 경우)
+    v = new_verifier(shoulder_bad)
+    for i in range(3):
+        s = v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
+    check("어깨 미확인 → 정면 단계 유지", s.state == "front" and v.stage == "front" and "어깨" in s.message)
+
+    # (e) 옆모습을 안 돌리고 시간이 지나면 실패
+    v = new_verifier()
+    for i in range(3):
+        v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
+    s = v.update(front, JK_ON, plain, t0 + 10.5)
+    check("시간 초과 → 실패", s.state == "failed" and "시간 초과" in s.message)
+
+    # (f) 얼굴이 멀리 뛰거나 오래 사라지면 추적 종료(신원 확인부터 다시)
+    v = new_verifier()
+    v.update(front, JK_ON, plain, t0 + 0.1)
+    s = v.update(det_at(30, 300, 100, 100, 0.5), JK_ON, plain, t0 + 0.2)
+    check("다른 위치 얼굴 → 추적 종료", s.state == "lost")
+    v = new_verifier()
+    v.update(front, JK_ON, plain, t0 + 0.1)
+    check("1초 넘게 사라짐 → 추적 종료",
+          v.lost(t0 + 1.5) and v.update(front, JK_ON, plain, t0 + 1.5).state == "lost")
+
     print("\n== 3) 얼굴 인식(모듈+카메라 확인) → 승선 목록에만 추가 (시동은 잠긴 채 유지) ==")
     rt.boarding._notice_times.clear()  # 쿨다운 초기화
-    rt.boarding.handle_recognition(user, {"visible": True, "ratio": 0.42, "box": (225, 205, 190, 165)})
+    rt.boarding.handle_recognition(
+        user, {"visible": True, "ratio": 0.42, "box": (225, 205, 190, 165), "turn": True, "side": "left"})
     check("승선 처리", rt.boarding.count() == 1)
     entry = rt.boarding.session()[0]
+    check("자세 검증 통과 기록", entry.get("jacket_turn") is True, str(entry))
+    check("환영 안내에 자세 확인 표기", "자세" in rt.overlay.get()["text"], rt.overlay.get()["text"])
     check("모듈+카메라 확인 기록",
           entry["lifejacket"] is True and entry["jacket_visual"] is True, str(entry))
     check("장치 동적 매칭(jacket-1)", entry["device_id"] == "jacket-1", str(entry))

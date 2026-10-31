@@ -16,6 +16,10 @@
   True  — 착용으로 판단 (ml: 확률 >= JACKET_ML_THRESHOLD / hsv: 색 비율 기준 이상)
   False — 상체 ROI 를 검사했지만 미착용으로 판단
   None  — 상체가 화면 밖이라 판단 불가
+
+어깨 검사(assess_shoulders): 조끼를 입지 않고 가슴 앞에 들고 있으면 가슴 ROI 는
+통과해도 어깨는 덮지 못한다. 얼굴 좌우 어깨 패치 두 곳의 조끼 색 비율을 본다
+(항상 HSV — 분류기는 가슴 크롭으로만 학습됨). 자세 검증(jacketturn)의 정면 단계에서 쓴다.
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ from .config import (
     JACKET_ML_THRESHOLD,
     JACKET_MODEL_PATH,
     JACKET_ROI_MIN_VISIBLE,
+    JACKET_SHOULDER_MIN_RATIO,
     JACKET_VISION_METHOD,
 )
 
@@ -60,6 +65,51 @@ def chest_roi(frame_shape, face_box):
     if (cx2 - cx1) * (cy2 - cy1) < full_area * JACKET_ROI_MIN_VISIBLE:
         return None
     return cx1, cy1, cx2 - cx1, cy2 - cy1
+
+
+# 어깨 패치 — 얼굴 중심에서 좌우 0.6w~1.4w (목~어깨 끝 사이), 얼굴 아래 0.15h~0.75h
+SHOULDER_INNER = 0.6
+SHOULDER_OUTER = 1.4
+SHOULDER_TOP = 0.15
+SHOULDER_BOTTOM = 0.75
+
+
+def shoulder_rois(frame_shape, face_box):
+    """좌우 어깨 패치 두 개를 프레임 좌표로 반환한다. 둘 중 하나라도 잘려
+    남은 면적이 JACKET_ROI_MIN_VISIBLE 미만이면 None(판단 불가)."""
+    fh, fw = frame_shape[:2]
+    x, y, w, h = (int(v) for v in face_box)
+    cx = x + w / 2
+    y1 = y + h + int(h * SHOULDER_TOP)
+    y2 = y + h + int(h * SHOULDER_BOTTOM)
+    patches = []
+    for sign in (-1, 1):
+        a = cx + sign * w * SHOULDER_INNER
+        b = cx + sign * w * SHOULDER_OUTER
+        x1, x2 = int(min(a, b)), int(max(a, b))
+        full = (x2 - x1) * (y2 - y1)
+        if full <= 0:
+            return None
+        px1, py1, px2, py2 = max(0, x1), max(0, y1), min(fw, x2), min(fh, y2)
+        if px2 <= px1 or py2 <= py1 or (px2 - px1) * (py2 - py1) < full * JACKET_ROI_MIN_VISIBLE:
+            return None
+        patches.append((px1, py1, px2 - px1, py2 - py1))
+    return patches[0], patches[1]
+
+
+def assess_shoulders(frame_bgr, face_box) -> dict:
+    """어깨 패치 두 곳 모두에 조끼 색이 JACKET_SHOULDER_MIN_RATIO 이상이면 True.
+
+    반환: {"visible": True|False|None, "ratios": (좌, 우), "boxes": [(x,y,w,h), ...]}
+    """
+    rois = shoulder_rois(frame_bgr.shape, face_box)
+    if rois is None:
+        return {"visible": None, "ratios": (0.0, 0.0), "boxes": []}
+    ratios = []
+    for x, y, w, h in rois:
+        ratios.append(round(color_ratio(frame_bgr[y:y + h, x:x + w]), 3))
+    return {"visible": all(r >= JACKET_SHOULDER_MIN_RATIO for r in ratios),
+            "ratios": (ratios[0], ratios[1]), "boxes": list(rois)}
 
 
 # ── HSV 폴백 ─────────────────────────────────────────────────────────────
