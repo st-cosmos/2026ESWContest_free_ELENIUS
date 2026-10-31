@@ -92,6 +92,10 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_JACKET_TURN_SIDE_YAW` | `0.22` | 옆모습 판정 코 위치 비율(이 값 이하 또는 1-값 이상) |
 | `VPASS_JACKET_SHOULDER_CHECK` | `1` | 정면 단계에서 어깨 좌우 패치에도 조끼 색이 보여야 통과 (`0` 비활성) |
 | `VPASS_JACKET_SHOULDER_MIN_RATIO` | `0.2` | 어깨 패치 조끼 색 픽셀 비율 판정 기준 |
+| `VPASS_JACKET_SIDE_BAND_HALF_W` | `1.6` | 옆모습 띠 반폭(얼굴폭 배수) |
+| `VPASS_JACKET_SIDE_COL_RATIO` | `0.3` | 옆모습 띠에서 '조끼 열'로 보는 열별 색 비율 |
+| `VPASS_JACKET_SIDE_MIN_SEG_W` | `0.15` | 조끼 구간(앞판/뒤판) 최소 폭(얼굴폭 배수) |
+| `VPASS_JACKET_SIDE_MIN_GAP_W` | `0.12` | 앞판·뒤판 사이 몸통 구간 최소 폭(얼굴폭 배수) |
 | `VPASS_KILLSWITCH_BLE` | `0` | `1`이면 ESP32-C3 BLE 킬 스위치로 릴레이 명령 전송 |
 | `VPASS_KILLSWITCH_BLE_NAME` | `VPass Kill Switch` | BLE 장치 이름 |
 | `VPASS_KILLSWITCH_BLE_ADDRESS` | (없음) | 장치 MAC/address를 알고 있으면 스캔 대신 직접 연결 |
@@ -290,9 +294,14 @@ uv run python tools/face_eval.py                                   # SFace vs LB
    어깨 좌우 패치(얼굴 중심에서 0.6~1.4 얼굴폭, 목~어깨 끝)에도 조끼 색이 보여야
    합니다. 들고 있는 조끼는 어깨를 덮지 못합니다. 연속 3프레임 통과 시 다음 단계.
 2. **옆모습** — 몸을 **한쪽으로**(어느 쪽이든) 돌려 코가 눈 구간 바깥쪽 22% 안에
-   오면 옆모습으로 보고, 그 자세에서도 가슴 ROI 에 조끼가 보여야 합니다. 연속
-   3프레임 통과 시 승선 처리(`jacket_turn=true` 로 기록). 옆모습인데 조끼가 3회
-   연속 안 보이면 "옆에서 구명조끼가 확인되지 않습니다" 로 실패합니다.
+   오면 옆모습으로 봅니다. 이 자세의 상체는 **조끼(앞판) / 몸통·팔 / 조끼(뒤판)**
+   샌드위치 모양이므로, 얼굴 아래 넓은 가로 띠(얼굴 중심 ±1.6 얼굴폭)를 열 단위로
+   훑어 조끼 색 열 비율 ≥ 30% 인 구간을 찾고 **조끼–비조끼–조끼** 순서(각 구간
+   최소 폭 0.15/0.12 얼굴폭)가 나오면 착용으로 판정합니다(`assess_side_profile`).
+   들고 있는 조끼는 앞쪽 한 덩어리만 보여 이 패턴이 나오지 않습니다. 연속 3프레임
+   통과 시 승선 처리(`jacket_turn=true` 로 기록). 패턴이 3회 연속 안 나오면
+   "옆에서 구명조끼 앞판·뒤판이 확인되지 않습니다" 로 실패합니다. 카메라 화면에
+   띠 박스와 열 구간 막대(주황=조끼, 회색=몸통)가 그려져 판정 근거를 볼 수 있습니다.
 
 - 신원은 정면에서 한 번만 확인합니다. 돌리는 동안은 얼굴 박스 연속성(위치·크기,
   1초 이내 재검출)으로 같은 사람임을 유지하므로 **옆얼굴 등록은 필요 없습니다**.
@@ -301,9 +310,10 @@ uv run python tools/face_eval.py                                   # SFace vs LB
   카메라 주석(`FRONT 2/3`, `TURN SIDE`, `SIDE OK`)으로 표시됩니다.
 - 자세는 YuNet 랜드마크로 판단하므로 SFace 모델이 없어 LBPH 로 폴백한 환경에서는
   자동으로 생략됩니다(시작 로그에 "자세 검증 생략" 1회 출력).
-- 옆모습 단계는 HSV 색 비율로 판정합니다(TFLite 분류기는 정면 가슴 크롭으로만
-  학습돼 있음). 실제 조끼·조명에서 `VPASS_JACKET_TURN_SIDE_YAW`, `VPASS_JACKET_MIN_RATIO`,
-  `VPASS_JACKET_SHOULDER_MIN_RATIO` 를 튜닝하세요.
+- 옆모습 단계는 HSV 색으로 판정합니다(TFLite 분류기는 정면 가슴 크롭으로만
+  학습돼 있음). 실제 조끼·조명에서 `VPASS_JACKET_TURN_SIDE_YAW`, `VPASS_JACKET_SIDE_COL_RATIO`,
+  `VPASS_JACKET_SIDE_MIN_SEG_W`/`_MIN_GAP_W`, `VPASS_JACKET_SHOULDER_MIN_RATIO` 를 튜닝하세요.
+  팔이 몸통을 가려도 팔 자체가 '비조끼' 구간이 되므로 패턴은 유지됩니다.
 
 ### 분류 모델 학습·배포
 

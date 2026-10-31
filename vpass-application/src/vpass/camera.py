@@ -45,7 +45,7 @@ from .config import (
 )
 from .facerec import Gallery, Match, RecognitionVoter, create_engine
 from .jacketturn import TurnVerifier
-from .jacketvision import assess_jacket, assess_shoulders
+from .jacketvision import assess_jacket, assess_shoulders, assess_side_profile
 
 # 자세 검증 실패 뒤 같은 사람을 다시 검증하기까지 두는 간격(초) — 실패 안내가 읽히게
 TURN_RETRY_HOLD_SEC = 2.0
@@ -89,6 +89,7 @@ class CameraManager:
         self._jacket_note = None    # 마지막 구명조끼 확인 주석: (box, color, tag)
         self._register_box = None   # 마지막 검출 가이드 박스
         self._last_capture = 0.0    # 학습 데이터 수집(ROI 저장) 스로틀
+        self._side_note = None      # 옆모습 단계 샌드위치 판정 표시
 
         # 구명조끼 자세 검증 (카메라 스레드 전용)
         self._turn: TurnVerifier | None = None
@@ -136,6 +137,7 @@ class CameraManager:
             self._jacket_note = None
             self._register_box = None
             self._turn = None
+            self._side_note = None
         if mode in ("scan", "register"):
             self._last_open_try = 0.0  # 대기에서 복귀 시 3초 스로틀 없이 즉시 오픈
 
@@ -270,6 +272,7 @@ class CameraManager:
                             self._turn = TurnVerifier(
                                 user, now,
                                 shoulder_check=assess_shoulders if JACKET_SHOULDER_CHECK else None,
+                                side_check=assess_side_profile,
                             )
                             note = self._run_turn(det, jacket, frame, now)
                         else:
@@ -283,6 +286,12 @@ class CameraManager:
                         self._boarding.handle_unknown()
             self._scan_note = note
             self._jacket_note = jacket_note
+            # 옆모습 단계에서는 가슴 박스 대신 샌드위치 띠와 구간을 표시한다
+            self._side_note = None
+            if self._turn is not None and self._turn.stage == "side" and self._turn.last_side:
+                self._side_note = self._turn.last_side
+                if self._side_note.get("box") is not None:
+                    self._jacket_note = None
 
         # 검출을 건너뛰는 프레임에는 마지막 주석을 그대로 그려 박스 깜빡임을 막는다
         if self._scan_note is not None:
@@ -297,6 +306,20 @@ class CameraManager:
             cv2.rectangle(display, (x, y), (x + w, y + h), color, 1)
             cv2.putText(display, tag, (x + 4, y + 16),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+
+        side = getattr(self, "_side_note", None)
+        if side is not None and side.get("box") is not None:
+            # 띠 박스 + 열 구간 막대(조끼=주황, 몸통=회색) + 샌드위치 여부
+            x, y, w, h = side["box"]
+            ok = side.get("visible") is True
+            color = GREEN if ok else RED
+            cv2.rectangle(display, (x, y), (x + w, y + h), color, 1)
+            bar_y = y + h - 6
+            for x0, x1, is_jacket in side.get("segments", []):
+                cv2.rectangle(display, (x0, bar_y), (max(x0, x1 - 1), bar_y + 5),
+                              (0, 140, 255) if is_jacket else (120, 120, 120), -1)
+            tag = f"SIDE {'J/B/J OK' if ok else 'NO J/B/J'} {side.get('ratio', 0):.0%}"
+            cv2.putText(display, tag, (x + 4, y + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         self._publish(display)
 

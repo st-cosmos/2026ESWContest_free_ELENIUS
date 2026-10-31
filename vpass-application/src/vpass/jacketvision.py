@@ -20,6 +20,11 @@
 어깨 검사(assess_shoulders): 조끼를 입지 않고 가슴 앞에 들고 있으면 가슴 ROI 는
 통과해도 어깨는 덮지 못한다. 얼굴 좌우 어깨 패치 두 곳의 조끼 색 비율을 본다
 (항상 HSV — 분류기는 가슴 크롭으로만 학습됨). 자세 검증(jacketturn)의 정면 단계에서 쓴다.
+
+옆모습 검사(assess_side_profile): 몸을 옆으로 돌린 사람의 상체는 "조끼(앞판) /
+몸통·팔 / 조끼(뒤판)" 샌드위치 모양이다. 얼굴 아래 넓은 가로 띠를 열 단위로 훑어
+조끼 색 열의 구간을 찾고, 조끼–비조끼–조끼 순서가 나오면 착용으로 본다. 들고 있는
+조끼는 앞쪽 한 덩어리만 보여 이 패턴이 나오지 않는다. 자세 검증의 옆모습 단계에서 쓴다.
 """
 
 from __future__ import annotations
@@ -34,6 +39,10 @@ from .config import (
     JACKET_MODEL_PATH,
     JACKET_ROI_MIN_VISIBLE,
     JACKET_SHOULDER_MIN_RATIO,
+    JACKET_SIDE_BAND_HALF_W,
+    JACKET_SIDE_COL_RATIO,
+    JACKET_SIDE_MIN_GAP_W,
+    JACKET_SIDE_MIN_SEG_W,
     JACKET_VISION_METHOD,
 )
 
@@ -110,6 +119,101 @@ def assess_shoulders(frame_bgr, face_box) -> dict:
         ratios.append(round(color_ratio(frame_bgr[y:y + h, x:x + w]), 3))
     return {"visible": all(r >= JACKET_SHOULDER_MIN_RATIO for r in ratios),
             "ratios": (ratios[0], ratios[1]), "boxes": list(rois)}
+
+
+def side_band_roi(frame_shape, face_box):
+    """옆모습용 가로 띠: 얼굴 중심 ±JACKET_SIDE_BAND_HALF_W 얼굴폭, 세로는 가슴 ROI 와 동일.
+    잘려 남은 면적이 JACKET_ROI_MIN_VISIBLE 미만이면 None."""
+    fh, fw = frame_shape[:2]
+    x, y, w, h = (int(v) for v in face_box)
+    cx = x + w / 2
+    x1, x2 = int(cx - w * JACKET_SIDE_BAND_HALF_W), int(cx + w * JACKET_SIDE_BAND_HALF_W)
+    y1 = y + h + int(h * CHEST_TOP)
+    y2 = y + h + int(h * CHEST_BOTTOM)
+    full = (x2 - x1) * (y2 - y1)
+    if full <= 0:
+        return None
+    bx1, by1, bx2, by2 = max(0, x1), max(0, y1), min(fw, x2), min(fh, y2)
+    if bx2 <= bx1 or by2 <= by1 or (bx2 - bx1) * (by2 - by1) < full * JACKET_ROI_MIN_VISIBLE:
+        return None
+    return bx1, by1, bx2 - bx1, by2 - by1
+
+
+def column_segments(col_ratio, threshold: float, min_run: int) -> list[tuple[int, int, bool]]:
+    """열별 조끼 색 비율 → [(시작, 끝(미포함), 조끼 여부), ...] 구간 목록.
+    min_run 보다 짧은 구간은 잡음으로 보고 이웃과 합친다."""
+    flags = [bool(v >= threshold) for v in col_ratio]
+    if not flags:
+        return []
+    segs: list[list] = []
+    start = 0
+    for i in range(1, len(flags) + 1):
+        if i == len(flags) or flags[i] != flags[start]:
+            segs.append([start, i, flags[start]])
+            start = i
+    # 짧은 구간을 반복해서 이웃에 흡수 (양 끝의 짧은 구간은 그대로 둔다)
+    changed = True
+    while changed and len(segs) >= 3:
+        changed = False
+        for k in range(1, len(segs) - 1):
+            a, b, _ = segs[k]
+            if b - a < min_run:
+                segs[k - 1][1] = segs[k + 1][1]
+                del segs[k:k + 2]
+                changed = True
+                break
+    return [(a, b, f) for a, b, f in segs]
+
+
+def find_sandwich(segments, min_seg: int, min_gap: int):
+    """조끼–비조끼–조끼 순서의 구간 3개를 찾는다. 찾으면 (앞판, 몸통, 뒤판) 구간, 없으면 None."""
+    jackets = [(a, b) for a, b, f in segments if f and b - a >= min_seg]
+    for i in range(len(jackets) - 1):
+        a0, b0 = jackets[i]
+        for a1, b1 in jackets[i + 1:]:
+            gap = a1 - b0
+            if gap >= min_gap:
+                # 두 조끼 구간 사이가 '비조끼'로만 이뤄졌는지 (더 긴 조끼 구간이 끼면 그게 앞판)
+                return (a0, b0), (b0, a1), (a1, b1)
+    return None
+
+
+def assess_side_profile(frame_bgr, face_box) -> dict:
+    """옆모습 샌드위치 판정.
+
+    반환: {"visible": True|False|None, "ratio": 띠 전체 조끼 색 비율,
+           "box": 띠 (x, y, w, h)|None, "segments": [(x0, x1, 조끼여부), ...](프레임 좌표),
+           "sandwich": ((앞판), (몸통), (뒤판))|None, "method": "sandwich"}
+    """
+    band = side_band_roi(frame_bgr.shape, face_box)
+    if band is None:
+        return {"visible": None, "ratio": 0.0, "box": None, "segments": [],
+                "sandwich": None, "method": "sandwich"}
+    bx, by, bw, bh = band
+    roi = frame_bgr[by:by + bh, bx:bx + bw]
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
+    for lo, hi in JACKET_COLOR_RANGES:
+        mask |= cv2.inRange(hsv, np.array(lo, np.uint8), np.array(hi, np.uint8))
+    col = (mask > 0).mean(axis=0)                      # 열별 조끼 색 비율 (0~1)
+    face_w = max(1, int(face_box[2]))
+    smooth = max(1, face_w // 12)
+    if smooth > 1:
+        kernel = np.ones(smooth, dtype=np.float32) / smooth
+        col = np.convolve(col, kernel, mode="same")
+    min_seg = max(2, int(face_w * JACKET_SIDE_MIN_SEG_W))
+    min_gap = max(2, int(face_w * JACKET_SIDE_MIN_GAP_W))
+    segs = column_segments(col, JACKET_SIDE_COL_RATIO, min_run=max(2, face_w // 10))
+    sandwich = find_sandwich(segs, min_seg, min_gap)
+    to_frame = lambda a, b: (bx + a, bx + b)  # noqa: E731
+    return {
+        "visible": sandwich is not None,
+        "ratio": round(float(mask.mean() / 255.0), 3),
+        "box": band,
+        "segments": [(bx + a, bx + b, f) for a, b, f in segs],
+        "sandwich": None if sandwich is None else tuple(to_frame(a, b) for a, b in sandwich),
+        "method": "sandwich",
+    }
 
 
 # ── HSV 폴백 ─────────────────────────────────────────────────────────────

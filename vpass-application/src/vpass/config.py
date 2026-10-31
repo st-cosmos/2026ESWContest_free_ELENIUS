@@ -192,6 +192,15 @@ JACKET_SHOULDER_CHECK = (
     os.environ.get("VPASS_JACKET_SHOULDER_CHECK", "1").strip().lower() not in ("0", "false", "off")
 )
 JACKET_SHOULDER_MIN_RATIO = float(os.environ.get("VPASS_JACKET_SHOULDER_MIN_RATIO", "0.2"))
+# 옆모습 단계 판정: 얼굴 아래 가로 띠(얼굴 중심 ±JACKET_SIDE_BAND_HALF_W 얼굴폭)를 열(column)
+# 단위로 훑어 "조끼 / 몸통 / 조끼" 샌드위치 패턴을 찾는다 — 입은 조끼는 앞판과 뒤판이
+# 몸통 양쪽에 보이지만, 들고 있는 조끼는 한 덩어리만 보인다.
+JACKET_SIDE_BAND_HALF_W = float(os.environ.get("VPASS_JACKET_SIDE_BAND_HALF_W", "1.6"))
+# 열의 조끼 색 픽셀 비율이 이 값 이상이면 '조끼 열'
+JACKET_SIDE_COL_RATIO = float(os.environ.get("VPASS_JACKET_SIDE_COL_RATIO", "0.3"))
+# 조끼 구간(앞판/뒤판)과 그 사이 몸통 구간의 최소 폭 (얼굴폭 배수)
+JACKET_SIDE_MIN_SEG_W = float(os.environ.get("VPASS_JACKET_SIDE_MIN_SEG_W", "0.15"))
+JACKET_SIDE_MIN_GAP_W = float(os.environ.get("VPASS_JACKET_SIDE_MIN_GAP_W", "0.12"))
 
 # ── 구명조끼 디바이스 / 익수 감지 ────────────────────────────────────────
 PING_INTERVAL = 3.0        # (구 ESP HTTP 펌웨어) ping 주기(초)
