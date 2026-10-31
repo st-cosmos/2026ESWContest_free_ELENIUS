@@ -14,8 +14,9 @@
 구명조끼 자세 검증(JACKET_TURN_CHECK): 얼굴 인식이 확정되면 바로 승선 처리하지
 않고 jacketturn.TurnVerifier 로 넘긴다 — 정면에서 조끼(가슴+어깨)를 확인하고,
 몸을 한쪽으로 돌린 옆모습에서도 조끼가 보여야 BoardingManager 에 넘긴다.
-검증 중에는 얼굴 박스 연속성으로 같은 사람임을 유지하고 신원 투표는 쉰다
-(옆모습은 인식률이 낮으므로). 랜드마크가 없는 LBPH 엔진에서는 건너뛴다.
+검증 중에는 신원 투표를 쉰다. 옆모습 단계는 얼굴 검출 없이 정면 때의 얼굴 위치
+아래 띠만 보며, 얼굴이 다시 검출되면 위치 연속성과(정면이면) 신원 재확인으로 같은
+사람인지 본다. 랜드마크가 없는 LBPH 엔진에서는 건너뛴다.
 
 카메라가 없는 개발 환경에서도 서버는 정상 동작하며 안내 프레임을 송출한다.
 """
@@ -44,7 +45,7 @@ from .config import (
     FACE_VOTE_WINDOW,
 )
 from .facerec import Gallery, Match, RecognitionVoter, create_engine
-from .jacketturn import TurnVerifier
+from .jacketturn import TurnVerifier, pose_of
 from .jacketvision import assess_jacket, assess_shoulders, assess_side_profile
 
 # 자세 검증 실패 뒤 같은 사람을 다시 검증하기까지 두는 간격(초) — 실패 안내가 읽히게
@@ -227,9 +228,12 @@ class CameraManager:
                 # 얼굴이 잠시 사라진 뒤 돌아오면 투표를 새로 시작한다
                 if now - self._last_face_seen > FACE_VOTE_SECONDS:
                     self._voter.reset()
-                # 자세 검증 중 얼굴이 오래 사라지면 추적을 끊는다
-                if self._turn is not None and self._turn.lost(now):
-                    self._turn = None
+                if self._turn is not None:
+                    if self._turn.stage == "side":
+                        # 옆모습 단계는 얼굴 없이 진행 — 기준 위치의 띠만 본다
+                        note = self._run_turn(None, None, frame, now)
+                    elif self._turn.lost(now):
+                        self._turn = None
             else:
                 self._last_face_seen = now
                 box = det.box
@@ -249,8 +253,21 @@ class CameraManager:
                     self._turn = None
                     self._boarding.handle_no_model()
                 elif self._turn is not None:
-                    # 자세 검증 진행 중 — 신원 투표는 쉬고 연속성으로 같은 사람을 추적한다
-                    note = self._run_turn(det, jacket, frame, now)
+                    # 자세 검증 진행 중 — 신원 투표는 쉬고 연속성으로 같은 사람을 추적한다.
+                    # 옆모습 단계에서 정면 얼굴이 다시 보이면 신원을 재확인해, 다른 사람이
+                    # 그 자리에 서서 앞사람 검증을 이어받는 일을 막는다.
+                    if (self._turn.stage == "side" and det.landmarks is not None
+                            and pose_of(det) == "front"):
+                        feat = engine.embed(frame, det)
+                        m = engine.match(feat, gallery) if feat is not None else Match(None, 0.0)
+                        other = (m.user.get("id") or m.user.get("name", "")) if m.user else None
+                        if other is not None and other != self._turn.user_id:
+                            self._turn = None
+                            self._voter.reset()
+                    if self._turn is not None:
+                        note = self._run_turn(det, jacket, frame, now)
+                    else:
+                        note = (box, YELLOW, "TRACK LOST", 1)
                 else:
                     feat = engine.embed(frame, det)
                     m = engine.match(feat, gallery) if feat is not None else Match(None, 0.0)
@@ -339,12 +356,16 @@ class CameraManager:
         """검증기에 이번 검출을 넣고 결과에 따라 승선/실패/안내를 처리한다. 화면 주석을 돌려준다."""
         turn = self._turn
         st = turn.update(det, jacket, frame, now)
-        box = det.box
+        box = det.box if det is not None else (turn.anchor_box or turn.last_box)
+        if (JACKET_CAPTURE_ENABLED and turn.stage == "side" and turn.last_side
+                and turn.last_side.get("box") is not None):
+            # 옆모습 띠 크롭도 학습/튜닝 자료로 저장 (파일명 _side<비율>)
+            self._maybe_capture_roi(frame, {"box": turn.last_side["box"], "method": "side",
+                                            "ratio": turn.last_side.get("ratio", 0.0)})
         if st.state == "passed":
             self._turn = None
             check = dict(turn.front_jacket or jacket or {})
             check["turn"] = True
-            check["side"] = turn.side
             self._boarding.handle_recognition(turn.user, check)
             return (box, GREEN, "PASSENGER TURN OK", 2)
         if st.state == "failed":
@@ -357,9 +378,9 @@ class CameraManager:
             # 다른 얼굴로 바뀌었거나 한참 사라졌다 — 신원 확인부터 다시
             self._turn = None
             self._voter.reset()
-            return (box, YELLOW, st.tag, 1)
+            return None if box is None else (box, YELLOW, st.tag, 1)
         self._boarding.guide(st.message, st.color)
-        return (box, YELLOW, st.tag, 2)
+        return None if box is None else (box, YELLOW, st.tag, 2)
 
     def _maybe_capture_roi(self, frame, jacket: dict) -> None:
         """학습 데이터 수집: 가슴 ROI 크롭을 주기 제한으로 저장한다.
