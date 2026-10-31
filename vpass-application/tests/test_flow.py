@@ -211,100 +211,108 @@ def main():
     def side_bad(frame, box):
         return {"visible": False, "box": (0, 0, 10, 10), "segments": []}
 
-    def new_verifier(shoulder=shoulder_ok, side=side_ok):
-        return TurnVerifier(user, t0, need=3, timeout=10, face_gap=1.0,
+    t0 = 1000.0
+    HOLD, GRACE, STEP = 3.0, 0.5, 0.2   # 3초 유지, 0.5초 끊김 허용, 검출 주기 0.2초
+
+    def new_verifier(shoulder=None, side=side_ok):
+        return TurnVerifier(user, t0, hold=HOLD, grace=GRACE, timeout=0, face_gap=1.0,
                             shoulder_check=shoulder, side_check=side)
 
-    t0 = 1000.0
-    # (a) 정상 착용: 정면 3프레임 → 옆모습 3프레임 → 통과
-    v = new_verifier()
-    s1 = v.update(front, JK_ON, plain, t0 + 0.1)
-    s2 = v.update(front, JK_ON, plain, t0 + 0.2)
-    s3 = v.update(front, JK_ON, plain, t0 + 0.3)
-    check("정면 1·2프레임은 진행 중", s1.state == "front" and s2.state == "front" and s2.progress == 2)
-    check("정면 3프레임 → 옆모습 단계", s3.state == "side" and v.stage == "side" and v.front_jacket == JK_ON)
-    check("정면 통과 시 기준 위치 저장", v.anchor_box == FB)
-    v2 = new_verifier(side=side_bad)
-    for i in range(3):
-        v2.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
-    s4 = v2.update(None, None, plain, t0 + 0.5)
-    check("아직 샌드위치 없음 → 돌리라고 안내(얼굴 없어도 진행)",
-          s4.state == "side" and s4.progress == 0 and "돌려" in s4.message, str(s4))
-    v.update(None, None, plain, t0 + 0.7)          # 얼굴 검출 없이 띠만 판정
-    v.update(None, None, plain, t0 + 0.8)
-    s5 = v.update(None, None, plain, t0 + 0.9)
-    check("얼굴 없이 샌드위치 3프레임 → 통과", s5.state == "passed", str(s5))
+    def feed(v, det, jacket, start, seconds):
+        """start 부터 seconds 동안 STEP 간격으로 같은 입력을 넣고 마지막 상태를 돌려준다."""
+        t, s = start, None
+        while t <= start + seconds + 1e-9:
+            s = v.update(det, jacket, plain, t)
+            t += STEP
+        return s, t
 
-    # (b) 치팅: 조끼를 들고 있음 — 정면은 통과하지만 옆에서 샌드위치 패턴이 없음 → 실패
-    #     (가슴 ROI 는 여전히 '보임'이지만 옆모습 단계는 샌드위치 판정만 본다)
+    # (a) 정상 착용: 정면 3초 유지 → 옆모습(얼굴 없이) 3초 유지 → 통과
+    v = new_verifier()
+    s, t = feed(v, front, JK_ON, t0, 1.0)
+    check("정면 1초 → 아직 진행 중", s.state == "front" and 0.9 <= s.progress <= 1.1, str(s))
+    s, t = feed(v, front, JK_ON, t, 2.2)
+    check("정면 3초 유지 → 옆모습 단계", s.state == "side" and v.stage == "side" and v.anchor_box == FB, str(s))
+    check("정면 통과 시 조끼 판정 보관", v.front_jacket == JK_ON)
+    s, t = feed(v, None, None, t, 1.0)
+    # 정면 단계가 3.0초에 통과한 뒤 남은 0.2초 입력도 옆모습 유지 시간으로 들어가므로 1.0~1.5초
+    check("옆모습 1초 → 아직 진행 중(얼굴 없이 진행)", s.state == "side" and 0.9 <= s.progress <= 1.5, str(s))
+    s, t = feed(v, None, None, t, 2.2)
+    check("옆모습 3초 유지 → 통과", s.state == "passed", str(s))
+
+    # (a-2) 잠깐 비추기만 하면 통과하지 않는다
+    v = new_verifier()
+    s, t = feed(v, front, JK_ON, t0, 0.6)
+    check("정면 0.6초만 비춤 → 통과 안 됨", s.state == "front" and v.stage == "front")
+
+    # (a-3) 0.5초 이내 끊김은 봐주고, 그 이상 끊기면 처음부터
+    v = new_verifier()
+    s, t = feed(v, front, JK_ON, t0, 2.0)
+    s = v.update(front, JK_OFF, plain, t + 0.2)          # 0.4초 끊김 (grace 이내)
+    s, t = feed(v, front, JK_ON, t + 0.4, 1.0)
+    check("짧은 끊김은 유지 시간 보존 → 통과", v.stage == "side", str(s))
+    v = new_verifier()
+    s, t = feed(v, front, JK_ON, t0, 2.0)
+    s, t = feed(v, front, JK_OFF, t, 1.0)                # 1초 끊김 (grace 초과)
+    check("긴 끊김 → 유지 시간 초기화", s.state == "front" and s.progress == 0.0, str(s))
+    s, t = feed(v, front, JK_ON, t, 1.0)
+    check("초기화 후 다시 1초 → 아직 정면 단계", v.stage == "front" and 0.9 <= s.progress <= 1.1, str(s))
+
+    # (b) 치팅: 조끼를 들고 있음 — 정면은 통과하지만 옆에서 샌드위치가 없음 → 통과하지 않음
     v = new_verifier(side=side_bad)
-    for i in range(3):
-        v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
-    t = t0 + 0.3
-    while t < t0 + 8.0:                      # 얼굴은 보이지만(옆모습 검출) 샌드위치가 없음
-        t += 0.5
-        s = v.update(side_r, JK_ON, plain, t)
-    check("샌드위치 없으면 통과하지 않음", s.state == "side" and v.count == 0, str(s))
+    feed(v, front, JK_ON, t0, 3.2)
+    s, t = feed(v, side_r, JK_ON, t0 + 3.4, 8.0)         # 얼굴은 보이지만 샌드위치 없음
+    check("샌드위치 없으면 통과하지 않음", s.state == "side" and s.progress == 0.0, str(s))
     check("오래 안 나오면 '조끼를 입었는지' 안내로 전환", "앞판" in s.message, s.message)
     check("마지막 옆모습 판정 보관(화면 표시용)", v.last_side is not None and v.last_side["visible"] is False)
 
-    # (c) 정면에서 조끼가 안 보이면 카운트 초기화
+    # (c) 정면에서 조끼가 안 보이거나 상체가 화면 밖이면 안내
     v = new_verifier()
-    v.update(front, JK_ON, plain, t0 + 0.1)
-    v.update(front, JK_ON, plain, t0 + 0.2)
-    s = v.update(front, JK_OFF, plain, t0 + 0.3)
-    check("정면 조끼 미확인 → 처음부터", s.state == "front" and s.progress == 0 and v.count == 0)
-    s = v.update(front, JK_NA, plain, t0 + 0.4)
+    s = v.update(front, JK_OFF, plain, t0)
+    check("정면 조끼 미확인 안내", s.state == "front" and "확인되지 않습니다" in s.message)
+    s = v.update(front, JK_NA, plain, t0 + 0.2)
     check("상체 화면 밖 → 안내", "상체가 화면에" in s.message)
+    s = v.update(between, JK_ON, plain, t0 + 0.4)
+    check("정면이 아니면 '정면을 봐 주세요'", "정면을" in s.message)
 
-    # (d) 어깨에 조끼가 없으면 정면 통과 불가 (가슴 앞에 들고 있는 경우)
-    v = new_verifier(shoulder_bad)
-    for i in range(3):
-        s = v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
-    check("어깨 검사를 켠 경우에만 정면 단계 유지", s.state == "front" and v.stage == "front" and "어깨" in s.message)
+    # (d) 어깨 검사는 기본 꺼짐 — 명시적으로 켠 경우에만 동작
     check("어깨 검사 기본 꺼짐", config.JACKET_SHOULDER_CHECK is False)
-    v = new_verifier(shoulder=None)
-    for i in range(3):
-        s = v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
-    check("어깨 검사 없이 정면 통과", s.state == "side")
+    v = new_verifier(shoulder=shoulder_bad)
+    s, t = feed(v, front, JK_ON, t0, 3.4)
+    check("어깨 검사를 켠 경우 어깨 미확인이면 정면 단계 유지", v.stage == "front" and "어깨" in s.message)
+    v = new_verifier(shoulder=shoulder_ok)
+    s, t = feed(v, front, JK_ON, t0, 3.2)
+    check("어깨 확인되면 통과", v.stage == "side")
 
-    # (e) 옆모습을 안 돌리고 시간이 지나면 실패
-    v = new_verifier()
-    for i in range(3):
-        v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
-    s = v.update(front, JK_ON, plain, t0 + 10.5)
+    # (e) 시간 제한은 기본 없음 — 지정한 경우에만 초과로 실패
+    v = TurnVerifier(user, t0, hold=HOLD, grace=GRACE, timeout=10, face_gap=1.0, side_check=side_bad)
+    feed(v, front, JK_ON, t0, 3.2)
+    s = v.update(None, None, plain, t0 + 10.5)
     check("시간 제한을 준 경우 초과 → 실패", s.state == "failed" and "시간 초과" in s.message)
-    v = TurnVerifier(user, t0, need=3, timeout=0, face_gap=1.0, shoulder_check=shoulder_ok, side_check=side_bad)
-    for i in range(3):
-        v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
-    t = t0 + 0.3
-    while t < t0 + 120.0:            # 2분 동안 0.5초마다 정면만 유지 → 실패 없이 계속 옆모습 안내
-        t += 0.5
-        s = v.update(front, JK_ON, plain, t)
+    v = new_verifier(side=side_bad)
+    feed(v, front, JK_ON, t0, 3.2)
+    s, t = feed(v, front, JK_ON, t0 + 3.4, 120.0)        # 2분 동안 정면 유지 → 실패 없이 계속 안내
     check("기본값(제한 없음)은 오래 걸려도 계속 안내",
           s.state == "side" and "돌려" in s.message and config.JACKET_TURN_TIMEOUT_SEC == 0, str(s))
 
-    # (f) 얼굴이 멀리 뛰거나 오래 사라지면 추적 종료(신원 확인부터 다시)
+    # (f) 추적 종료 조건
     v = new_verifier()
     v.update(front, JK_ON, plain, t0 + 0.1)
     s = v.update(det_at(30, 300, 100, 100, 0.5), JK_ON, plain, t0 + 0.2)
-    check("다른 위치 얼굴 → 추적 종료", s.state == "lost")
+    check("정면 단계에 다른 위치 얼굴 → 추적 종료", s.state == "lost")
     v = new_verifier()
     v.update(front, JK_ON, plain, t0 + 0.1)
     check("정면 단계에서 1초 넘게 사라짐 → 추적 종료",
           v.lost(t0 + 1.5) and v.update(front, JK_ON, plain, t0 + 1.5).state == "lost")
     v = new_verifier(side=side_bad)
-    for i in range(3):
-        v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
-    s = v.update(None, None, plain, t0 + 5.0)
+    feed(v, front, JK_ON, t0, 3.2)
+    s = v.update(None, None, plain, t0 + 8.0)
     check("옆모습 단계는 얼굴이 몇 초 안 보여도 유지", s.state == "side")
-    s = v.update(det_at(30, 300, 100, 100, 0.5), None, plain, t0 + 5.5)
+    s = v.update(det_at(30, 300, 100, 100, 0.5), None, plain, t0 + 8.5)
     check("옆모습 단계에 멀리 떨어진 얼굴 → 추적 종료", s.state == "lost")
-    v = TurnVerifier(user, t0, need=3, timeout=0, face_gap=1.0, noface_limit=15,
-                     shoulder_check=None, side_check=side_bad)
-    for i in range(3):
-        v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
-    s = v.update(None, None, plain, t0 + 16.0)
+    v = TurnVerifier(user, t0, hold=HOLD, grace=GRACE, timeout=0, face_gap=1.0, noface_limit=15,
+                     side_check=side_bad)
+    feed(v, front, JK_ON, t0, 3.2)
+    s = v.update(None, None, plain, t0 + 19.0)
     check("옆모습 단계에서 15초 넘게 얼굴 없음 → 자리 떠남으로 종료", s.state == "lost")
 
     print("\n== 3) 얼굴 인식(모듈+카메라 확인) → 승선 목록에만 추가 (시동은 잠긴 채 유지) ==")
