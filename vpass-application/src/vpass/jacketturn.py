@@ -7,7 +7,10 @@
 
   1) front — 정면 자세(YuNet 랜드마크: 코가 두 눈 사이 30~70%)에서 가슴 ROI 에
              조끼가 보인다. 통과 시점의 얼굴 박스를 '기준 위치(anchor)'로 저장한다.
-  2) side  — 기준 위치 아래 넓은 가로 띠에서 샌드위치 패턴이 나온다
+  2) side  — 기준 위치 아래 넓은 가로 띠에서 샌드위치 패턴이 나온다.
+  각 단계는 조건이 JACKET_TURN_HOLD_SEC(기본 3초) 동안 끊기지 않고 유지돼야 통과한다 —
+  잠깐 비추고 지나가는 것으로는 승선되지 않는다. JACKET_TURN_GRACE_SEC 이내의 순간
+  끊김(검출 흔들림)은 봐준다.
              (jacketvision.assess_side_profile). **이 단계는 얼굴 검출이 필요 없다** —
              옆으로 돌린 얼굴은 검출기가 자주 놓치므로, 사람이 그 자리에서 몸만
              돌린다고 보고 정면 때의 위치를 그대로 쓴다. 정면 자세에서는 조끼가 한
@@ -71,8 +74,8 @@ def same_face(prev_box, box) -> bool:
 @dataclass
 class TurnStatus:
     state: str          # "front" | "side" | "passed" | "failed" | "lost"
-    progress: int       # 현재 단계에서 모은 연속 프레임 수
-    need: int
+    progress: float     # 현재 단계에서 조건이 유지된 시간(초)
+    need: float         # 통과에 필요한 유지 시간(초)
     message: str        # 오버레이 안내(한글)
     tag: str            # 카메라 화면 주석(영문, cv2.putText 용)
     color: str = COLOR_INFO
@@ -81,12 +84,15 @@ class TurnStatus:
 class TurnVerifier:
     """한 사람에 대한 정면 → 옆모습 검증 상태기계. 카메라 스레드에서만 쓴다."""
 
-    def __init__(self, user: dict, now: float, *, need: int | None = None,
-                 timeout: float | None = None, face_gap: float | None = None,
-                 noface_limit: float | None = None, shoulder_check=None, side_check=None):
+    def __init__(self, user: dict, now: float, *, hold: float | None = None,
+                 grace: float | None = None, timeout: float | None = None,
+                 face_gap: float | None = None, noface_limit: float | None = None,
+                 shoulder_check=None, side_check=None):
         self.user = user
         self.user_id = user.get("id") or user.get("name", "")
-        self.need = max(1, need if need is not None else config.JACKET_TURN_FRAMES)
+        # 단계 통과에 필요한 조건 유지 시간과, 그 사이 허용하는 순간 끊김
+        self.hold = max(0.0, hold if hold is not None else config.JACKET_TURN_HOLD_SEC)
+        self.grace = max(0.0, grace if grace is not None else config.JACKET_TURN_GRACE_SEC)
         self.timeout = timeout if timeout is not None else config.JACKET_TURN_TIMEOUT_SEC
         self.face_gap = face_gap if face_gap is not None else config.JACKET_TURN_FACE_GAP_SEC
         self.noface_limit = (noface_limit if noface_limit is not None
@@ -96,7 +102,8 @@ class TurnVerifier:
         # (frame, anchor_box) -> 샌드위치 판정 dict; None 이면 옆모습 단계를 가슴 ROI(jacket) 로 판정
         self._side_check = side_check
         self.stage = "front"
-        self.count = 0           # 현재 단계 연속 통과 프레임
+        self.hold_since: float | None = None   # 현재 단계 조건이 이어지기 시작한 시각
+        self.last_ok: float | None = None      # 조건이 마지막으로 만족된 시각(grace 판정용)
         self.started = now
         self.side_started: float | None = None
         self.last_seen = now     # 마지막으로 얼굴이 검출된 시각
@@ -112,7 +119,7 @@ class TurnVerifier:
     def update(self, det, jacket: dict | None, frame, now: float) -> TurnStatus:
         """검출 결과 한 번을 반영한다. side 단계에서는 det 가 None 이어도 된다."""
         if self.timeout > 0 and now - self.started > self.timeout:
-            return TurnStatus("failed", self.count, self.need,
+            return TurnStatus("failed", self.held(now), self.hold,
                               "구명조끼 확인 시간 초과 · 정면을 보고 다시 인식해 주세요",
                               "TURN TIMEOUT", COLOR_DANGER)
         if self.stage == "front":
@@ -123,52 +130,55 @@ class TurnVerifier:
     def _update_front(self, det, jacket, frame, now) -> TurnStatus:
         if det is None:
             if self.lost(now):
-                return TurnStatus("lost", 0, self.need, "", "TRACK LOST", COLOR_WARN)
-            return self._status("front", "정면을 봐 주세요", "FRONT: FACE?")
+                return TurnStatus("lost", 0.0, self.hold, "", "TRACK LOST", COLOR_WARN)
+            self._miss(now)
+            return self._status("front", "정면을 봐 주세요", "FRONT: FACE?", now=now)
         if self.lost(now) or (self.last_box is not None and not same_face(self.last_box, det.box)):
-            return TurnStatus("lost", 0, self.need, "", "TRACK LOST", COLOR_WARN)
+            return TurnStatus("lost", 0.0, self.hold, "", "TRACK LOST", COLOR_WARN)
         self.last_seen = now
         self.last_box = det.box
 
         pose = pose_of(det) or "between"
         visible = None if jacket is None else jacket.get("visible")
         if pose != "front":
-            self.count = 0
-            return self._status("front", "정면을 봐 주세요", "FRONT: LOOK AHEAD")
+            self._miss(now)
+            return self._status("front", "정면을 봐 주세요", "FRONT: LOOK AHEAD", now=now)
         if visible is None:
-            self.count = 0
-            return self._status("front", "상체가 화면에 나오게 서 주세요", "FRONT: STEP BACK", COLOR_WARN)
+            self._miss(now)
+            return self._status("front", "상체가 화면에 나오게 서 주세요", "FRONT: STEP BACK",
+                                COLOR_WARN, now=now)
         if visible is not True:
-            self.count = 0
+            self._miss(now)
             return self._status("front", "구명조끼가 카메라에 확인되지 않습니다 · 착용 후 다시 인식해 주세요",
-                                "FRONT: NO JACKET", COLOR_DANGER)
+                                "FRONT: NO JACKET", COLOR_DANGER, now=now)
         if self._shoulder_check is not None:
             sh = self._shoulder_check(frame, det.box)
             if sh is not None and sh.get("visible") is False:
-                self.count = 0
+                self._miss(now)
                 return self._status("front", "어깨까지 구명조끼가 보이게 서 주세요",
-                                    "FRONT: SHOULDERS", COLOR_WARN)
-        self.count += 1
-        if self.count >= self.need:
-            self.stage, self.count = "side", 0
+                                    "FRONT: SHOULDERS", COLOR_WARN, now=now)
+        if self._hit(now):
+            self.stage = "side"
+            self.hold_since = self.last_ok = None
             self.side_started = now
             self.anchor_box = det.box
             self.front_jacket = dict(jacket)
             return self._status("side", "정면 확인 완료 · 몸을 한쪽 옆으로 돌려 주세요",
-                                "FRONT OK -> TURN SIDE")
-        return self._status("front", f"정면 확인 중 ({self.count}/{self.need}) · 그대로 계셔 주세요",
-                            f"FRONT {self.count}/{self.need}")
+                                "FRONT OK -> TURN SIDE", now=now)
+        held = self.held(now)
+        return self._status("front", f"정면 확인 중 ({held:.0f}/{self.hold:.0f}초) · 그대로 계셔 주세요",
+                            f"FRONT {held:.1f}/{self.hold:.0f}s", now=now)
 
     # ── 2) 옆모습 (얼굴 검출 불필요) ──────────────────────────────────────
     def _update_side(self, det, jacket, frame, now) -> TurnStatus:
         if det is not None:
             # 얼굴이 보이면 기준 위치와의 연속성만 확인한다 (멀리 떨어진 얼굴 = 다른 사람/이동)
             if not same_face(self.anchor_box, det.box):
-                return TurnStatus("lost", 0, self.need, "", "TRACK LOST", COLOR_WARN)
+                return TurnStatus("lost", 0.0, self.hold, "", "TRACK LOST", COLOR_WARN)
             self.last_seen = now
         elif self.noface_limit > 0 and now - self.last_seen > self.noface_limit:
             # 얼굴이 한참 안 보임 — 자리를 떠난 것으로 보고 처음부터
-            return TurnStatus("lost", 0, self.need, "", "TRACK LOST", COLOR_WARN)
+            return TurnStatus("lost", 0.0, self.hold, "", "TRACK LOST", COLOR_WARN)
 
         if self._side_check is not None:
             self.last_side = self._side_check(frame, self.anchor_box)
@@ -177,21 +187,43 @@ class TurnVerifier:
             visible = None if jacket is None else jacket.get("visible")
 
         if visible is None:
-            self.count = 0
-            return self._status("side", "상체가 화면에 나오게 서 주세요", "SIDE: STEP BACK", COLOR_WARN)
+            self._miss(now)
+            return self._status("side", "상체가 화면에 나오게 서 주세요", "SIDE: STEP BACK", COLOR_WARN, now=now)
         if visible is not True:
-            self.count = 0
+            self._miss(now)
+            if self.hold_since is not None:
+                # 유예 중(잠깐 끊김) — 유지 시간은 그대로 보여 준다
+                held = self.held(now)
+                return self._status("side", f"옆모습 확인 중 ({held:.0f}/{self.hold:.0f}초) · 그대로 계셔 주세요",
+                                    f"SIDE {held:.1f}/{self.hold:.0f}s", now=now)
             waited = now - (self.side_started or now)
             if waited >= SIDE_HINT_AFTER_SEC:
                 return self._status("side",
                                     "옆에서 구명조끼 앞판·뒤판이 함께 보여야 합니다 · 조끼를 입고 몸을 옆으로 돌려 주세요",
-                                    "TURN SIDE: NO J/B/J", COLOR_WARN)
-            return self._status("side", "몸을 한쪽 옆으로 돌려 주세요", "TURN SIDE")
-        self.count += 1
-        if self.count >= self.need:
-            return TurnStatus("passed", self.count, self.need, "옆모습 확인 완료", "SIDE OK", COLOR_OK)
-        return self._status("side", f"옆모습 확인 중 ({self.count}/{self.need}) · 그대로 계셔 주세요",
-                            f"SIDE {self.count}/{self.need}")
+                                    "TURN SIDE: NO J/B/J", COLOR_WARN, now=now)
+            return self._status("side", "몸을 한쪽 옆으로 돌려 주세요", "TURN SIDE", now=now)
+        if self._hit(now):
+            return TurnStatus("passed", self.held(now), self.hold, "옆모습 확인 완료", "SIDE OK", COLOR_OK)
+        held = self.held(now)
+        return self._status("side", f"옆모습 확인 중 ({held:.0f}/{self.hold:.0f}초) · 그대로 계셔 주세요",
+                            f"SIDE {held:.1f}/{self.hold:.0f}s", now=now)
 
-    def _status(self, state, message, tag, color=COLOR_INFO) -> TurnStatus:
-        return TurnStatus(state, self.count, self.need, message, tag, color)
+    # ── 유지 시간 관리 ───────────────────────────────────────────────────
+    def _hit(self, now: float) -> bool:
+        """조건 만족 1회. 유지 시간이 hold 를 채웠으면 True."""
+        if self.hold_since is None:
+            self.hold_since = now
+        self.last_ok = now
+        return now - self.hold_since >= self.hold
+
+    def _miss(self, now: float) -> None:
+        """조건 불만족 1회. grace 를 넘겨 끊겼으면 유지 시간을 처음부터 다시 센다."""
+        if self.hold_since is not None and (self.last_ok is None or now - self.last_ok > self.grace):
+            self.hold_since = self.last_ok = None
+
+    def held(self, now: float) -> float:
+        """현재 단계에서 조건이 유지된 시간(초)."""
+        return 0.0 if self.hold_since is None else max(0.0, now - self.hold_since)
+
+    def _status(self, state, message, tag, color=COLOR_INFO, *, now: float) -> TurnStatus:
+        return TurnStatus(state, self.held(now), self.hold, message, tag, color)

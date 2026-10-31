@@ -177,8 +177,11 @@ JACKET_ROI_MIN_VISIBLE = float(os.environ.get("VPASS_JACKET_ROI_MIN_VISIBLE", "0
 JACKET_TURN_CHECK = (
     os.environ.get("VPASS_JACKET_TURN_CHECK", "1").strip().lower() not in ("0", "false", "off")
 )
-# 단계마다 이만큼 연속 검출 프레임이 조건을 만족해야 통과
-JACKET_TURN_FRAMES = max(1, int(os.environ.get("VPASS_JACKET_TURN_FRAMES", "3")))
+# 단계마다 조건(정면+조끼 / 옆모습 샌드위치)이 이 시간(초) 동안 끊기지 않고 유지돼야 통과.
+# 잠깐 비추고 지나가는 것으로는 승선되지 않게 한다.
+JACKET_TURN_HOLD_SEC = float(os.environ.get("VPASS_JACKET_TURN_HOLD", "3"))
+# 유지 중 조건이 이 시간(초) 이내로 잠깐 끊기는 것(검출 흔들림)은 봐준다 — 넘으면 처음부터 다시 센다
+JACKET_TURN_GRACE_SEC = float(os.environ.get("VPASS_JACKET_TURN_GRACE", "0.5"))
 # 정면 시작부터 옆모습 통과까지 허용 시간(초). 0 이하면 제한 없음(기본) — 사람이
 # 화면에 있는 한 계속 안내하며 기다린다. 얼굴이 사라지면 FACE_GAP 으로만 끊긴다.
 JACKET_TURN_TIMEOUT_SEC = float(os.environ.get("VPASS_JACKET_TURN_TIMEOUT", "0"))
