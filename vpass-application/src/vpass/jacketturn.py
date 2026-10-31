@@ -6,7 +6,9 @@
 얼굴 인식이 확정된 뒤 두 단계를 차례로 통과해야 승선 처리한다.
 
   1) front — 정면 자세에서 가슴 ROI(+어깨 ROI)에 조끼가 보인다
-  2) side  — 몸을 한쪽으로 돌린 자세(어느 쪽이든)에서도 가슴 ROI 에 조끼가 보인다
+  2) side  — 몸을 한쪽으로 돌린 자세(어느 쪽이든)에서 상체가 "조끼 / 몸통 / 조끼"
+             샌드위치 모양으로 보인다(jacketvision.assess_side_profile). 입은 조끼는
+             앞판·뒤판이 몸통 양쪽에 보이지만 들고 있는 조끼는 한 덩어리뿐이다.
 
 자세는 YuNet 5점 랜드마크로 판단한다: 코끝 x 가 두 눈 사이 구간의 어디에
 있는지(0 = 한쪽 눈, 1 = 다른 쪽 눈). 정면 ≈ 0.5, 옆으로 돌리면 0 또는 1 쪽으로
@@ -75,7 +77,7 @@ class TurnVerifier:
 
     def __init__(self, user: dict, now: float, *, need: int | None = None,
                  timeout: float | None = None, face_gap: float | None = None,
-                 shoulder_check=None):
+                 shoulder_check=None, side_check=None):
         self.user = user
         self.user_id = user.get("id") or user.get("name", "")
         self.need = max(1, need if need is not None else config.JACKET_TURN_FRAMES)
@@ -83,6 +85,9 @@ class TurnVerifier:
         self.face_gap = face_gap if face_gap is not None else config.JACKET_TURN_FACE_GAP_SEC
         # (frame, face_box) -> {"visible": True|False|None, ...}; None 이면 어깨 검사 생략
         self._shoulder_check = shoulder_check
+        # (frame, face_box) -> 샌드위치 판정 dict; None 이면 옆모습도 가슴 ROI(jacket) 로 판정
+        self._side_check = side_check
+        self.last_side: dict | None = None      # 마지막 옆모습 판정(화면 표시용)
         self.stage = "front"
         self.count = 0           # 현재 단계 연속 통과 프레임
         self.fail_count = 0      # side 단계에서 '옆모습인데 조끼 없음' 연속 횟수
@@ -111,6 +116,9 @@ class TurnVerifier:
 
         if self.stage == "front":
             return self._update_front(pose, visible, jacket, det, frame)
+        if pose == "side" and self._side_check is not None:
+            self.last_side = self._side_check(frame, det.box)
+            visible = self.last_side.get("visible")
         return self._update_side(pose, visible, det)
 
     # ── 단계별 처리 ──────────────────────────────────────────────────────
@@ -152,10 +160,10 @@ class TurnVerifier:
             self.fail_count += 1
             if self.fail_count >= self.need:
                 return TurnStatus("failed", 0, self.need,
-                                  "옆에서 구명조끼가 확인되지 않습니다 · 조끼를 입고 다시 인식해 주세요",
-                                  "SIDE: NO JACKET", COLOR_DANGER)
-            return self._status("side", f"옆모습 확인 중 · 구명조끼가 보이지 않습니다 ({self.fail_count}/{self.need})",
-                                f"SIDE: NO JACKET {self.fail_count}/{self.need}", COLOR_WARN)
+                                  "옆에서 구명조끼 앞판·뒤판이 확인되지 않습니다 · 조끼를 입고 다시 인식해 주세요",
+                                  "SIDE: NO SANDWICH", COLOR_DANGER)
+            return self._status("side", f"옆모습 확인 중 · 구명조끼 앞판·뒤판이 보이지 않습니다 ({self.fail_count}/{self.need})",
+                                f"SIDE: NO SANDWICH {self.fail_count}/{self.need}", COLOR_WARN)
         self.fail_count = 0
         self.count += 1
         if self.count >= self.need:
