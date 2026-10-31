@@ -102,7 +102,7 @@ class TurnVerifier:
         return now - self.last_seen > self.face_gap
 
     def update(self, det, jacket: dict | None, frame, now: float) -> TurnStatus:
-        if now - self.started > self.timeout:
+        if self.timeout > 0 and now - self.started > self.timeout:
             return TurnStatus("failed", self.count, self.need,
                               "구명조끼 확인 시간 초과 · 정면을 보고 다시 인식해 주세요",
                               "TURN TIMEOUT", COLOR_DANGER)

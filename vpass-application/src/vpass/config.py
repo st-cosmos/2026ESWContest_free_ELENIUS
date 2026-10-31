@@ -179,8 +179,9 @@ JACKET_TURN_CHECK = (
 )
 # 단계마다 이만큼 연속 검출 프레임이 조건을 만족해야 통과
 JACKET_TURN_FRAMES = max(1, int(os.environ.get("VPASS_JACKET_TURN_FRAMES", "3")))
-# 정면 시작부터 옆모습 통과까지 허용 시간(초) — 넘기면 실패 안내 후 처음부터
-JACKET_TURN_TIMEOUT_SEC = float(os.environ.get("VPASS_JACKET_TURN_TIMEOUT", "10"))
+# 정면 시작부터 옆모습 통과까지 허용 시간(초). 0 이하면 제한 없음(기본) — 사람이
+# 화면에 있는 한 계속 안내하며 기다린다. 얼굴이 사라지면 FACE_GAP 으로만 끊긴다.
+JACKET_TURN_TIMEOUT_SEC = float(os.environ.get("VPASS_JACKET_TURN_TIMEOUT", "0"))
 # 옆모습 판정: 코 위치 비율이 이 값 이하(또는 1-값 이상)면 옆으로 돌린 것으로 봄
 # (정면은 FACE_ENROLL_YAW_MIN~MAX = 0.3~0.7, 그 사이는 '돌리는 중')
 JACKET_TURN_SIDE_YAW = float(os.environ.get("VPASS_JACKET_TURN_SIDE_YAW", "0.22"))

@@ -261,7 +261,16 @@ def main():
     for i in range(3):
         v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
     s = v.update(front, JK_ON, plain, t0 + 10.5)
-    check("시간 초과 → 실패", s.state == "failed" and "시간 초과" in s.message)
+    check("시간 제한을 준 경우 초과 → 실패", s.state == "failed" and "시간 초과" in s.message)
+    v = TurnVerifier(user, t0, need=3, timeout=0, face_gap=1.0, shoulder_check=shoulder_ok, side_check=side_ok)
+    for i in range(3):
+        v.update(front, JK_ON, plain, t0 + 0.1 * (i + 1))
+    t = t0 + 0.3
+    while t < t0 + 120.0:            # 2분 동안 0.5초마다 정면만 유지 → 실패 없이 계속 옆모습 안내
+        t += 0.5
+        s = v.update(front, JK_ON, plain, t)
+    check("기본값(제한 없음)은 오래 걸려도 계속 안내",
+          s.state == "side" and "돌려" in s.message and config.JACKET_TURN_TIMEOUT_SEC == 0, str(s))
 
     # (f) 얼굴이 멀리 뛰거나 오래 사라지면 추적 종료(신원 확인부터 다시)
     v = new_verifier()

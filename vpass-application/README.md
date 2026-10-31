@@ -88,7 +88,7 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_JACKET_MIN_RATIO` | `0.4` | (hsv 폴백) 상체 ROI 구명조끼 색 픽셀 비율 판정 기준 |
 | `VPASS_JACKET_TURN_CHECK` | `1` | 승선 시 정면→옆모습 자세 검증(들고 있는 조끼 걸러내기) 사용 여부 (`0` 비활성) |
 | `VPASS_JACKET_TURN_FRAMES` | `3` | 자세 단계마다 필요한 연속 검출 프레임 수 |
-| `VPASS_JACKET_TURN_TIMEOUT` | `10` | 정면 시작부터 옆모습 통과까지 허용 시간(초) |
+| `VPASS_JACKET_TURN_TIMEOUT` | `0` | 정면 시작부터 옆모습 통과까지 허용 시간(초), `0` 이면 제한 없음 |
 | `VPASS_JACKET_TURN_SIDE_YAW` | `0.22` | 옆모습 판정 코 위치 비율(이 값 이하 또는 1-값 이상) |
 | `VPASS_JACKET_SHOULDER_CHECK` | `1` | 정면 단계에서 어깨 좌우 패치에도 조끼 색이 보여야 통과 (`0` 비활성) |
 | `VPASS_JACKET_SHOULDER_MIN_RATIO` | `0.2` | 어깨 패치 조끼 색 픽셀 비율 판정 기준 |
@@ -305,7 +305,9 @@ uv run python tools/face_eval.py                                   # SFace vs LB
 
 - 신원은 정면에서 한 번만 확인합니다. 돌리는 동안은 얼굴 박스 연속성(위치·크기,
   1초 이내 재검출)으로 같은 사람임을 유지하므로 **옆얼굴 등록은 필요 없습니다**.
-- 10초 안에 못 마치면 시간 초과로 실패하고 2초 뒤 처음부터 다시 시작합니다.
+- 시간 제한은 기본적으로 없습니다. 사람이 화면에 있는 한 계속 안내하며 기다리고,
+  얼굴이 1초 넘게 사라지면 추적을 끊고 신원 확인부터 다시 합니다. 제한을 두려면
+  `VPASS_JACKET_TURN_TIMEOUT` 에 초를 지정합니다(초과 시 실패 안내 후 2초 뒤 재시작).
 - 진행 상황은 출항 화면 오버레이("정면 확인 중 2/3", "몸을 한쪽 옆으로 돌려 주세요")와
   카메라 주석(`FRONT 2/3`, `TURN SIDE`, `SIDE OK`)으로 표시됩니다.
 - 자세는 YuNet 랜드마크로 판단하므로 SFace 모델이 없어 LBPH 로 폴백한 환경에서는
