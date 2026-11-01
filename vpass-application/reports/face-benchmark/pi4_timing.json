@@ -1,0 +1,6 @@
+{
+ "device": "Raspberry Pi 4 Model B Rev 1.4",
+ "measured_at": "2026-11-01 17:04 KST",
+ "note": "tools/face_benchmark.py --timing-only, 640x480 프레임 60장, V-PASS 앱 동작 중(load avg 2.4)",
+ "timing": {"lbph": {"ms_median": 22.3, "ms_p90": 28.9, "frames": 60}, "sface": {"ms_median": 167.1, "ms_p90": 223.5, "frames": 60}}
+}
