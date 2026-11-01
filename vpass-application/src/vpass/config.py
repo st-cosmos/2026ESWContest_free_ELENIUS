@@ -96,8 +96,12 @@ FACE_REC_MODEL_PATH = Path(
 )
 FACE_DET_SCORE_THRESHOLD = 0.8  # YuNet 검출 점수 하한
 FACE_MIN_SIZE_PX = 80           # 스캔 시 이보다 작은 얼굴은 무시(멀리 있는 사람)
-# SFace 코사인 유사도 판정: 임계값(OpenCV 권장 0.363) + 2등과의 마진
-FACE_SFACE_THRESHOLD = float(os.environ.get("VPASS_FACE_THRESHOLD", "0.363"))
+# SFace 코사인 유사도 판정: 임계값 + 2등과의 마진.
+# OpenCV 권장값 0.363 은 승선 게이트 모의(LFW, 선원 10명·미등록자 50명)에서 미등록자 사진
+# 한 장 오수락 3.3%, 5회 중 3회 투표 후에도 1.0% 가 남았다. 0.40 은 본인 수락 99.3% 를 유지하고
+# 설치 카메라 본인 인식 97.5→97.2% 로 거의 그대로이면서 오수락 0.8%, 투표 후 0% 였다
+# (tools/face_benchmark.py, reports/face-benchmark/).
+FACE_SFACE_THRESHOLD = float(os.environ.get("VPASS_FACE_THRESHOLD", "0.40"))
 FACE_SFACE_MARGIN = float(os.environ.get("VPASS_FACE_MARGIN", "0.08"))
 # 시간 투표: 최근 FACE_VOTE_WINDOW 회(FACE_VOTE_SECONDS 초 이내) 중 FACE_VOTE_NEED 회 일치 시 확정
 FACE_VOTE_WINDOW = max(1, int(os.environ.get("VPASS_FACE_VOTE_WINDOW", "5")))
