@@ -8,9 +8,12 @@
   1) front — 정면 자세(YuNet 랜드마크: 코가 두 눈 사이 30~70%)에서 가슴 ROI 에
              조끼가 보인다. 통과 시점의 얼굴 박스를 '기준 위치(anchor)'로 저장한다.
   2) side  — 기준 위치 아래 넓은 가로 띠에서 샌드위치 패턴이 나온다.
-  각 단계는 조건이 JACKET_TURN_HOLD_SEC(기본 3초) 동안 끊기지 않고 유지돼야 통과한다 —
-  잠깐 비추고 지나가는 것으로는 승선되지 않는다. JACKET_TURN_GRACE_SEC 이내의 순간
-  끊김(검출 흔들림)은 봐준다.
+  각 단계는 조건이 JACKET_TURN_HOLD_SEC(기본 3초) 동안 이어져야 통과한다 — 잠깐 비추고
+  지나가는 것으로는 승선되지 않는다. JACKET_TURN_GRACE_SEC 이내의 순간 끊김은 유지 시간을
+  초기화하지 않지만, 그 사이의 미착용 판정도 기록해 최근 HOLD 초 판정 중
+  JACKET_TURN_HOLD_MIN_RATIO(기본 80%) 이상이 착용이어야 통과한다(얼굴을 놓쳐 판정이 없는
+  순간은 비율에 넣지 않는다). 옆모습 단계는 JACKET_TURN_SIDE_TIMEOUT_SEC(기본 20초) 안에
+  통과하지 못하면 실패로 처리하고 처음부터 다시 한다.
              (jacketvision.assess_side_profile). **이 단계는 얼굴 검출이 필요 없다** —
              옆으로 돌린 얼굴은 검출기가 자주 놓치므로, 사람이 그 자리에서 몸만
              돌린다고 보고 마지막으로 보인 얼굴 위치(없으면 정면 때 위치)를 쓴다. 다만 조끼 정면도 지퍼 쪽 안감이
@@ -90,6 +93,7 @@ class TurnVerifier:
     def __init__(self, user: dict, now: float, *, hold: float | None = None,
                  grace: float | None = None, timeout: float | None = None,
                  face_gap: float | None = None, noface_limit: float | None = None,
+                 min_ratio: float | None = None, side_timeout: float | None = None,
                  shoulder_check=None, side_check=None):
         self.user = user
         self.user_id = user.get("id") or user.get("name", "")
@@ -100,6 +104,10 @@ class TurnVerifier:
         self.face_gap = face_gap if face_gap is not None else config.JACKET_TURN_FACE_GAP_SEC
         self.noface_limit = (noface_limit if noface_limit is not None
                              else config.JACKET_TURN_NOFACE_SEC)
+        self.min_ratio = (min_ratio if min_ratio is not None
+                          else config.JACKET_TURN_HOLD_MIN_RATIO)
+        self.side_timeout = (side_timeout if side_timeout is not None
+                             else config.JACKET_TURN_SIDE_TIMEOUT_SEC)
         # (frame, face_box) -> {"visible": True|False|None, ...}; None 이면 어깨 검사 생략(기본)
         self._shoulder_check = shoulder_check
         # (frame, face_box) -> 옆모습 판정 dict; None 이면 옆모습 단계를 가슴 ROI(jacket) 로 판정
@@ -107,6 +115,7 @@ class TurnVerifier:
         self.stage = "front"
         self.hold_since: float | None = None   # 현재 단계 조건이 이어지기 시작한 시각
         self.last_ok: float | None = None      # 조건이 마지막으로 만족된 시각(grace 판정용)
+        self.judgments: list[tuple[float, bool]] = []  # 현재 유지 구간의 판정 (시각, 착용 여부)
         self.started = now
         self.side_started: float | None = None
         self.last_seen = now     # 마지막으로 얼굴이 검출된 시각
@@ -135,7 +144,7 @@ class TurnVerifier:
         if det is None:
             if self.lost(now):
                 return TurnStatus("lost", 0.0, self.hold, "", "TRACK LOST", COLOR_WARN)
-            self._miss(now)
+            self._miss(now, judged=False)
             return self._status("front", "정면을 봐 주세요", "FRONT: FACE?", now=now)
         if self.lost(now) or (self.last_box is not None and not same_face(self.last_box, det.box)):
             return TurnStatus("lost", 0.0, self.hold, "", "TRACK LOST", COLOR_WARN)
@@ -148,7 +157,7 @@ class TurnVerifier:
             self._miss(now)
             return self._status("front", "정면을 봐 주세요", "FRONT: LOOK AHEAD", now=now)
         if visible is None:
-            self._miss(now)
+            self._miss(now, judged=False)
             return self._status("front", "상체가 화면에 나오게 서 주세요", "FRONT: STEP BACK",
                                 COLOR_WARN, now=now)
         if visible is not True:
@@ -163,7 +172,7 @@ class TurnVerifier:
                                     "FRONT: SHOULDERS", COLOR_WARN, now=now)
         if self._hit(now):
             self.stage = "side"
-            self.hold_since = self.last_ok = None
+            self._reset_hold()
             self.side_started = now
             self.anchor_box = det.box
             self.side_box = det.box
@@ -176,6 +185,10 @@ class TurnVerifier:
 
     # ── 2) 옆모습 (얼굴 검출 불필요) ──────────────────────────────────────
     def _update_side(self, det, jacket, frame, now) -> TurnStatus:
+        if self.side_timeout > 0 and now - (self.side_started or now) > self.side_timeout:
+            return TurnStatus("failed", self.held(now), self.hold,
+                              "옆모습 확인 시간 초과 · 구명조끼를 입고 정면부터 다시 해 주세요",
+                              "SIDE TIMEOUT", COLOR_DANGER)
         if det is not None:
             # 얼굴이 보이면 기준 위치와의 연속성만 확인한다 (멀리 떨어진 얼굴 = 다른 사람/이동)
             ref = self.side_box or self.anchor_box
@@ -198,12 +211,12 @@ class TurnVerifier:
             # 얼굴이 정면이면 몸을 돌리지 않은 것이다. 조끼 정면도 지퍼 쪽 안감 때문에
             # '조끼/안감/조끼' 로 보여 샌드위치가 나오므로(들고 있는 조끼 포함), 정면 얼굴이
             # 보이는 동안은 유지 시간을 쌓지 않고 grace 없이 바로 처음부터 다시 센다.
-            self.hold_since = self.last_ok = None
+            self._reset_hold()
             return self._status("side", "정면이 아니라 몸을 한쪽 옆으로 돌려 주세요",
                                 "SIDE: FACING FRONT", COLOR_WARN, now=now)
 
         if visible is None:
-            self._miss(now)
+            self._miss(now, judged=False)
             return self._status("side", "상체가 화면에 나오게 서 주세요", "SIDE: STEP BACK", COLOR_WARN, now=now)
         if visible is not True:
             self._miss(now)
@@ -226,16 +239,35 @@ class TurnVerifier:
 
     # ── 유지 시간 관리 ───────────────────────────────────────────────────
     def _hit(self, now: float) -> bool:
-        """조건 만족 1회. 유지 시간이 hold 를 채웠으면 True."""
+        """조건 만족 1회. 유지 시간이 hold 를 채우고 최근 hold 초 판정의 착용 비율이
+        min_ratio 이상이면 True."""
         if self.hold_since is None:
             self.hold_since = now
         self.last_ok = now
-        return now - self.hold_since >= self.hold
+        self.judgments.append((now, True))
+        return now - self.hold_since >= self.hold and self.hit_ratio(now) >= self.min_ratio
 
-    def _miss(self, now: float) -> None:
-        """조건 불만족 1회. grace 를 넘겨 끊겼으면 유지 시간을 처음부터 다시 센다."""
-        if self.hold_since is not None and (self.last_ok is None or now - self.last_ok > self.grace):
-            self.hold_since = self.last_ok = None
+    def _miss(self, now: float, judged: bool = True) -> None:
+        """조건 불만족 1회. judged=True 면 미착용 '판정' 으로 기록해 착용 비율에 넣는다
+        (얼굴을 놓쳤거나 상체가 화면 밖이라 판단을 못 한 경우는 judged=False).
+        grace 를 넘겨 끊겼으면 유지 시간을 처음부터 다시 센다."""
+        if self.hold_since is None:
+            return
+        if self.last_ok is None or now - self.last_ok > self.grace:
+            self._reset_hold()
+        elif judged:
+            self.judgments.append((now, False))
+
+    def _reset_hold(self) -> None:
+        self.hold_since = self.last_ok = None
+        self.judgments = []
+
+    def hit_ratio(self, now: float) -> float:
+        """최근 hold 초(유지 구간 안) 판정 중 착용 비율. 판정이 없으면 0."""
+        since = max(self.hold_since or now, now - self.hold)
+        recent = [ok for t, ok in self.judgments if t >= since - 1e-9]
+        self.judgments = [(t, ok) for t, ok in self.judgments if t >= now - self.hold - 1.0]
+        return sum(recent) / len(recent) if recent else 0.0
 
     def held(self, now: float) -> float:
         """현재 단계에서 조건이 유지된 시간(초)."""

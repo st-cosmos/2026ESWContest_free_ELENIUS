@@ -351,11 +351,51 @@ def main():
     feed(v, front, JK_ON, t0, 3.2)
     s = v.update(None, None, plain, t0 + 10.5)
     check("시간 제한을 준 경우 초과 → 실패", s.state == "failed" and "시간 초과" in s.message)
+    v = new_verifier()
+    s, t = feed(v, front, JK_OFF, t0, 120.0)             # 2분 동안 정면에서 조끼 미확인
+    check("전체 제한 없음(기본): 정면 단계는 오래 걸려도 계속 안내",
+          s.state == "front" and config.JACKET_TURN_TIMEOUT_SEC == 0, str(s))
+
+    # (e-2) 옆모습 단계는 기본 20초 제한 — 넘으면 실패로 처리하고 처음부터
+    check("옆모습 제한 시간 기본 20초", config.JACKET_TURN_SIDE_TIMEOUT_SEC == 20)
     v = new_verifier(side=side_bad)
     feed(v, front, JK_ON, t0, 3.2)
-    s, t = feed(v, front, JK_ON, t0 + 3.4, 120.0)        # 2분 동안 정면 유지 → 실패 없이 계속 안내
-    check("기본값(제한 없음)은 오래 걸려도 계속 안내",
-          s.state == "side" and "돌려" in s.message and config.JACKET_TURN_TIMEOUT_SEC == 0, str(s))
+    s, t = feed(v, side_r, JK_ON, t0 + 3.4, 19.0)
+    check("옆모습 19초까지는 계속 안내", s.state == "side", str(s))
+    s, t = feed(v, side_r, JK_ON, t, 2.0)
+    check("옆모습 20초 넘으면 실패(처음부터)", s.state == "failed" and s.tag == "SIDE TIMEOUT", str(s))
+    v = TurnVerifier(user, t0, hold=HOLD, grace=GRACE, timeout=0, face_gap=1.0, side_timeout=0,
+                     side_check=side_bad)
+    feed(v, front, JK_ON, t0, 3.2)
+    s, t = feed(v, side_r, JK_ON, t0 + 3.4, 60.0)
+    check("옆모습 제한 0 이면 계속 안내", s.state == "side", str(s))
+
+    # (e-3) 착용/미착용이 번갈아 나오는 애매한 판정은 grace 안이어도 통과하지 못한다
+    v = new_verifier()
+    t = t0
+    for k in range(40):                                  # 0.2초 간격으로 8초 동안 번갈아
+        s = v.update(front, JK_ON if k % 2 == 0 else JK_OFF, plain, t)
+        t += STEP
+    check("번갈아 나오는 정면 판정(50%) → 통과 안 됨", v.stage == "front" and s.state == "front", str(s))
+    v = new_verifier(side=None)
+    feed(v, front, JK_ON, t0, 3.2)
+    t = t0 + 3.4
+    for k in range(40):
+        s = v.update(None, JK_ON if k % 2 == 0 else JK_OFF, plain, t)
+        t += STEP
+    check("번갈아 나오는 옆모습 판정(50%) → 통과 안 됨", s.state == "side", str(s))
+    v = new_verifier()
+    t = t0
+    for k in range(25):                                  # 다섯 번에 한 번만 미착용(80%) → 통과
+        s = v.update(front, JK_OFF if k % 5 == 4 else JK_ON, plain, t)
+        t += STEP
+    check("가끔 한 번 미착용(80% 착용) → 통과", v.stage == "side", str(s))
+    v = new_verifier()
+    t = t0
+    for k in range(20):                                  # 얼굴을 자주 놓쳐도(판정 없음) 착용만 나오면 통과
+        s = v.update(front if k % 3 else None, JK_ON, plain, t)
+        t += STEP
+    check("얼굴을 잠깐씩 놓치는 건 비율에 안 넣음 → 통과", v.stage == "side", str(s))
 
     # (f) 추적 종료 조건
     v = new_verifier()
