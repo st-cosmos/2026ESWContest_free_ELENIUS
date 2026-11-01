@@ -83,7 +83,7 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_JACKET_METHOD` | `auto` | 판정 방법 — `auto`(모델 있으면 ml)/`ml`/`hsv` |
 | `VPASS_JACKET_MODEL` | `models/jacket_classifier.tflite` | 가슴 ROI 이진 분류 TFLite 모델 경로 |
 | `VPASS_JACKET_ML_THRESHOLD` | `0.5` | ML 착용 확률 판정 기준 |
-| `VPASS_JACKET_CAPTURE` | `0` | `1` 이면 스캔 중 가슴 ROI 크롭을 학습 데이터로 저장 |
+| `VPASS_JACKET_CAPTURE` | `0` | `1` 이면 스캔 중 가슴 ROI 크롭과 카메라 원본 프레임(`data/jacket_dataset/frames/`, 모듈 신호 불필요)을 학습 데이터로 저장 |
 | `VPASS_JACKET_COLORS` | `orange,lime,red` | (hsv 폴백) 색상 프리셋(`orange`/`red`/`yellow`/`lime`, 쉼표 구분) |
 | `VPASS_JACKET_MIN_RATIO` | `0.4` | (hsv 폴백) 상체 ROI 구명조끼 색 픽셀 비율 판정 기준 |
 | `VPASS_JACKET_TURN_CHECK` | `1` | 승선 시 정면→옆모습 자세 검증(들고 있는 조끼 걸러내기) 사용 여부 (`0` 비활성) |
@@ -335,7 +335,7 @@ uv run python tools/face_eval.py                                   # SFace vs LB
    (클래스당 200장 이상 권장, 파일명의 점수는 참고용)
 3. **학습 (PC)** — `pip install "tensorflow>=2.16"` 후
    `python tools/train_jacket_classifier.py --data data/jacket_dataset`
-   → `models/jacket_classifier.tflite` 생성 (MobileNetV3-Small 전이학습, int8 양자화)
+   → `models/jacket_classifier.tflite` 생성 (MobileNetV3-Small 전이학습, dynamic-range 양자화)
 4. **배포 (라즈베리파이)** — 모델 파일을 같은 경로에 복사하고 `uv sync --extra ml`
    로 tflite 런타임을 설치. 앱 시작 로그에 `[jacketvision] TFLite 모델 로드` 확인.
 

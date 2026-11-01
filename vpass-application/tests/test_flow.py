@@ -171,28 +171,51 @@ def main():
     third = bw0 // 3
     sw_ok[by0:by0 + bh0, bx0:bx0 + third] = (0, 128, 255)                 # 앞판(주황)
     sw_ok[by0:by0 + bh0, bx0 + 2 * third:bx0 + bw0] = (0, 128, 255)       # 뒤판(주황), 가운데는 몸통(회색)
-    sp = jacketvision.assess_side_profile(sw_ok, FB)
+    sp = jacketvision.assess_side_sandwich(sw_ok, FB)
     check("조끼/몸통/조끼 → 착용", sp["visible"] is True and sp["sandwich"] is not None, str(sp))
     check("구간 3개(조끼·몸통·조끼)",
           [f for _, _, f in sp["segments"]] == [True, False, True], str(sp["segments"]))
     one_side = plain.copy()
     one_side[by0:by0 + bh0, bx0:bx0 + bw0 // 2] = (0, 128, 255)          # 앞쪽 한 덩어리만(들고 있음)
     check("조끼 한 덩어리만 → 미착용",
-          jacketvision.assess_side_profile(one_side, FB)["visible"] is False)
+          jacketvision.assess_side_sandwich(one_side, FB)["visible"] is False)
     full = plain.copy()
     full[by0:by0 + bh0, bx0:bx0 + bw0] = (0, 128, 255)                    # 띠 전체 주황(가운데 몸통 없음)
-    check("몸통 구간 없음 → 미착용", jacketvision.assess_side_profile(full, FB)["visible"] is False)
-    check("무채색 → 미착용", jacketvision.assess_side_profile(plain, FB)["visible"] is False)
+    check("몸통 구간 없음 → 미착용", jacketvision.assess_side_sandwich(full, FB)["visible"] is False)
+    check("무채색 → 미착용", jacketvision.assess_side_sandwich(plain, FB)["visible"] is False)
     noisy = sw_ok.copy()
     mid = bx0 + bw0 // 2
     noisy[by0:by0 + bh0, mid:mid + 3] = (0, 128, 255)                     # 몸통 가운데 3px 잡음
-    check("몸통 속 잡음 열은 무시", jacketvision.assess_side_profile(noisy, FB)["visible"] is True)
+    check("몸통 속 잡음 열은 무시", jacketvision.assess_side_sandwich(noisy, FB)["visible"] is True)
     check("띠 화면 밖 → 판단 불가",
-          jacketvision.assess_side_profile(plain, (270, 420, 100, 100))["visible"] is None)
+          jacketvision.assess_side_sandwich(plain, (270, 420, 100, 100))["visible"] is None)
     # 구간 분할/샌드위치 탐색 단위 검사
     segs = jacketvision.column_segments([0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0], 0.5, min_run=2)
     check("열 구간 분할", segs == [(0, 2, False), (2, 5, True), (5, 7, False), (7, 10, True), (10, 11, False)], str(segs))
     check("샌드위치 탐색", jacketvision.find_sandwich(segs, 2, 2) == ((2, 5), (5, 7), (7, 10)))
+
+    # 옆모습 분류 모델이 있으면 색 규칙 대신 모델 점수로 판정한다
+    class _StubSide:
+        def __init__(self, score):
+            self.score = score
+
+        def predict(self, roi):
+            return self.score
+
+    saved = (jacketvision._SIDE_CLASSIFIER, jacketvision._SIDE_CLASSIFIER_LOADED)
+    try:
+        jacketvision._SIDE_CLASSIFIER_LOADED = True
+        jacketvision._SIDE_CLASSIFIER = _StubSide(0.8)
+        r = jacketvision.assess_side_profile(plain, FB)
+        check("옆모습 모델 있으면 모델로 판정(착용)", r["method"] == "ml" and r["visible"] is True, str(r))
+        jacketvision._SIDE_CLASSIFIER = _StubSide(0.2)
+        r = jacketvision.assess_side_profile(sw_ok, FB)
+        check("옆모습 모델이 미착용이면 샌드위치가 있어도 미착용", r["visible"] is False, str(r))
+        jacketvision._SIDE_CLASSIFIER = None
+        check("옆모습 모델 없으면 색 규칙으로 폴백",
+              jacketvision.assess_side_profile(sw_ok, FB)["method"] == "sandwich")
+    finally:
+        jacketvision._SIDE_CLASSIFIER, jacketvision._SIDE_CLASSIFIER_LOADED = saved
     check("조끼 구간 하나면 없음", jacketvision.find_sandwich([(0, 5, True), (5, 9, False)], 2, 2) is None)
 
     JK_ON = {"visible": True, "ratio": 0.6, "box": (225, 205, 190, 165), "method": "hsv"}
@@ -264,6 +287,46 @@ def main():
     check("샌드위치 없으면 통과하지 않음", s.state == "side" and s.progress == 0.0, str(s))
     check("오래 안 나오면 '조끼를 입었는지' 안내로 전환", "앞판" in s.message, s.message)
     check("마지막 옆모습 판정 보관(화면 표시용)", v.last_side is not None and v.last_side["visible"] is False)
+
+    # (b-2) 치팅: 조끼를 들고 정면으로 서 있음 — 조끼 정면도 지퍼 쪽 안감 때문에 옆띠에
+    #       샌드위치가 나온다. 얼굴이 정면이면 몸을 돌리지 않은 것이므로 통과하지 않아야 한다.
+    v = new_verifier(side=side_ok)
+    feed(v, front, JK_ON, t0, 3.2)
+    s, t = feed(v, front, JK_ON, t0 + 3.4, 8.0)
+    check("옆모습 단계에서 정면 얼굴이면 샌드위치가 나와도 통과 안 됨",
+          s.state == "side" and s.progress == 0.0 and s.tag == "SIDE: FACING FRONT", str(s))
+    check("정면 얼굴이면 '옆으로 돌려' 안내", "돌려" in s.message, s.message)
+    s, t = feed(v, side_r, JK_ON, t, 1.0)
+    check("옆 얼굴로 돌리면 유지 시간 쌓임", s.state == "side" and 0.9 <= s.progress <= 1.1, str(s))
+    s = v.update(front, JK_ON, plain, t)
+    check("잠깐이라도 정면 얼굴이면 유지 시간 즉시 초기화(grace 없음)", s.progress == 0.0, str(s))
+    s, t = feed(v, None, None, t + 0.2, 3.2)
+    check("다시 돌려 3초 유지 → 통과", s.state == "passed", str(s))
+
+    # (b-3) 옆모습 띠는 지금 보이는 얼굴 위치를 따라간다 (돌면서 화면 안에서 움직임)
+    seen_boxes = []
+
+    def side_record(frame, box):
+        seen_boxes.append(box)
+        return {"visible": False, "box": (0, 0, 10, 10), "segments": []}
+
+    v = new_verifier(side=side_record)
+    feed(v, front, JK_ON, t0, 3.2)
+    moved = det_at(FB[0] + 40, FB[1], FB[2], FB[3], 0.95)   # 옆 얼굴, 오른쪽으로 40px 이동
+    v.update(moved, JK_ON, plain, t0 + 3.4)
+    check("옆모습 띠가 지금 보이는 얼굴 위치를 따라감", seen_boxes[-1] == moved.box, str(seen_boxes[-1]))
+    v.update(None, None, plain, t0 + 3.6)
+    check("얼굴이 안 보이면 마지막으로 보인 위치 유지", seen_boxes[-1] == moved.box, str(seen_boxes[-1]))
+
+    # (b-4) 몸을 돌리면서 얼굴이 얼굴폭만큼 옆으로 움직여도 추적을 유지한다
+    v = new_verifier(side=side_bad)
+    feed(v, front, JK_ON, t0, 3.2)
+    shifted = det_at(FB[0] + int(FB[2] * 1.1), FB[1], FB[2], FB[3], 0.95)
+    s = v.update(shifted, JK_ON, plain, t0 + 3.4)
+    check("옆모습 단계: 얼굴폭 1.1배 이동은 같은 사람", s.state == "side", str(s))
+    far = det_at(shifted.box[0] + int(FB[2] * 1.8), FB[1], FB[2], FB[3], 0.95)
+    s = v.update(far, JK_ON, plain, t0 + 3.6)
+    check("옆모습 단계: 얼굴폭 1.8배 이동은 추적 종료", s.state == "lost", str(s))
 
     # (c) 정면에서 조끼가 안 보이거나 상체가 화면 밖이면 안내
     v = new_verifier()
