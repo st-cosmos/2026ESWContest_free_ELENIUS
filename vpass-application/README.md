@@ -83,12 +83,17 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_JACKET_METHOD` | `auto` | 판정 방법 — `auto`(모델 있으면 ml)/`ml`/`hsv` |
 | `VPASS_JACKET_MODEL` | `models/jacket_classifier.tflite` | 가슴 ROI 이진 분류 TFLite 모델 경로 |
 | `VPASS_JACKET_ML_THRESHOLD` | `0.5` | ML 착용 확률 판정 기준 |
+| `VPASS_JACKET_SIDE_MODEL` | `models/jacket_side_classifier.tflite` | 옆모습 띠 이진 분류 TFLite 모델 경로(없으면 색 규칙 폴백) |
+| `VPASS_JACKET_SIDE_ML_THRESHOLD` | `0.5` | 옆모습 모델 착용 확률 판정 기준 |
 | `VPASS_JACKET_CAPTURE` | `0` | `1` 이면 스캔 중 가슴 ROI 크롭과 카메라 원본 프레임(`data/jacket_dataset/frames/`, 모듈 신호 불필요)을 학습 데이터로 저장 |
 | `VPASS_JACKET_COLORS` | `orange,lime,red` | (hsv 폴백) 색상 프리셋(`orange`/`red`/`yellow`/`lime`, 쉼표 구분) |
 | `VPASS_JACKET_MIN_RATIO` | `0.4` | (hsv 폴백) 상체 ROI 구명조끼 색 픽셀 비율 판정 기준 |
 | `VPASS_JACKET_TURN_CHECK` | `1` | 승선 시 정면→옆모습 자세 검증(들고 있는 조끼 걸러내기) 사용 여부 (`0` 비활성) |
 | `VPASS_JACKET_TURN_HOLD` | `3` | 자세 단계마다 조건이 유지돼야 하는 시간(초) |
-| `VPASS_JACKET_TURN_GRACE` | `0.5` | 유지 중 봐주는 순간 끊김 한도(초) |
+| `VPASS_JACKET_TURN_GRACE` | `0.5` | 유지 시간을 초기화하지 않는 순간 끊김 한도(초) |
+| `VPASS_JACKET_TURN_HOLD_MIN_RATIO` | `0.8` | 통과에 필요한 최근 유지 시간 동안의 착용 판정 비율 |
+| `VPASS_JACKET_TURN_SIDE_TIMEOUT` | `20` | 옆모습 단계 제한 시간(초), 넘으면 처음부터 (`0` 이면 제한 없음) |
+| `VPASS_JACKET_TURN_SIDE_MOVE` | `1.5` | 옆모습 단계에서 같은 사람으로 보는 얼굴 이동 범위(얼굴폭 배수) |
 | `VPASS_JACKET_TURN_TIMEOUT` | `0` | 정면 시작부터 옆모습 통과까지 허용 시간(초), `0` 이면 제한 없음 |
 | `VPASS_JACKET_TURN_SIDE_YAW` | `0.22` | 옆모습 판정 코 위치 비율(이 값 이하 또는 1-값 이상) |
 | `VPASS_JACKET_TURN_NOFACE` | `15` | 옆모습 단계에서 얼굴이 이 시간(초) 넘게 안 보이면 처음부터 (`0` 이면 끊지 않음) |
@@ -296,35 +301,37 @@ uv run python tools/face_eval.py                                   # SFace vs LB
    보여야 합니다. 이 상태가 **3초 동안 유지**되면(`VPASS_JACKET_TURN_HOLD`) 그때의
    얼굴 위치를 기준점으로 저장하고 다음 단계로 갑니다. (`VPASS_JACKET_SHOULDER_CHECK=1` 이면 어깨 좌우 패치의 조끼
    색도 요구하지만, 구도에 따라 오탐이 잦아 기본은 꺼져 있습니다.)
-2. **옆모습** — 몸을 **한쪽으로**(어느 쪽이든) 돌립니다. 이 단계는 **얼굴 검출이
-   필요 없습니다**: 옆얼굴은 검출기가 자주 놓치므로, 정면 때 저장한 기준점 아래의
-   넓은 가로 띠(얼굴 중심 ±1.6 얼굴폭)만 봅니다. 옆으로 돌린 상체는 **조끼(앞판) /
-   몸통·팔 / 조끼(뒤판)** 샌드위치 모양이므로, 띠를 열 단위로 훑어 조끼 색 열 비율
-   ≥ 30% 인 구간을 찾고 **조끼–비조끼–조끼** 순서(각 구간 최소 폭 0.15/0.12 얼굴폭)가
-   나오면 착용으로 판정합니다(`assess_side_profile`). 정면 자세에서는 조끼가 한 덩어리로
-   보여 이 패턴이 나오지 않으므로 '돌렸는지' 를 따로 판단하지 않습니다. 들고 있는
-   조끼도 앞쪽 한 덩어리만 보여 통과하지 못하며, 6초 넘게 패턴이 안 나오면 "앞판·뒤판이
-   함께 보여야 합니다 · 조끼를 입고 몸을 옆으로 돌려 주세요" 로 안내가 바뀝니다(실패로
-   끝내지는 않음). 패턴이 **3초 동안 유지**되면 승선 처리(`jacket_turn=true` 로 기록). 카메라
-   화면에 띠 박스와 열 구간 막대(주황=조끼, 회색=몸통)가 그려져 판정 근거를 볼 수 있습니다.
-   두 단계 모두 0.5초 이내의 순간 끊김(`VPASS_JACKET_TURN_GRACE`)은 봐주고, 그보다 길게
-   끊기면 그 단계의 유지 시간을 처음부터 다시 셉니다.
+2. **옆모습** — 몸을 **한쪽으로**(어느 쪽이든) 돌립니다. 얼굴 아래 넓은 가로 띠(얼굴 중심
+   ±1.6 얼굴폭)를 옆모습 분류 모델(`models/jacket_side_classifier.tflite`)로 판정해 착용 확률
+   ≥ `VPASS_JACKET_SIDE_ML_THRESHOLD` 이면 착용으로 봅니다(`assess_side_profile`). 모델이 없으면
+   색 규칙(**조끼–비조끼–조끼** 열 패턴, `assess_side_sandwich`)으로 폴백하지만, 실제 구도에서는
+   입은 옆모습도 대부분 놓치고 조끼 정면(지퍼 쪽 안감)도 패턴으로 보이므로 모델 사용을 권장합니다.
+   - 이 단계는 얼굴 검출이 없어도 진행합니다(옆얼굴은 검출기가 자주 놓침). 띠는 마지막으로
+     보인 얼굴 위치를 따라가며, 돌면서 얼굴이 얼굴폭 1.5배(`VPASS_JACKET_TURN_SIDE_MOVE`)까지
+     움직여도 같은 사람으로 봅니다.
+   - 이 단계에서 얼굴이 **정면**으로 잡히면 몸을 돌리지 않은 것으로 보고 유지 시간을 바로
+     처음부터 다시 셉니다(조끼를 앞에 들고 정면으로 서 있는 경우 차단).
+   - **20초** 안에 통과하지 못하면(`VPASS_JACKET_TURN_SIDE_TIMEOUT`) 실패로 안내하고
+     얼굴 인식·정면부터 다시 합니다.
+   - 통과하면 승선 처리(`jacket_turn=true` 로 기록). 카메라 화면에 띠 박스와 판정 점수가 그려집니다.
 
-- 신원은 정면에서 한 번만 확인합니다. 옆모습 단계에서 얼굴이 다시 검출되면 기준점과의
-  위치 연속성으로, 정면 얼굴이면 신원 재확인으로 같은 사람인지 보고, 다른 사람이면
+   두 단계 모두 **최근 3초 판정 중 80% 이상이 착용**(`VPASS_JACKET_TURN_HOLD_MIN_RATIO`)이어야
+   통과합니다. 0.5초 이내의 순간 끊김(`VPASS_JACKET_TURN_GRACE`)은 유지 시간을 초기화하지
+   않지만, 그 사이의 미착용 판정도 비율에 들어가므로 점수가 기준 근처에서 오르내리는 애매한
+   장면은 통과하지 못합니다. 얼굴을 놓쳐 판정이 없는 순간은 비율에 넣지 않습니다.
+
+- 신원은 정면에서 한 번만 확인합니다. 옆모습 단계에서 얼굴이 다시 검출되면 위치
+  연속성으로, 정면 얼굴이면 신원 재확인으로 같은 사람인지 보고, 다른 사람이면
   처음부터 다시 합니다. **옆얼굴 등록은 필요 없습니다**. 얼굴이 15초 넘게 한 번도 안
   보이면 자리를 떠난 것으로 보고 끊습니다(`VPASS_JACKET_TURN_NOFACE`).
-- 시간 제한은 기본적으로 없습니다. 사람이 화면에 있는 한 계속 안내하며 기다리고,
-  얼굴이 1초 넘게 사라지면 추적을 끊고 신원 확인부터 다시 합니다. 제한을 두려면
+- 정면 단계에는 시간 제한이 없습니다. 사람이 화면에 있는 한 계속 안내하며 기다리고,
+  얼굴이 1초 넘게 사라지면 추적을 끊고 신원 확인부터 다시 합니다. 전체 제한을 두려면
   `VPASS_JACKET_TURN_TIMEOUT` 에 초를 지정합니다(초과 시 실패 안내 후 2초 뒤 재시작).
 - 진행 상황은 출항 화면 오버레이("정면 확인 중 2/3", "몸을 한쪽 옆으로 돌려 주세요")와
-  카메라 주석(`FRONT 2/3`, `TURN SIDE`, `SIDE OK`)으로 표시됩니다.
+  카메라 주석(`FRONT 2/3`, `TURN SIDE`, `SIDE OK`)으로 표시됩니다. 상태가 바뀔 때마다
+  `/tmp/vpass.log` 에 `[turn]` 줄로 얼굴 방향·정면 점수·옆모습 점수를 남깁니다.
 - 자세는 YuNet 랜드마크로 판단하므로 SFace 모델이 없어 LBPH 로 폴백한 환경에서는
   자동으로 생략됩니다(시작 로그에 "자세 검증 생략" 1회 출력).
-- 옆모습 단계는 HSV 색으로 판정합니다(TFLite 분류기는 정면 가슴 크롭으로만
-  학습돼 있음). 실제 조끼·조명에서 `VPASS_JACKET_TURN_SIDE_YAW`, `VPASS_JACKET_SIDE_COL_RATIO`,
-  `VPASS_JACKET_SIDE_MIN_SEG_W`/`_MIN_GAP_W`, `VPASS_JACKET_SHOULDER_MIN_RATIO` 를 튜닝하세요.
-  팔이 몸통을 가려도 팔 자체가 '비조끼' 구간이 되므로 패턴은 유지됩니다.
 
 ### 분류 모델 학습·배포
 
@@ -335,7 +342,12 @@ uv run python tools/face_eval.py                                   # SFace vs LB
    (클래스당 200장 이상 권장, 파일명의 점수는 참고용)
 3. **학습 (PC)** — `pip install "tensorflow>=2.16"` 후
    `python tools/train_jacket_classifier.py --data data/jacket_dataset`
-   → `models/jacket_classifier.tflite` 생성 (MobileNetV3-Small 전이학습, dynamic-range 양자화)
+   → `models/jacket_classifier.tflite` 생성 (MobileNetV3-Small 전이학습, dynamic-range 양자화).
+   옆모습 모델은 옆모습 띠 크롭 데이터로 같은 스크립트를 돌려
+   `--out models/jacket_side_classifier.tflite` 로 만듭니다.
+   **조끼를 몸 앞에 들고 있는 사진은 반드시 `no_jacket`** 으로 둡니다 — V자 사이로 뒤판
+   안쪽 회색 안감·라벨이 보이면 입지 않은 것입니다(2026-08-08 수집분 `jacket` 폴더가 이
+   경우라 첫 모델이 들고 있는 조끼를 착용으로 배웠음).
 4. **배포 (라즈베리파이)** — 모델 파일을 같은 경로에 복사하고 `uv sync --extra ml`
    로 tflite 런타임을 설치. 앱 시작 로그에 `[jacketvision] TFLite 모델 로드` 확인.
 
