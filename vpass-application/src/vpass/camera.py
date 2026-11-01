@@ -18,6 +18,9 @@
 아래 띠만 보며, 얼굴이 다시 검출되면 위치 연속성과(정면이면) 신원 재확인으로 같은
 사람인지 본다. 랜드마크가 없는 LBPH 엔진에서는 건너뛴다.
 
+위조 판별(liveness.py): 신원 투표 전에 얼굴이 휴대폰 화면·인쇄 사진인지 보고, 위조로
+판정되면 투표를 처음부터 다시 시작한다. 옆모습 단계의 신원 재확인에도 같은 검사를 한다.
+
 카메라가 없는 개발 환경에서도 서버는 정상 동작하며 안내 프레임을 송출한다.
 """
 
@@ -49,6 +52,7 @@ from .config import (
 from .facerec import Gallery, Match, RecognitionVoter, create_engine
 from .jacketturn import TurnVerifier, pose_of
 from .jacketvision import assess_jacket, assess_shoulders, assess_side_profile
+from .liveness import load_checker
 
 # 자세 검증 실패 뒤 같은 사람을 다시 검증하기까지 두는 간격(초) — 실패 안내가 읽히게
 TURN_RETRY_HOLD_SEC = 2.0
@@ -75,6 +79,7 @@ class CameraManager:
         # cv2 검출기/인식기는 스레드 공유가 안전하지 않아 카메라 스레드만 사용한다.
         self._engine = None
         self._gallery = Gallery()
+        self._liveness = None   # 위조 판별기 (모델 없으면 None)
         self.engine_name = "-"
         self._voter = RecognitionVoter(FACE_VOTE_WINDOW, FACE_VOTE_NEED, FACE_VOTE_SECONDS)
         self._last_face_seen = 0.0
@@ -124,8 +129,10 @@ class CameraManager:
         users = self._users_store.load()
         engine = create_engine()
         gallery = engine.build_gallery(users, self._base_dir)
+        liveness = load_checker()
         with self.lock:
             self._engine = engine
+            self._liveness = liveness
             self._gallery = gallery
             self.engine_name = engine.name
             self._voter.reset()
@@ -224,7 +231,7 @@ class CameraManager:
 
         if detect_now:
             with self.lock:
-                engine, gallery = self._engine, self._gallery
+                engine, gallery, liveness = self._engine, self._gallery, self._liveness
             det = engine.detect_largest(frame) if engine is not None else None
             note = None
             jacket = None
@@ -267,13 +274,19 @@ class CameraManager:
                         feat = engine.embed(frame, det)
                         m = engine.match(feat, gallery) if feat is not None else Match(None, 0.0)
                         other = (m.user.get("id") or m.user.get("name", "")) if m.user else None
-                        if other is not None and other != self._turn.user_id:
+                        if ((other is not None and other != self._turn.user_id)
+                                or (liveness is not None and not liveness.is_live(frame, box)[0])):
                             self._turn = None
                             self._voter.reset()
                     if self._turn is not None:
                         note = self._run_turn(det, jacket, frame, now)
                     else:
                         note = (box, YELLOW, "TRACK LOST", 1)
+                elif liveness is not None and not (live := liveness.is_live(frame, box))[0]:
+                    # 휴대폰 화면·사진 속 얼굴 — 투표를 끊어 위조 프레임이 이어져도 확정되지 않게 한다
+                    self._voter.reset()
+                    note = (box, RED, f"FAKE FACE {live[1]:.2f}", 2)
+                    self._boarding.handle_spoof(live[1])
                 else:
                     feat = engine.embed(frame, det)
                     m = engine.match(feat, gallery) if feat is not None else Match(None, 0.0)

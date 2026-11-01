@@ -228,6 +228,11 @@ class BoardingManager:
         if self._cooldown_ok("unknown"):
             self._overlay.set("등록되지 않은 사람입니다", COLOR_DANGER)
 
+    def handle_spoof(self, score: float) -> None:
+        if self._cooldown_ok("spoof"):
+            print(f"[liveness] 위조 의심 얼굴 거부 (진짜 확률 {score:.2f})")
+            self._overlay.set("사진이나 화면이 아닌 실제 얼굴을 보여 주세요", COLOR_DANGER)
+
     def handle_no_model(self) -> None:
         if self._cooldown_ok("nomodel"):
             self._overlay.set("등록된 사용자가 없습니다 · 사용자를 먼저 등록해 주세요", COLOR_INFO)

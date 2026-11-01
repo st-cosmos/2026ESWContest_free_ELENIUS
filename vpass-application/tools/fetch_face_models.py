@@ -7,8 +7,11 @@
 받는 파일 (Apache-2.0, https://github.com/opencv/opencv_zoo):
   face_detection_yunet_2023mar.onnx      YuNet 얼굴 검출기 (약 230 KB)
   face_recognition_sface_2021dec.onnx    SFace 얼굴 임베딩 (약 37 MB)
+  MiniFASNetV2.onnx, MiniFASNetV1SE.onnx 사진·화면 위조 판별 (각 약 1.7 MB, Apache-2.0,
+      Silent-Face-Anti-Spoofing 의 ONNX 변환본 https://github.com/yakhyo/face-anti-spoofing)
 
-두 파일이 있으면 앱이 자동으로 SFace 엔진을 쓰고, 없으면 LBPH 로 폴백한다.
+앞의 두 파일이 있으면 앱이 자동으로 SFace 엔진을 쓰고, 없으면 LBPH 로 폴백한다.
+MiniFASNet 이 없으면 위조 판별 없이 동작한다.
 라즈베리파이는 인터넷이 없을 수 있으니 PC 에서 받아 scp 로 복사해도 된다.
 """
 
@@ -21,11 +24,14 @@ from pathlib import Path
 
 MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
 BASE = "https://github.com/opencv/opencv_zoo/raw/main/models"
+FAS = "https://github.com/yakhyo/face-anti-spoofing/releases/download/weights"
 FILES = {
     "face_detection_yunet_2023mar.onnx": (
         f"{BASE}/face_detection_yunet/face_detection_yunet_2023mar.onnx", 200_000),
     "face_recognition_sface_2021dec.onnx": (
         f"{BASE}/face_recognition_sface/face_recognition_sface_2021dec.onnx", 30_000_000),
+    "MiniFASNetV2.onnx": (f"{FAS}/MiniFASNetV2.onnx", 1_500_000),
+    "MiniFASNetV1SE.onnx": (f"{FAS}/MiniFASNetV1SE.onnx", 1_500_000),
 }
 
 
@@ -67,7 +73,9 @@ def main() -> None:
         import cv2
         cv2.FaceDetectorYN.create(str(MODELS_DIR / "face_detection_yunet_2023mar.onnx"), "", (320, 320))
         cv2.FaceRecognizerSF.create(str(MODELS_DIR / "face_recognition_sface_2021dec.onnx"), "")
-        print("OpenCV 로드 확인: SFace 엔진 사용 가능")
+        for name in ("MiniFASNetV2.onnx", "MiniFASNetV1SE.onnx"):
+            cv2.dnn.readNetFromONNX(str(MODELS_DIR / name))
+        print("OpenCV 로드 확인: SFace 엔진·위조 판별 사용 가능")
     except Exception as e:
         sys.exit(f"OpenCV 가 모델을 열지 못했습니다: {e}")
 
