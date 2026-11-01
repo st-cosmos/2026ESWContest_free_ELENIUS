@@ -59,7 +59,7 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_DATA_DIR` | `vpass-application/data` | 사용자/기록 JSON·얼굴 사진 저장 위치 |
 | `VPASS_CAMERA_INDEX` | `0` | OpenCV 카메라 인덱스 |
 | `VPASS_FACE_METHOD` | `auto` | 얼굴 인식 엔진: `auto`(모델 있으면 sface)/`sface`/`lbph` |
-| `VPASS_FACE_THRESHOLD` | `0.363` | SFace 코사인 유사도 인정 임계값 (높일수록 엄격) |
+| `VPASS_FACE_THRESHOLD` | `0.40` | SFace 코사인 유사도 인정 임계값 (높일수록 엄격, 근거는 `reports/face-benchmark/`) |
 | `VPASS_FACE_MARGIN` | `0.08` | 1등과 2등 사용자 점수 차이 하한 (비슷한 얼굴 오인식 억제) |
 | `VPASS_FACE_VOTE_WINDOW`, `VPASS_FACE_VOTE_NEED` | `5`, `3` | 시간 투표: 최근 N회 검출 중 M회 일치 시 승선 확정 |
 | `VPASS_FACE_ENROLL_SAMPLES` | `5` | 등록 시 저장하는 얼굴 샘플 수 |
@@ -246,8 +246,8 @@ uv run python tools/fetch_face_models.py     # models/ 에 ONNX 2개 (약 37 MB)
 | --- | --- | --- |
 | 검출 | DNN, 5점 랜드마크로 얼굴 정렬, 측면·기울임에 강함 | Haar cascade, 정면 전용 |
 | 특징 | 128차원 임베딩, 코사인 유사도 | 히스토그램 패턴 거리 |
-| 판정 | 임계값 0.363 **+ 2등과의 마진 0.08** | confidence ≤ 52 |
-| 라즈베리파이 4 처리 시간 | 검출 ≈ 30 ms, 임베딩 ≈ 40 ms (3프레임마다 1회) | ≈ 20 ms |
+| 판정 | 임계값 0.40 **+ 2등과의 마진 0.08** | confidence ≤ 52 |
+| 라즈베리파이 4 처리 시간(검출+특징, 프레임당 중앙값) | ≈ 167 ms (3프레임마다 1회) | ≈ 22 ms |
 
 인식 품질을 위한 세 가지 장치:
 
@@ -262,16 +262,28 @@ uv run python tools/fetch_face_models.py     # models/ 에 ONNX 2개 (약 37 MB)
 
 ### 인식 성능 평가 (보고서용)
 
+두 엔진을 같은 데이터로 비교한 결과는 `reports/face-benchmark/` 에 있습니다
+(`results.json` 원자료, `threshold_study.json` 임계값 선정 근거). 2026-11-01 측정 요약:
+
+| 항목 | Haar + LBPH (이전) | YuNet + SFace (현재) |
+| --- | --- | --- |
+| LFW 표준 검증 6,000쌍, 10-fold 정확도 | 67.2% | 98.1% |
+| LFW 오수락 1% 에서 본인 수락률 | 17.6% | 96.8% |
+| 승선 게이트 모의 본인 수락률 (선원 10명, 10회 반복) | 21.9% | 99.3% (임계값 0.40) |
+| 승선 게이트 모의 타인 오인식 | 2.3% | 0.0% |
+| 설치 카메라(라즈베리파이) 얼굴 검출률, 881프레임 | 51.3% | 98.9% |
+| 설치 카메라 본인 인식률 (옆얼굴 211프레임) | 34.9% (0.0%) | 96.1% (93.8%) |
+
+다시 측정하려면 LFW(`lfw_funneled`, pairs.txt 포함)와 앱 등록 사진·카메라 프레임 폴더를 지정합니다.
+
 ```bash
-uv run python tools/face_capture.py --person 홍길동 --count 20     # 사람별 20장
-uv run python tools/face_capture.py --person _unknown --count 30   # 미등록자
-uv run python tools/face_eval.py                                   # SFace vs LBPH 비교
+uv run python tools/face_benchmark.py --lfw <lfw_funneled> \
+    --device-gallery data/faces --device-frames data/jacket_dataset/frames \
+    --out reports/face-benchmark/results.json
 ```
 
-`data/face_eval/<사람>/` 사진의 앞 5장으로 등록하고 나머지로 시험해, 본인 수락률(TAR)·
-본인 거부율(FRR)·타인 오인식률·미등록자 오수락률(FAR)과 임계값 스윕표를 마크다운으로
-출력합니다. 선원 3명 이상 + 미등록자 2명 이상, 조명(주간·야간·역광)과 모자·마스크
-조건을 섞어 찍으면 운용 임계값 선정 근거가 됩니다.
+현장 사람들로 따로 평가하려면 `tools/face_capture.py` 로 `data/face_eval/<사람>/` 에 모은 뒤
+`tools/face_eval.py` 를 돌립니다(앞 5장 등록, 나머지 시험, 임계값 스윕표 출력).
 
 ## 구명조끼 착용 시각 확인
 
