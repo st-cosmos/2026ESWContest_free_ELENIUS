@@ -60,6 +60,8 @@ uv run vpass --reset-all     # 등록 선원·얼굴 사진·어선 정보까지
 | `VPASS_CAMERA_INDEX` | `0` | OpenCV 카메라 인덱스 |
 | `VPASS_FACE_METHOD` | `auto` | 얼굴 인식 엔진: `auto`(모델 있으면 sface)/`sface`/`lbph` |
 | `VPASS_FACE_THRESHOLD` | `0.40` | SFace 코사인 유사도 인정 임계값 (높일수록 엄격, 근거는 `reports/face-benchmark/`) |
+| `VPASS_FACE_LIVENESS` | `1` | 사진·휴대폰 화면 위조 판별(MiniFASNet). 모델이 없으면 자동으로 생략 |
+| `VPASS_FACE_LIVENESS_THRESHOLD` | `0.5` | 위조 판별 '진짜' 확률 하한. 미만이면 신원 투표를 다시 시작 |
 | `VPASS_FACE_MARGIN` | `0.08` | 1등과 2등 사용자 점수 차이 하한 (비슷한 얼굴 오인식 억제) |
 | `VPASS_FACE_VOTE_WINDOW`, `VPASS_FACE_VOTE_NEED` | `5`, `3` | 시간 투표: 최근 N회 검출 중 M회 일치 시 승선 확정 |
 | `VPASS_FACE_ENROLL_SAMPLES` | `5` | 등록 시 저장하는 얼굴 샘플 수 |

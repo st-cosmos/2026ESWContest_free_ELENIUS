@@ -103,6 +103,17 @@ FACE_MIN_SIZE_PX = 80           # 스캔 시 이보다 작은 얼굴은 무시(�
 # (tools/face_benchmark.py, reports/face-benchmark/).
 FACE_SFACE_THRESHOLD = float(os.environ.get("VPASS_FACE_THRESHOLD", "0.40"))
 FACE_SFACE_MARGIN = float(os.environ.get("VPASS_FACE_MARGIN", "0.08"))
+# 위조(휴대폰 화면·인쇄 사진) 판별: MiniFASNetV2(2.7배)·V1SE(4.0배) '진짜' 확률 평균이 임계값 미만이면
+# 신원 투표에서 뺀다. 설치 카메라 실측(2026-11-01): 화면 속 얼굴 8프레임 0.00~0.11, 실제 얼굴 871프레임 중
+# 0.5 미만은 얼굴 위쪽이 화면 밖으로 잘린 1장뿐. 모델이 없으면 판별 없이 동작 (tools/fetch_face_models.py 로 받음).
+FACE_LIVENESS_ENABLED = (
+    os.environ.get("VPASS_FACE_LIVENESS", "1").strip().lower() not in ("0", "false", "off")
+)
+FACE_LIVENESS_THRESHOLD = float(os.environ.get("VPASS_FACE_LIVENESS_THRESHOLD", "0.5"))
+FACE_LIVENESS_MODELS = [
+    (APP_DIR / "models" / "MiniFASNetV2.onnx", 2.7),
+    (APP_DIR / "models" / "MiniFASNetV1SE.onnx", 4.0),
+]
 # 시간 투표: 최근 FACE_VOTE_WINDOW 회(FACE_VOTE_SECONDS 초 이내) 중 FACE_VOTE_NEED 회 일치 시 확정
 FACE_VOTE_WINDOW = max(1, int(os.environ.get("VPASS_FACE_VOTE_WINDOW", "5")))
 FACE_VOTE_NEED = max(1, int(os.environ.get("VPASS_FACE_VOTE_NEED", "3")))

@@ -16,6 +16,7 @@ from vpass.facerec import (  # noqa: E402
     Gallery, LbphEngine, RecognitionVoter, cosine_match, create_engine,
     sface_models_available, user_photos,
 )
+from vpass import liveness  # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -92,6 +93,38 @@ def main():
     check("photos 우선", user_photos({"photo": "a.jpg", "photos": ["a.jpg", "b.jpg"]}) == ["a.jpg", "b.jpg"])
     check("photos 없으면 photo", user_photos({"photo": "a.jpg"}) == ["a.jpg"])
     check("둘 다 없으면 빈 목록", user_photos({"photo": None}) == [])
+
+    print("\n== 5) 위조 판별 ==")
+
+    class FakeNet:
+        def __init__(self, logits):
+            self.logits, self.shape = np.asarray(logits, np.float32), None
+
+        def setInput(self, blob):
+            self.shape = blob.shape
+
+        def forward(self):
+            return self.logits[None]
+
+    real, fake = FakeNet([0.0, 5.0, 0.0]), FakeNet([5.0, 0.0, 0.0])
+    frame = np.zeros((480, 640, 3), np.uint8)
+    ok, sc = liveness.LivenessChecker([(real, 2.7), (real, 4.0)], 0.5).is_live(frame, (300, 200, 100, 120))
+    check("두 모델 모두 진짜 → 통과", ok and sc > 0.98, f"{sc:.3f}")
+    check("입력 1×3×80×80", real.shape == (1, 3, 80, 80), str(real.shape))
+    ok, sc = liveness.LivenessChecker([(fake, 2.7), (fake, 4.0)], 0.5).is_live(frame, (300, 200, 100, 120))
+    check("두 모델 모두 위조 → 거부", not ok and sc < 0.02, f"{sc:.3f}")
+    sc = liveness.LivenessChecker([(real, 2.7), (fake, 4.0)], 0.5).score(frame, (300, 200, 100, 120))
+    check("점수는 두 모델 평균", abs(sc - 0.5) < 0.01, f"{sc:.3f}")
+    crop = liveness.crop_face(frame, (600, 440, 100, 100), 4.0)
+    check("화면 가장자리 얼굴도 80×80 으로 자름", crop.shape == (80, 80, 3))
+    if liveness.models_available():
+        chk = liveness.load_checker()
+        check("모델 있음 → 판별기 로드", chk is not None)
+        noise = np.random.default_rng(1).integers(0, 255, (480, 640, 3), dtype=np.uint8)
+        sc = chk.score(noise, (270, 180, 100, 120))
+        check("실제 모델 점수 0~1", 0.0 <= sc <= 1.0, f"{sc:.3f}")
+    else:
+        check("모델 없음 → None (판별 생략)", liveness.load_checker() is None)
 
     print(f"\n결과: PASS {PASS} / FAIL {FAIL}")
     raise SystemExit(1 if FAIL else 0)
