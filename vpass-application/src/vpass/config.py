@@ -194,6 +194,13 @@ JACKET_TURN_CHECK = (
 JACKET_TURN_HOLD_SEC = float(os.environ.get("VPASS_JACKET_TURN_HOLD", "3"))
 # 유지 중 조건이 이 시간(초) 이내로 잠깐 끊기는 것(검출 흔들림)은 봐준다 — 넘으면 처음부터 다시 센다
 JACKET_TURN_GRACE_SEC = float(os.environ.get("VPASS_JACKET_TURN_GRACE", "0.5"))
+# 통과하려면 최근 JACKET_TURN_HOLD_SEC 동안의 판정 중 이 비율 이상이 '착용' 이어야 한다.
+# grace 는 끊김 하나로 유지 시간이 초기화되지 않게 할 뿐, 미착용 판정은 이 비율에 그대로 들어간다 —
+# 점수가 기준 근처에서 오르내리는(착용/미착용이 번갈아 나오는) 애매한 장면은 통과하지 못한다.
+JACKET_TURN_HOLD_MIN_RATIO = float(os.environ.get("VPASS_JACKET_TURN_HOLD_MIN_RATIO", "0.8"))
+# 옆모습 단계 제한 시간(초). 넘으면 실패로 처리하고 얼굴 인식·정면부터 다시 한다(0 이하면 제한 없음).
+# 제한이 없으면 애매한 판정이 우연히 이어지는 순간까지 몇 분이고 기다리게 된다.
+JACKET_TURN_SIDE_TIMEOUT_SEC = float(os.environ.get("VPASS_JACKET_TURN_SIDE_TIMEOUT", "20"))
 # 정면 시작부터 옆모습 통과까지 허용 시간(초). 0 이하면 제한 없음(기본) — 사람이
 # 화면에 있는 한 계속 안내하며 기다린다. 얼굴이 사라지면 FACE_GAP 으로만 끊긴다.
 JACKET_TURN_TIMEOUT_SEC = float(os.environ.get("VPASS_JACKET_TURN_TIMEOUT", "0"))
