@@ -21,10 +21,13 @@
 통과해도 어깨는 덮지 못한다. 얼굴 좌우 어깨 패치 두 곳의 조끼 색 비율을 본다
 (항상 HSV — 분류기는 가슴 크롭으로만 학습됨). 자세 검증(jacketturn)의 정면 단계에서 쓴다.
 
-옆모습 검사(assess_side_profile): 몸을 옆으로 돌린 사람의 상체는 "조끼(앞판) /
-몸통·팔 / 조끼(뒤판)" 샌드위치 모양이다. 얼굴 아래 넓은 가로 띠를 열 단위로 훑어
-조끼 색 열의 구간을 찾고, 조끼–비조끼–조끼 순서가 나오면 착용으로 본다. 들고 있는
-조끼는 앞쪽 한 덩어리만 보여 이 패턴이 나오지 않는다. 자세 검증의 옆모습 단계에서 쓴다.
+옆모습 검사(assess_side_profile): 얼굴 아래 넓은 가로 띠를 본다. 자세 검증의 옆모습 단계에서 쓴다.
+  ml       — 옆모습 띠를 입력으로 받는 TFLite 이진 분류기(models/jacket_side_classifier.tflite).
+             모델 파일과 런타임이 있으면 이것을 쓴다.
+  sandwich — 색 규칙 폴백(assess_side_sandwich). 옆으로 돈 사람의 상체는 "조끼(앞판) /
+             몸통·팔 / 조끼(뒤판)" 모양이라 띠를 열 단위로 훑어 조끼–비조끼–조끼 순서를 찾는다.
+             실제 카메라 구도(가슴 아래 잘림)와 반사띠 달린 조끼에서는 입은 옆모습도 대부분
+             놓치고, 조끼 정면(지퍼 쪽 안감)도 샌드위치로 보이는 한계가 있다.
 """
 
 from __future__ import annotations
@@ -39,6 +42,8 @@ from .config import (
     JACKET_MODEL_PATH,
     JACKET_ROI_MIN_VISIBLE,
     JACKET_SHOULDER_MIN_RATIO,
+    JACKET_SIDE_ML_THRESHOLD,
+    JACKET_SIDE_MODEL_PATH,
     JACKET_SIDE_BAND_HALF_W,
     JACKET_SIDE_COL_RATIO,
     JACKET_SIDE_MIN_GAP_W,
@@ -179,7 +184,27 @@ def find_sandwich(segments, min_seg: int, min_gap: int):
 
 
 def assess_side_profile(frame_bgr, face_box) -> dict:
-    """옆모습 샌드위치 판정.
+    """옆모습 단계 판정. 옆모습 분류 모델이 있으면 그것으로, 없으면 색 샌드위치 규칙으로.
+
+    반환: {"visible": True|False|None, "ratio": 착용 확률(ml)|띠 조끼 색 비율(sandwich),
+           "box": 띠 (x, y, w, h)|None, "segments": [...], "sandwich": ...|None,
+           "method": "ml"|"sandwich"}
+    """
+    clf = _get_side_classifier()
+    if clf is None:
+        return assess_side_sandwich(frame_bgr, face_box)
+    band = side_band_roi(frame_bgr.shape, face_box)
+    if band is None:
+        return {"visible": None, "ratio": 0.0, "box": None, "segments": [],
+                "sandwich": None, "method": "ml"}
+    bx, by, bw, bh = band
+    score = clf.predict(frame_bgr[by:by + bh, bx:bx + bw])
+    return {"visible": score >= JACKET_SIDE_ML_THRESHOLD, "ratio": round(score, 3), "box": band,
+            "segments": [], "sandwich": None, "method": "ml"}
+
+
+def assess_side_sandwich(frame_bgr, face_box) -> dict:
+    """옆모습 샌드위치 판정 (색 규칙 폴백).
 
     반환: {"visible": True|False|None, "ratio": 띠 전체 조끼 색 비율,
            "box": 띠 (x, y, w, h)|None, "segments": [(x0, x1, 조끼여부), ...](프레임 좌표),
@@ -283,6 +308,33 @@ _CLASSIFIER = None
 _CLASSIFIER_LOADED = False
 
 
+def _load_classifier(path, fallback: str):
+    """TFLite 분류기를 불러온다. 런타임이 없거나 로드에 실패하면 None (fallback 으로 폴백)."""
+    interpreter_cls, resolver_type = _load_interpreter_cls()
+    if interpreter_cls is None:
+        print(f"[jacketvision] tflite 런타임 없음 (uv sync --extra ml) — {fallback} 로 폴백")
+        return None
+    try:
+        clf = _TFLiteJacketClassifier(interpreter_cls(model_path=str(path)))
+    except Exception as e:
+        # 일부 환경은 XNNPACK 델리게이트가 양자화 모델 준비에 실패한다 — 델리게이트 없이 재시도
+        first_error = e
+        clf = None
+        if resolver_type is not None:
+            try:
+                clf = _TFLiteJacketClassifier(interpreter_cls(
+                    model_path=str(path),
+                    experimental_op_resolver_type=resolver_type.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
+                ))
+            except Exception:
+                pass
+        if clf is None:
+            print(f"[jacketvision] 모델 로드 실패({first_error}) — {fallback} 로 폴백")
+            return None
+    print(f"[jacketvision] TFLite 모델 로드: {path.name} (입력 {clf._w}x{clf._h})")
+    return clf
+
+
 def _get_classifier():
     global _CLASSIFIER, _CLASSIFIER_LOADED
     if _CLASSIFIER_LOADED:
@@ -294,30 +346,24 @@ def _get_classifier():
         if JACKET_VISION_METHOD == "ml":
             print(f"[jacketvision] 모델 없음: {JACKET_MODEL_PATH} — HSV 로 폴백")
         return None
-    interpreter_cls, resolver_type = _load_interpreter_cls()
-    if interpreter_cls is None:
-        print("[jacketvision] tflite 런타임 없음 (uv sync --extra ml) — HSV 로 폴백")
-        return None
-    try:
-        _CLASSIFIER = _TFLiteJacketClassifier(interpreter_cls(model_path=str(JACKET_MODEL_PATH)))
-    except Exception as e:
-        # 일부 환경은 XNNPACK 델리게이트가 양자화 모델 준비에 실패한다 — 델리게이트 없이 재시도
-        first_error = e
-        _CLASSIFIER = None
-        if resolver_type is not None:
-            try:
-                _CLASSIFIER = _TFLiteJacketClassifier(interpreter_cls(
-                    model_path=str(JACKET_MODEL_PATH),
-                    experimental_op_resolver_type=resolver_type.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
-                ))
-            except Exception:
-                pass
-        if _CLASSIFIER is None:
-            print(f"[jacketvision] 모델 로드 실패({first_error}) — HSV 로 폴백")
-            return None
-    print(f"[jacketvision] TFLite 모델 로드: {JACKET_MODEL_PATH.name} "
-          f"(입력 {_CLASSIFIER._w}x{_CLASSIFIER._h})")
+    _CLASSIFIER = _load_classifier(JACKET_MODEL_PATH, "HSV")
     return _CLASSIFIER
+
+
+# 옆모습 분류기 — 정면 분류기와 같은 지연 로드 싱글턴 (테스트에서 직접 주입할 수 있다)
+_SIDE_CLASSIFIER = None
+_SIDE_CLASSIFIER_LOADED = False
+
+
+def _get_side_classifier():
+    global _SIDE_CLASSIFIER, _SIDE_CLASSIFIER_LOADED
+    if _SIDE_CLASSIFIER_LOADED:
+        return _SIDE_CLASSIFIER
+    _SIDE_CLASSIFIER_LOADED = True
+    if JACKET_VISION_METHOD == "hsv" or not JACKET_SIDE_MODEL_PATH.exists():
+        return None
+    _SIDE_CLASSIFIER = _load_classifier(JACKET_SIDE_MODEL_PATH, "색 샌드위치 규칙")
+    return _SIDE_CLASSIFIER
 
 
 def assess_jacket(frame_bgr, face_box) -> dict:

@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 
@@ -34,6 +35,7 @@ from .config import (
     DETECT_EVERY_N_FRAMES,
     JACKET_CAPTURE_DIR,
     JACKET_CAPTURE_ENABLED,
+    JACKET_CAPTURE_FRAMES_DIR,
     JACKET_CAPTURE_INTERVAL,
     JACKET_SHOULDER_CHECK,
     JACKET_TURN_CHECK,
@@ -90,12 +92,14 @@ class CameraManager:
         self._jacket_note = None    # 마지막 구명조끼 확인 주석: (box, color, tag)
         self._register_box = None   # 마지막 검출 가이드 박스
         self._last_capture = 0.0    # 학습 데이터 수집(ROI 저장) 스로틀
+        self._last_frame_capture = 0.0  # 학습 데이터 수집(원본 프레임 저장) 스로틀
         self._side_note = None      # 옆모습 단계 샌드위치 판정 표시
 
         # 구명조끼 자세 검증 (카메라 스레드 전용)
         self._turn: TurnVerifier | None = None
         self._turn_hold_until = 0.0     # 실패 직후 재시작 억제 만료 시각
         self._turn_skip_logged = False  # LBPH 등 랜드마크 없음 안내 1회
+        self._turn_log_key = None       # 자세 검증 로그 중복 억제 (마지막으로 찍은 상태)
 
     # ── 수명 주기 ────────────────────────────────────────────────────────
     def start(self) -> None:
@@ -215,6 +219,8 @@ class CameraManager:
 
     def _process_scan(self, frame, detect_now: bool) -> None:
         display = frame.copy()
+        if JACKET_CAPTURE_ENABLED:
+            self._maybe_capture_frame(frame)
 
         if detect_now:
             with self.lock:
@@ -335,7 +341,10 @@ class CameraManager:
             for x0, x1, is_jacket in side.get("segments", []):
                 cv2.rectangle(display, (x0, bar_y), (max(x0, x1 - 1), bar_y + 5),
                               (0, 140, 255) if is_jacket else (120, 120, 120), -1)
-            tag = f"SIDE {'J/B/J OK' if ok else 'NO J/B/J'} {side.get('ratio', 0):.0%}"
+            if side.get("method") == "ml":
+                tag = f"SIDE {'WORN' if ok else 'NOT WORN'} {side.get('ratio', 0):.0%}"
+            else:
+                tag = f"SIDE {'J/B/J OK' if ok else 'NO J/B/J'} {side.get('ratio', 0):.0%}"
             cv2.putText(display, tag, (x + 4, y + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         self._publish(display)
@@ -356,6 +365,7 @@ class CameraManager:
         """검증기에 이번 검출을 넣고 결과에 따라 승선/실패/안내를 처리한다. 화면 주석을 돌려준다."""
         turn = self._turn
         st = turn.update(det, jacket, frame, now)
+        self._log_turn(turn, st, det, jacket)
         box = det.box if det is not None else (turn.anchor_box or turn.last_box)
         if (JACKET_CAPTURE_ENABLED and turn.stage == "side" and turn.last_side
                 and turn.last_side.get("box") is not None):
@@ -381,6 +391,54 @@ class CameraManager:
             return None if box is None else (box, YELLOW, st.tag, 1)
         self._boarding.guide(st.message, st.color)
         return None if box is None else (box, YELLOW, st.tag, 2)
+
+    def _log_turn(self, turn, st, det, jacket) -> None:
+        """자세 검증 판정 근거를 로그에 남긴다. 상태(안내 종류)가 바뀔 때만 한 줄 찍는다.
+
+        예) [turn] 홍길동 front FRONT 0.0/3s | 정면 얼굴 | 조끼 ml 0.93
+            [turn] 홍길동 side SIDE: FACING FRONT | 정면 얼굴 | 옆띠 조끼/몸통/조끼 1.1/0.3/0.9 (색 0.41)
+        """
+        key = (id(turn), st.state, re.sub(r"[\d.]+", "#", st.tag))
+        if key == self._turn_log_key:
+            return
+        self._turn_log_key = key
+        parts = [f"[turn] {turn.user.get('name', turn.user_id)} {st.state} {st.tag}"]
+        if det is None:
+            parts.append("얼굴 없음")
+        else:
+            parts.append({"front": "정면 얼굴", "side": "옆 얼굴", "between": "비스듬한 얼굴"}
+                         .get(pose_of(det) or "", "얼굴 방향 모름"))
+        src = jacket if jacket is not None else (turn.front_jacket if st.state != "front" else None)
+        if src is not None and src.get("box") is not None:
+            label = "조끼" if jacket is not None else "정면 통과 때 조끼"
+            parts.append(f"{label} {src.get('method')} {src.get('ratio', 0):.2f}")
+        side = turn.last_side if turn.stage == "side" or st.state == "passed" else None
+        if side is not None:
+            if side.get("box") is None:
+                parts.append("옆띠 화면 밖")
+            elif side.get("method") == "ml":
+                parts.append(f"옆띠 ml {side.get('ratio', 0):.2f}")
+            else:
+                fw = float(turn.anchor_box[2]) if turn.anchor_box else 1.0
+                sw = side.get("sandwich")
+                pat = ("/".join(f"{(b - a) / fw:.1f}" for a, b in sw) if sw else "없음")
+                parts.append(f"옆띠 조끼/몸통/조끼 {pat} (색 {side.get('ratio', 0):.2f})")
+        print(" | ".join(parts))
+
+    def _maybe_capture_frame(self, frame) -> None:
+        """학습 데이터 수집: 스캔 중 카메라 원본 프레임을 주기 제한으로 저장한다.
+
+        얼굴 검출·모듈 신호와 무관하게 저장하므로, 모듈 없는 조끼로도 정면/옆모습 장면을
+        모을 수 있다. 정면 가슴 ROI 와 옆모습 띠는 나중에 PC 에서 다시 잘라 판정한다.
+        """
+        now = time.time()
+        if now - self._last_frame_capture < JACKET_CAPTURE_INTERVAL:
+            return
+        self._last_frame_capture = now
+        JACKET_CAPTURE_FRAMES_DIR.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S") + f"-{int(now * 1000) % 1000:03d}"
+        cv2.imwrite(str(JACKET_CAPTURE_FRAMES_DIR / f"{stamp}.jpg"), frame,
+                    [cv2.IMWRITE_JPEG_QUALITY, 90])
 
     def _maybe_capture_roi(self, frame, jacket: dict) -> None:
         """학습 데이터 수집: 가슴 ROI 크롭을 주기 제한으로 저장한다.

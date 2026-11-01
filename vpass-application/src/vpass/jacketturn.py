@@ -13,12 +13,14 @@
   끊김(검출 흔들림)은 봐준다.
              (jacketvision.assess_side_profile). **이 단계는 얼굴 검출이 필요 없다** —
              옆으로 돌린 얼굴은 검출기가 자주 놓치므로, 사람이 그 자리에서 몸만
-             돌린다고 보고 정면 때의 위치를 그대로 쓴다. 정면 자세에서는 조끼가 한
-             덩어리로 보여 샌드위치가 나오지 않으므로 '돌렸는지' 를 따로 판단하지 않아도 된다.
+             돌린다고 보고 마지막으로 보인 얼굴 위치(없으면 정면 때 위치)를 쓴다. 다만 조끼 정면도 지퍼 쪽 안감이
+             드러나 '조끼/안감/조끼' 샌드위치로 보이므로(들고 있는 조끼도 마찬가지), 이
+             단계에서 얼굴이 정면으로 검출되면 몸을 돌리지 않은 것으로 보고 유지 시간을
+             처음부터 다시 센다.
 
 신원은 front 진입 시점(얼굴 인식 확정)에 한 번만 확인한다. side 단계에서 얼굴이
-다시 검출되면 기준 위치와의 연속성(위치·크기)으로 같은 사람인지 보고, 멀리 떨어진
-얼굴이면 추적을 끊는다(카메라는 정면 얼굴이 다른 사용자로 인식되면 추가로 끊는다).
+다시 검출되면 마지막으로 보인 얼굴과의 연속성(위치·크기, 얼굴폭 JACKET_TURN_SIDE_MOVE 배
+이내)으로 같은 사람인지 보고, 멀리 떨어진 얼굴이면 추적을 끊는다(카메라는 정면 얼굴이 다른 사용자로 인식되면 추가로 끊는다).
 얼굴이 전혀 안 보이는 상태가 JACKET_TURN_NOFACE_SEC 넘게 이어지면 자리를 떠난
 것으로 보고 끊는다. 그 외에는 시간 제한 없이 기다린다(JACKET_TURN_TIMEOUT_SEC > 0 이면 제한).
 
@@ -58,13 +60,14 @@ def pose_of(det) -> str | None:
     return "between"
 
 
-def same_face(prev_box, box) -> bool:
-    """두 얼굴 박스가 같은 사람의 연속 프레임으로 볼 수 있는지 (위치·크기 연속성)."""
+def same_face(prev_box, box, move: float = 0.8) -> bool:
+    """두 얼굴 박스가 같은 사람의 연속 프레임으로 볼 수 있는지 (위치·크기 연속성).
+    move: 중심 이동 허용 범위(얼굴폭 배수)."""
     px, py, pw, ph = prev_box
     x, y, w, h = box
     pcx, pcy = px + pw / 2, py + ph / 2
     cx, cy = x + w / 2, y + h / 2
-    limit = 0.8 * max(pw, w)
+    limit = move * max(pw, w)
     if abs(cx - pcx) > limit or abs(cy - pcy) > limit:
         return False
     ratio = w / pw if pw else 0
@@ -99,7 +102,7 @@ class TurnVerifier:
                              else config.JACKET_TURN_NOFACE_SEC)
         # (frame, face_box) -> {"visible": True|False|None, ...}; None 이면 어깨 검사 생략(기본)
         self._shoulder_check = shoulder_check
-        # (frame, anchor_box) -> 샌드위치 판정 dict; None 이면 옆모습 단계를 가슴 ROI(jacket) 로 판정
+        # (frame, face_box) -> 옆모습 판정 dict; None 이면 옆모습 단계를 가슴 ROI(jacket) 로 판정
         self._side_check = side_check
         self.stage = "front"
         self.hold_since: float | None = None   # 현재 단계 조건이 이어지기 시작한 시각
@@ -108,7 +111,8 @@ class TurnVerifier:
         self.side_started: float | None = None
         self.last_seen = now     # 마지막으로 얼굴이 검출된 시각
         self.last_box = None     # 마지막 얼굴 박스 (front 단계 연속성용)
-        self.anchor_box = None   # front 통과 시점의 얼굴 박스 — side 단계 띠 위치 기준
+        self.anchor_box = None   # front 통과 시점의 얼굴 박스 — side 단계 연속성 기준
+        self.side_box = None     # side 단계 띠 위치 기준: 마지막으로 보인 얼굴 박스(없으면 anchor)
         self.front_jacket: dict | None = None   # 정면 통과 시점의 조끼 판정(승선 기록용)
         self.last_side: dict | None = None      # 마지막 옆모습 판정(화면 표시용)
 
@@ -162,6 +166,7 @@ class TurnVerifier:
             self.hold_since = self.last_ok = None
             self.side_started = now
             self.anchor_box = det.box
+            self.side_box = det.box
             self.front_jacket = dict(jacket)
             return self._status("side", "정면 확인 완료 · 몸을 한쪽 옆으로 돌려 주세요",
                                 "FRONT OK -> TURN SIDE", now=now)
@@ -173,18 +178,29 @@ class TurnVerifier:
     def _update_side(self, det, jacket, frame, now) -> TurnStatus:
         if det is not None:
             # 얼굴이 보이면 기준 위치와의 연속성만 확인한다 (멀리 떨어진 얼굴 = 다른 사람/이동)
-            if not same_face(self.anchor_box, det.box):
+            ref = self.side_box or self.anchor_box
+            if not same_face(ref, det.box, config.JACKET_TURN_SIDE_MOVE):
                 return TurnStatus("lost", 0.0, self.hold, "", "TRACK LOST", COLOR_WARN)
             self.last_seen = now
+            # 몸을 돌리면서 화면 안에서 조금씩 움직이므로 띠는 지금 보이는 얼굴을 따라간다
+            self.side_box = det.box
         elif self.noface_limit > 0 and now - self.last_seen > self.noface_limit:
             # 얼굴이 한참 안 보임 — 자리를 떠난 것으로 보고 처음부터
             return TurnStatus("lost", 0.0, self.hold, "", "TRACK LOST", COLOR_WARN)
 
         if self._side_check is not None:
-            self.last_side = self._side_check(frame, self.anchor_box)
+            self.last_side = self._side_check(frame, self.side_box or self.anchor_box)
             visible = self.last_side.get("visible")
         else:
             visible = None if jacket is None else jacket.get("visible")
+
+        if det is not None and pose_of(det) == "front":
+            # 얼굴이 정면이면 몸을 돌리지 않은 것이다. 조끼 정면도 지퍼 쪽 안감 때문에
+            # '조끼/안감/조끼' 로 보여 샌드위치가 나오므로(들고 있는 조끼 포함), 정면 얼굴이
+            # 보이는 동안은 유지 시간을 쌓지 않고 grace 없이 바로 처음부터 다시 센다.
+            self.hold_since = self.last_ok = None
+            return self._status("side", "정면이 아니라 몸을 한쪽 옆으로 돌려 주세요",
+                                "SIDE: FACING FRONT", COLOR_WARN, now=now)
 
         if visible is None:
             self._miss(now)

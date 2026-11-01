@@ -2,7 +2,7 @@
 """구명조끼 착용 분류기 학습 스크립트 (개발 PC 전용).
 
 가슴 ROI 크롭 이미지를 입력으로 착용/미착용을 판정하는 MobileNetV3-Small
-이진 분류기를 전이학습하고, 라즈베리파이용 int8 양자화 TFLite 로 내보낸다.
+이진 분류기를 전이학습하고, 라즈베리파이용 양자화 TFLite 로 내보낸다.
 결과 모델은 vpass 앱의 jacketvision.py 가 그대로 로드한다.
 
 전체 워크플로:
@@ -93,32 +93,33 @@ def build_model(img_size: int) -> tf.keras.Model:
     return tf.keras.Model(inputs, outputs)
 
 
-def convert_tflite(model: tf.keras.Model, train_ds, out_path: Path) -> None:
-    """int8 전체 양자화 변환. 실패 시 dynamic-range 양자화로 폴백한다."""
+def convert_tflite(model: tf.keras.Model, train_ds, out_path: Path, *, int8: bool = False) -> None:
+    """TFLite 변환. 기본은 dynamic-range 양자화(가중치 int8, float32 입출력).
+
+    전체 int8 양자화(int8=True)는 MobileNetV3 의 hard-swish 활성화에서 정확도가 크게
+    무너진다 — 검증 정확도 100% 모델이 int8 변환 후 미착용 156장 중 82장을 착용으로
+    판정한 적이 있다. 또 XNNPACK 델리게이트 준비에 실패해 델리게이트 없이만 돌아간다.
+    dynamic-range 는 같은 데이터에서 오판 0, 크기도 더 작아 기본으로 쓴다.
+    """
     with tempfile.TemporaryDirectory() as tmp:
         saved = str(Path(tmp) / "saved_model")
         model.export(saved)  # Keras 3 호환 경로: SavedModel 을 거쳐 변환
 
-        def representative_data():
-            for images, _ in train_ds.take(64):
-                for img in images[:4]:
-                    yield [tf.expand_dims(tf.cast(img, tf.float32), 0)]
-
         converter = tf.lite.TFLiteConverter.from_saved_model(saved)
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        converter.representative_dataset = representative_data
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        converter.inference_input_type = tf.uint8
-        converter.inference_output_type = tf.uint8
-        try:
-            blob = converter.convert()
+        kind = "dynamic-range 양자화 (float32 입출력)"
+        if int8:
+            def representative_data():
+                for images, _ in train_ds.take(64):
+                    for img in images[:4]:
+                        yield [tf.expand_dims(tf.cast(img, tf.float32), 0)]
+
+            converter.representative_dataset = representative_data
+            converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+            converter.inference_input_type = tf.uint8
+            converter.inference_output_type = tf.uint8
             kind = "int8 전체 양자화"
-        except Exception as e:
-            print(f"[변환] int8 양자화 실패({e}) — dynamic-range 로 폴백")
-            converter = tf.lite.TFLiteConverter.from_saved_model(saved)
-            converter.optimizations = [tf.lite.Optimize.DEFAULT]
-            blob = converter.convert()
-            kind = "dynamic-range 양자화 (float32 입출력)"
+        blob = converter.convert()
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_bytes(blob)
@@ -137,6 +138,8 @@ def main():
     ap.add_argument("--fine-tune-epochs", type=int, default=5,
                     help="백본 상위 레이어 미세조정 epoch (0 이면 생략)")
     ap.add_argument("--seed", type=int, default=1234)
+    ap.add_argument("--int8", action="store_true",
+                    help="전체 int8 양자화로 변환 (MobileNetV3 에서 정확도 손실이 커 비권장)")
     args = ap.parse_args()
 
     for cls in CLASS_NAMES:
@@ -172,7 +175,7 @@ def main():
 
     print("\n[3/3] TFLite 변환")
     out = args.out.resolve()
-    convert_tflite(model, train_ds, out)
+    convert_tflite(model, train_ds, out, int8=args.int8)
     print("\n완료. 라즈베리파이 배포:")
     shown = out.relative_to(app_dir) if out.is_relative_to(app_dir) else out
     print(f"  1) {shown} 를 파이의 같은 경로로 복사")

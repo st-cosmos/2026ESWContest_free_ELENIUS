@@ -136,6 +136,12 @@ JACKET_MODEL_PATH = Path(
 )
 # 모델 출력(착용 확률)이 이 값 이상이면 착용으로 판정
 JACKET_ML_THRESHOLD = float(os.environ.get("VPASS_JACKET_ML_THRESHOLD", "0.5"))
+# 옆모습 단계용 TFLite 이진 분류 모델 — 얼굴 아래 넓은 가로 띠(side_band_roi)를 입력으로
+# '입었음' 확률을 낸다. 있으면 색 샌드위치 규칙 대신 쓴다(없으면 색 규칙으로 폴백).
+JACKET_SIDE_MODEL_PATH = Path(
+    os.environ.get("VPASS_JACKET_SIDE_MODEL", APP_DIR / "models" / "jacket_side_classifier.tflite")
+)
+JACKET_SIDE_ML_THRESHOLD = float(os.environ.get("VPASS_JACKET_SIDE_ML_THRESHOLD", "0.5"))
 
 # 학습 데이터 수집: 스캔 중 가슴 ROI 크롭을 주기적으로 저장 (기본 꺼짐)
 JACKET_CAPTURE_ENABLED = (
@@ -145,6 +151,12 @@ JACKET_CAPTURE_DIR = Path(
     os.environ.get("VPASS_JACKET_CAPTURE_DIR", DATA_DIR / "jacket_dataset" / "unsorted")
 )
 JACKET_CAPTURE_INTERVAL = float(os.environ.get("VPASS_JACKET_CAPTURE_INTERVAL", "1.0"))
+# 수집 모드에서 카메라 원본 프레임도 함께 저장한다 (얼굴 검출·모듈 신호와 무관).
+# 옆모습 띠 크롭은 자세 검증이 시작돼야(=모듈 착용 신호) 저장되므로, 모듈 없는 조끼나
+# 얼굴이 안 잡히는 옆모습도 나중에 PC 에서 다시 판정해 볼 수 있게 원본을 남긴다.
+JACKET_CAPTURE_FRAMES_DIR = Path(
+    os.environ.get("VPASS_JACKET_CAPTURE_FRAMES_DIR", DATA_DIR / "jacket_dataset" / "frames")
+)
 
 # 구명조끼 색상 프리셋 (OpenCV HSV: H 0-179, S/V 0-255)
 _JACKET_COLOR_PRESETS: dict[str, list[tuple]] = {
@@ -193,6 +205,10 @@ JACKET_TURN_FACE_GAP_SEC = float(os.environ.get("VPASS_JACKET_TURN_FACE_GAP", "1
 # 옆모습 단계는 얼굴 검출 없이 진행한다(옆얼굴은 검출기가 자주 놓침). 다만 얼굴이 이 시간(초)
 # 넘게 한 번도 안 보이면 자리를 떠난 것으로 보고 처음부터 다시. 0 이면 끊지 않음.
 JACKET_TURN_NOFACE_SEC = float(os.environ.get("VPASS_JACKET_TURN_NOFACE", "15"))
+# 옆모습 단계에서 같은 사람으로 보는 얼굴 이동 허용 범위(얼굴폭 배수, 마지막으로 보인 얼굴 기준).
+# 몸을 돌리는 순간 얼굴이 얼굴폭만큼 옆으로 움직이는 일이 흔해 정면 단계(0.8)보다 넓게 둔다.
+# 다른 사람이 끼어드는 경우는 정면 얼굴이 보일 때 신원을 다시 확인해 막는다(camera.py).
+JACKET_TURN_SIDE_MOVE = float(os.environ.get("VPASS_JACKET_TURN_SIDE_MOVE", "1.5"))
 # (선택) 정면 단계에서 어깨 좌우 패치에도 조끼 색이 보여야 통과. 기본 꺼짐 — 카메라 구도에
 # 따라 어깨가 잘려 오탐이 잦았다. 옆모습 샌드위치 판정이 '들고 있는 조끼'를 걸러낸다.
 JACKET_SHOULDER_CHECK = (
