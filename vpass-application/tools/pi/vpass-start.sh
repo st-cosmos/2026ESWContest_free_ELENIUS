@@ -13,6 +13,26 @@ export VPASS_KILLSWITCH_BLE_ADAPTER=usb
 export VPASS_KILLSWITCH_BLE_ADDRESS=${VPASS_KILLSWITCH_BLE_ADDRESS:-D4:05:92:E7:B3:4A}
 export DISPLAY=:0
 
+# ── 효과음 출력 고정 ──────────────────────────────────────────────────────
+# 효과음은 키오스크 chromium 이 PipeWire "기본 출력"으로 재생한다. 기본 출력이
+# 모니터가 안 꽂힌 HDMI 포트나 사라진 장치로 남아 있거나 볼륨이 0 근처면 소리가
+# 조용히 안 나므로(2026-11-02 증상), 시작할 때 모니터(HDMI) 출력으로 맞추고
+# 볼륨을 올려 둔다. 볼륨은 VPASS_AUDIO_VOLUME(0~1, 기본 0.7)으로 조정.
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+AUDIO_VOLUME=${VPASS_AUDIO_VOLUME:-0.7}
+if command -v wpctl >/dev/null 2>&1; then
+  sink=$(wpctl status 2>/dev/null | sed -n '/Sinks:/,/Sources:/p' | grep -i 'HDMI'          | grep -oE '[0-9]+\.' | head -1 | tr -d .)
+  if [ -n "$sink" ]; then
+    wpctl set-default "$sink"
+    wpctl set-volume "$sink" "$AUDIO_VOLUME"
+    wpctl set-mute "$sink" 0
+    echo "audio: HDMI sink $sink, volume $AUDIO_VOLUME"
+  else
+    wpctl set-volume @DEFAULT_AUDIO_SINK@ "$AUDIO_VOLUME" 2>/dev/null
+    echo "audio: HDMI 출력 장치 없음(모니터 꺼짐/미연결?) — 기본 출력 그대로, volume $AUDIO_VOLUME"
+  fi
+fi
+
 # ── 데모 관제 서버 주소 자동 탐색 ─────────────────────────────────────────
 # PC IP 는 네트워크(집 공유기 / 핫스팟)마다 달라서 고정값을 쓰면 연동이 끊긴다.
 #   1) VPASS_DEMO_SERVER_URL 이 지정돼 있으면 그대로 사용
@@ -20,7 +40,7 @@ export DISPLAY=:0
 #   3) 같은 서브넷 전체를 8100 포트로 빠르게 스캔
 #   4) 못 찾으면 연동 없이 시작 (V-PASS 본체 동작에는 영향 없음)
 DEMO_PORT=${VPASS_DEMO_SERVER_PORT:-8100}
-CANDIDATES=${VPASS_DEMO_SERVER_CANDIDATES:-"10.213.122.84 192.168.0.222"}
+CANDIDATES=${VPASS_DEMO_SERVER_CANDIDATES:-"10.213.122.84 192.168.0.222 172.26.94.84 10.75.209.84"}
 
 probe() { curl -s -m 1 -o /dev/null -w '%{http_code}' "http://$1:$DEMO_PORT/api/state" 2>/dev/null | grep -q '^200$'; }
 
@@ -51,5 +71,7 @@ else
   echo "demo server: $VPASS_DEMO_SERVER_URL (env)"
 fi
 
-nohup ~/.local/bin/uv run vpass "$@" > /tmp/vpass.log 2>&1 &
+# --kiosk: chromium 을 자동재생 허용 플래그와 함께 띄운다. 수동으로 연 chromium 은
+# 화면을 한 번 터치하기 전까지 효과음이 차단된다.
+nohup ~/.local/bin/uv run vpass --kiosk "$@" > /tmp/vpass.log 2>&1 &
 echo "vpass started (pid $!) - tail -f /tmp/vpass.log"
