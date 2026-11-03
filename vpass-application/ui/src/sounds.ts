@@ -55,6 +55,7 @@ export function play(name: SoundName): void {
 }
 
 export function startLoop(name: SoundName): void {
+  if (mutedLoops.has(name)) return; // 사용자가 소리만 꺼 둔 상태
   const a = get(name);
   if (!a.paused) return; // 이미 재생 중
   a.loop = true;
@@ -63,12 +64,39 @@ export function startLoop(name: SoundName): void {
 }
 
 export function stopLoop(name: SoundName): void {
+  // 루프가 끝나면(예: 상황 종료) 음소거도 함께 풀어, 다음 발보는 다시 울린다
+  mutedLoops.delete(name);
+  silence(name);
+}
+
+function silence(name: SoundName): void {
   const a = cache.get(name);
   if (a) {
     a.pause();
     a.loop = false;
     a.currentTime = 0;
   }
+}
+
+// 루프 음소거 — 모달·상태는 그대로 두고 소리만 끈다 (SOS 사이렌용).
+// startLoop 는 음소거된 이름을 재생하지 않고, stopLoop(상황 종료)가 음소거를 푼다.
+const mutedLoops = new Set<SoundName>();
+
+export function muteLoop(name: SoundName): void {
+  mutedLoops.add(name);
+  silence(name);
+}
+
+export function unmuteLoop(name: SoundName): void {
+  mutedLoops.delete(name);
+  const a = get(name);
+  a.loop = true;
+  a.currentTime = 0;
+  void a.play().catch(() => {});
+}
+
+export function isLoopMuted(name: SoundName): boolean {
+  return mutedLoops.has(name);
 }
 
 // 브라우저 자동재생 정책 해제: 첫 사용자 입력 때 전 오디오를 무음으로 한 번
