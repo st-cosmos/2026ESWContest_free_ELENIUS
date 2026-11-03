@@ -1,11 +1,21 @@
 // SOS / 익수 비상 모달 — 어떤 화면 위에서도 표시
 
-import { Siren } from "lucide-react";
+import { useState } from "react";
+import { Siren, Volume2, VolumeX } from "lucide-react";
 import { api } from "../api";
+import { isLoopMuted, muteLoop, unmuteLoop } from "../sounds";
 import type { SosReport } from "../types";
 
 export function SosModal({ report }: { report: SosReport }) {
   const isMob = report.cause === "mob";
+  // 사이렌만 끄는 버튼 — 신고·모달·킬 스위치 상태는 건드리지 않는다.
+  // 상황 종료로 SOS 가 내려가면 음소거도 풀려 다음 발보 때 다시 울린다.
+  const [muted, setMuted] = useState(() => isLoopMuted("sos"));
+  const toggleSiren = () => {
+    if (muted) unmuteLoop("sos");
+    else muteLoop("sos");
+    setMuted(!muted);
+  };
 
   return (
     <div className="modal-backdrop" style={{ background: "#070509e6" }}>
@@ -110,6 +120,16 @@ export function SosModal({ report }: { report: SosReport }) {
             </div>
           ))}
         </div>
+
+        <button
+          className="btn btn-secondary"
+          style={{ width: "100%", borderRadius: 12 }}
+          onClick={toggleSiren}
+          aria-pressed={muted}
+        >
+          {muted ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          {muted ? "사이렌 다시 켜기" : "사이렌 소리 끄기"}
+        </button>
 
         <button
           className="btn"
