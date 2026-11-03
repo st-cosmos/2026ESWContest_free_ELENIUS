@@ -28,6 +28,17 @@ HTTP → 레지스트리 매핑과 동일한 의미로 변환한다:
 
 bleak 미설치·블루투스 어댑터 부재 시에는 상태만 남기고 조용히 비활성화된다
 — 기존 HTTP 경로(/api/wearing 등)와 SimJacket 은 그대로 병행 동작한다.
+
+수신 경로 자가 복구 (2026-11-03 파이 실측):
+  bluetoothd 가 죽었다 재시작하면(앱 시작 직후 "buffer overflow detected" 로
+  세 번 확인) 우리가 등록한 패시브 광고 모니터는 죽은 데몬과 함께 사라지는데
+  bleak 은 아무 예외도 내지 않아 "scanning" 인 채로 조끼를 전혀 못 듣는다.
+  그러면 착용 중 10초 두절 → 신호 두절 경고가 오경보로 울린다. 그래서
+    1) org.bluez 의 D-Bus 소유자를 주기적으로 확인해 바뀌면(데몬 재시작) 즉시,
+    2) 착용 장치가 있는데 ADV_STALL_SEC 동안 조끼 광고가 하나도 없으면 보조로
+  스캐너를 멈추고 다시 등록한다. 레지스트리(마지막 수신 시각·경고 상태)는
+  건드리지 않으므로 전파가 정말 끊긴 경우(철제 구조물·입수)의 경고 흐름은
+  그대로다 — 재시작해도 안 들리면 두절로 흘러간다.
 """
 
 from __future__ import annotations
@@ -61,6 +72,11 @@ FLAG_STROBE = 0x10
 # 같은 장치의 ping 을 레지스트리에 넣는 최소 간격(초) — 광고는 이보다 촘촘하다
 PING_MIN_INTERVAL = 1.0
 
+# 수신 경로 자가 복구
+BLUEZ_OWNER_POLL_SEC = 2.0    # org.bluez D-Bus 소유자(데몬 재시작) 확인 주기
+ADV_STALL_SEC = 15.0          # 착용 장치가 있는데 이만큼 광고가 없으면 스캐너 재시작
+ADV_STALL_RETRY_SEC = 60.0    # 재시작 뒤에도 안 들리면(실제 두절) 다음 재시작까지 대기
+
 
 class BleJacketScanner:
     def __init__(self, registry, on_low_batt=None):
@@ -73,6 +89,12 @@ class BleJacketScanner:
         self._seen: dict[str, dict] = {}
         self._lock = threading.Lock()
         self.status = "off" if not BLE_ENABLED else "starting"
+        # 자가 복구용 — 마지막 조끼 광고 시각, 재시작 이력, D-Bus 연결
+        self._last_adv_ts = 0.0
+        self._stall_retry_at = 0.0
+        self._dbus = None
+        self.restarts = 0
+        self.last_restart: dict | None = None
 
     # ── 수명 주기 ────────────────────────────────────────────────────────
     # BLE 코루틴은 blebus 의 공용 루프에서 실행한다. 스캐너와 킬 스위치가
@@ -107,6 +129,13 @@ class BleJacketScanner:
         except Exception as e:  # 어댑터 없음/권한 등
             self.status = f"error: {e}"
             print(f"[jacketble] 스캔 종료: {e}")
+        finally:
+            bus, self._dbus = self._dbus, None
+            if bus is not None:
+                try:
+                    bus.disconnect()
+                except Exception:
+                    pass
 
     @staticmethod
     def _passive_patterns() -> list:
@@ -154,14 +183,6 @@ class BleJacketScanner:
             try:
                 scanner = BleakScanner(**kwargs)
                 await scanner.start()
-                try:
-                    self.status = f"scanning ({label}, {mode})"
-                    print(f"[jacketble] BLE 스캔 시작 (adapter={label}, mode={mode})")
-                    while self._running:
-                        await asyncio.sleep(0.5)
-                finally:
-                    await scanner.stop()
-                return
             except Exception as e:
                 if use_passive and BLE_SCAN_MODE == "auto":
                     # BlueZ Experimental 꺼짐 / 구버전 등 — 능동 스캔으로 폴백
@@ -181,6 +202,87 @@ class BleJacketScanner:
                     if not self._running:
                         return
                     await asyncio.sleep(0.5)
+                continue
+
+            self.status = f"scanning ({label}, {mode})"
+            print(f"[jacketble] BLE 스캔 시작 (adapter={label}, mode={mode})")
+            try:
+                reason = await self._watch_scanner()
+            finally:
+                try:
+                    await scanner.stop()
+                except Exception:
+                    pass  # 데몬이 바뀌었으면 stop 자체가 실패할 수 있다
+            if not self._running:
+                return
+            self.restarts += 1
+            self.last_restart = {"time": time.strftime("%H:%M:%S"), "reason": reason}
+            self.status = f"restarting: {reason}"
+            print(f"[jacketble] 스캐너 재시작 — {reason}")
+            await asyncio.sleep(1.0)
+
+    async def _watch_scanner(self) -> str | None:
+        """스캔 중 감시. 재시작해야 할 때 그 사유를 돌려주고, 종료 시 None."""
+        owner = await self._bluez_owner()
+        started = time.time()
+        self._last_adv_ts = 0.0
+        last_owner_check = started
+        while self._running:
+            await asyncio.sleep(0.5)
+            now = time.time()
+            if now - last_owner_check >= BLUEZ_OWNER_POLL_SEC:
+                last_owner_check = now
+                current = await self._bluez_owner()
+                if owner and current and current != owner:
+                    return f"bluetoothd 재시작 감지 ({owner} → {current}) — 광고 모니터 유실"
+                if owner and current is None:
+                    return f"bluetoothd 응답 없음 (이전 소유자 {owner})"
+            # 착용 장치가 있는데 광고가 전혀 없다 — 모니터가 조용히 죽었을 수 있다.
+            # 실제 두절이면 재시작해도 안 들리므로 ADV_STALL_RETRY_SEC 간격으로만 다시 시도.
+            silent_since = max(self._last_adv_ts, started)
+            if (
+                now - silent_since >= ADV_STALL_SEC
+                and now >= self._stall_retry_at
+                and self._registry.worn_devices()
+            ):
+                self._stall_retry_at = now + ADV_STALL_RETRY_SEC
+                return f"착용 중인데 {ADV_STALL_SEC:.0f}초간 조끼 광고 없음"
+        return None
+
+    async def _bluez_owner(self) -> str | None:
+        """org.bluez 의 현재 D-Bus 소유자(:1.xxx). 데몬이 재시작되면 바뀐다.
+
+        리눅스가 아니거나 dbus-fast 가 없으면 None — 그러면 광고 공백 휴리스틱만 쓴다.
+        """
+        if sys.platform != "linux":
+            return None
+        try:
+            from dbus_fast import BusType, Message
+            from dbus_fast.aio import MessageBus
+        except ImportError:
+            return None
+        try:
+            if self._dbus is None:
+                self._dbus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+            reply = await self._dbus.call(Message(
+                destination="org.freedesktop.DBus",
+                path="/org/freedesktop/DBus",
+                interface="org.freedesktop.DBus",
+                member="GetNameOwner",
+                signature="s",
+                body=["org.bluez"],
+            ))
+            if reply is None or not reply.body:
+                return None
+            return str(reply.body[0])
+        except Exception:
+            bus, self._dbus = self._dbus, None
+            if bus is not None:
+                try:
+                    bus.disconnect()
+                except Exception:
+                    pass
+            return None
 
     # ── 광고 수신 ────────────────────────────────────────────────────────
     def _on_adv(self, device, adv) -> None:
@@ -190,6 +292,7 @@ class BleJacketScanner:
             return
         if payload[2] != PROTO_VERSION:
             return
+        self._last_adv_ts = time.time()
 
         device_id = f"jacket-{payload[3]}"
         flags = payload[4]
@@ -300,4 +403,9 @@ class BleJacketScanner:
                 }
                 for dev, d in self._seen.items()
             }
-        return {"status": self.status, "devices": devices}
+        return {
+            "status": self.status,
+            "devices": devices,
+            "restarts": self.restarts,
+            "last_restart": self.last_restart,
+        }
