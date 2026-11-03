@@ -5,6 +5,10 @@ V-PASS 단말에서 접수되는 신고를 저장/조회한다.
 - cause == 'mob'    : 자동 신고 (익수 감지 — 물에 빠졌을 때만 발생)
 
 'alerted' 플래그로 '최초 접수 알림 모달'에 아직 노출되지 않은 신규 신고를 구분한다.
+
+같은 선박·같은 사유의 신고가 DEDUP_WINDOW_SEC 안에 다시 들어오면(단말 재판정,
+LoRa/HTTP 재전송, 터치 중복 등) 새 신고를 만들지 않고 기존 신고를 돌려준다
+— 익수 판정 1회당 신고 접수 1회. 이미 상황 종료된 신고는 중복 기준에서 제외한다.
 """
 
 from __future__ import annotations
@@ -13,9 +17,19 @@ import threading
 import uuid
 from datetime import datetime
 
+# 같은 신고로 묶는 시간 창(초) — 기존 신고의 접수 시각 기준
+DEDUP_WINDOW_SEC = 120
+
 
 def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _parse(ts: str | None) -> datetime | None:
+    try:
+        return datetime.strptime(ts or "", "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
 
 
 class ReportInbox:
@@ -23,11 +37,40 @@ class ReportInbox:
         self._store = store
         self._lock = threading.Lock()
 
+    @staticmethod
+    def _same_incident(existing: dict, cause: str, payload: dict, now: datetime) -> bool:
+        if existing.get("status") == "closed":
+            return False
+        if existing.get("cause") != cause:
+            return False
+        if existing.get("vessel_id", "-") != payload.get("vessel_id", "-"):
+            return False
+        if (existing.get("detail") or None) != (payload.get("detail") or None):
+            return False
+        created = _parse(existing.get("created_at"))
+        return created is not None and 0 <= (now - created).total_seconds() <= DEDUP_WINDOW_SEC
+
     def add(self, payload: dict) -> dict:
+        report, _ = self.add_or_merge(payload)
+        return report
+
+    def add_or_merge(self, payload: dict) -> tuple[dict, bool]:
+        """신고 저장. (report, created) — 중복으로 판정돼 기존 신고를 돌려주면 created=False."""
         cause = payload.get("cause")
         if cause not in ("manual", "mob"):
             cause = "manual"
-        report = {
+        now = datetime.now()
+        with self._lock:
+            for existing in self._store.load():
+                if self._same_incident(existing, cause, payload, now):
+                    return existing, False
+            report = self._new_report(cause, payload)
+            self._store.update(lambda rs: [report] + rs)
+        return report, True
+
+    @staticmethod
+    def _new_report(cause: str, payload: dict) -> dict:
+        return {
             "id": uuid.uuid4().hex[:12],
             "cause": cause,
             "detail": payload.get("detail"),
@@ -40,8 +83,6 @@ class ReportInbox:
             "alerted": False,          # 최초 접수 알림 모달 노출 여부
             "created_at": _now(),
         }
-        self._store.update(lambda rs: [report] + rs)
-        return report
 
     def list_public(self) -> list[dict]:
         return self._store.load()

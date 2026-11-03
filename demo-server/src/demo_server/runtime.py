@@ -152,7 +152,11 @@ class Runtime:
         실제 단말에서는 킬 스위치가 작동해 배가 멈추므로, 시뮬레이터도 항로
         이동을 중단해야 관제 화면과 상태가 어긋나지 않는다.
         """
-        report = self.reports.add(payload)
+        report, created = self.reports.add_or_merge(payload)
+        if not created:
+            # 같은 사고의 재전송/재판정 — 신고도 시뮬레이터 고정 시각도 그대로 둔다
+            print(f"[sos] 중복 신고 무시 ({report.get('vessel_name')}, id={report['id']})")
+            return report
         self.simulator.lock_for_sos({
             "report_id": report["id"],
             "cause": report["cause"],

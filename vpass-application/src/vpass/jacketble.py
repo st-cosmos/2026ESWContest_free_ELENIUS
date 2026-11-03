@@ -21,6 +21,10 @@ HTTP → 레지스트리 매핑과 동일한 의미로 변환한다:
   worn 플래그 전환    = set_wearing (승선 게이트/탈의 경고)
   낙하 카운터 증가    = fall (이후 두절 시 FALL_PING_TIMEOUT 로 익수 판정)
   낙하 + 물 플래그    = mob_confirm (펌웨어 로컬 익수 확정 → 즉시 익수 판정)
+                        플래그가 꺼졌다 다시 켜질 때만(상승 에지) 1회 호출한다.
+                        펌웨어는 물이 마를 때까지 매 광고에 플래그를 실으므로,
+                        레벨로 넣으면 단말에서 '상황 확인'을 누를 때마다 익수가
+                        재판정돼 관제 서버에 신고가 계속 중복 접수된다.
 
 bleak 미설치·블루투스 어댑터 부재 시에는 상태만 남기고 조용히 비활성화된다
 — 기존 HTTP 경로(/api/wearing 등)와 SimJacket 은 그대로 병행 동작한다.
@@ -207,10 +211,19 @@ class BleJacketScanner:
                     "fall_count": fall_count,
                     "last_ping": 0.0,
                     "batt_warned": False,
+                    "fall_water": False,
                 }
                 self._seen[device_id] = prev
 
             worn_changed = prev["worn"] != worn
+            # 낙하 + 물 감지 = 펌웨어 로컬 익수 확정. STROBE 는 펌웨어가 그 조건에서만
+            # 켜므로 단독으로도 충분하고, FALL 래치(30초) + WATER 동시 수신도 같은 뜻.
+            fall_water = bool(flags & FLAG_STROBE) or (
+                bool(flags & FLAG_FALL) and bool(flags & FLAG_WATER)
+            )
+            # 익수 확정은 상승 에지에서만 1회 — 익수 판정 1회당 신고 1회
+            mob_rise = worn and fall_water and not prev.get("fall_water", False)
+            prev["fall_water"] = worn and fall_water
             # 낙하 카운터 증가분 (uint8 랩어라운드 포함)
             new_falls = (fall_count - prev["fall_count"]) % 256 if not first else 0
             do_ping = worn and now - prev["last_ping"] >= PING_MIN_INTERVAL
@@ -234,12 +247,6 @@ class BleJacketScanner:
                 address=device.address,
             )
 
-        # 낙하 + 물 감지 = 펌웨어 로컬 익수 확정. STROBE 는 펌웨어가 그 조건에서만
-        # 켜므로 단독으로도 충분하고, FALL 래치(30초) + WATER 동시 수신도 같은 뜻.
-        fall_water = bool(flags & FLAG_STROBE) or (
-            bool(flags & FLAG_FALL) and bool(flags & FLAG_WATER)
-        )
-
         # 레지스트리 반영은 락 밖에서 (콜백 체인이 길 수 있음)
         if worn_changed:
             self._registry.set_wearing(device_id, worn)
@@ -248,7 +255,7 @@ class BleJacketScanner:
             self._registry.ping(device_id)  # 낙하 직후 광고 = 아직 생존
         elif do_ping:
             self._registry.ping(device_id)
-        if worn and fall_water:
+        if mob_rise:
             self._registry.mob_confirm(device_id, "fall_water")
         if warn_batt and self._on_low_batt:
             try:
