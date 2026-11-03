@@ -134,6 +134,11 @@ def note_device(device) -> None:
     _devices[device.address.upper()] = device
 
 
+def forget_device(address: str) -> None:
+    """보관된 BLEDevice 를 버린다 — BlueZ 가 그 D-Bus 객체를 이미 지운 경우용."""
+    _devices.pop(address.upper(), None)
+
+
 def get_device(address: str, adapter: str | None = None):
     """보관된 BLEDevice. adapter 가 주어지면 그 어댑터에서 본 것만 돌려준다."""
     device = _devices.get(address.upper())
