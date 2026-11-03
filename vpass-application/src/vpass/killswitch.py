@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import queue
+import re
 import threading
 
 from . import blebus
@@ -189,9 +190,47 @@ class _BleOutput:
                 pass
         return None
 
+    async def _connect_any(self, target: str, adapter: str | None, client_kwargs):
+        """후보를 차례로 시도해 연결된 BleakClient 를 돌려준다 (전부 실패 시 마지막 예외).
+
+        1) 조끼 스캐너가 본 BLEDevice (blebus 캐시)
+        2) BlueZ 장치 경로를 직접 지정한 BLEDevice — 스캔 없이 바로 연결
+        3) 주소 문자열 — bleak 이 직접 스캔해서 찾는다
+
+        연결이 끊긴 뒤 BlueZ 가 장치 D-Bus 객체를 지우면 1) 은 "device 'dev_…'
+        not found" 로 즉시 실패하고, 패시브 광고 모니터는 그 객체를 다시 만들지
+        않아 같은 실패가 무한 반복됐다. 또 재시작 직후 캐시가 비어 있으면 3) 의
+        같은 프로세스 내 스캔이 장치를 못 찾았다 (2026-11-01 파이 실측). 1)·2) 는
+        객체가 없으면 즉시 실패하므로 앞에 둬도 지연이 거의 없다.
+        """
+        from bleak import BleakClient  # type: ignore
+        from bleak.backends.device import BLEDevice  # type: ignore
+
+        candidates = []
+        known = blebus.get_device(target, adapter)
+        if known is not None:
+            candidates.append(("cache", known))
+        if adapter and re.fullmatch(r"hci\d+", adapter):
+            path = f"/org/bluez/{adapter}/dev_{target.upper().replace(':', '_')}"
+            candidates.append(("path", BLEDevice(target, None, {"path": path})))
+        candidates.append(("scan", target))
+
+        last_error: Exception | None = None
+        for kind, candidate in candidates:
+            new_client = BleakClient(candidate, timeout=self.timeout_sec, **client_kwargs)
+            try:
+                await new_client.connect()
+                return new_client
+            except Exception as e:
+                last_error = e
+                if kind == "cache":
+                    blebus.forget_device(target)  # 낡은 객체 — 다음부터 쓰지 않는다
+        assert last_error is not None
+        raise last_error
+
     async def _reconnect(self, client):
         """기존 연결을 정리하고 새로 접속한다. 실패 시 None (에러는 last_error)."""
-        from bleak import BleakClient, BleakScanner  # type: ignore
+        from bleak import BleakScanner  # type: ignore
 
         client = await self._drop(client)
 
@@ -218,13 +257,9 @@ class _BleOutput:
                     raise RuntimeError(f"BLE 장치를 찾지 못했습니다: {self.name}")
                 target = device.address
 
-            # 조끼 스캐너가 같은 어댑터에서 이미 본 장치면 BLEDevice 로 넘겨 bleak 의
-            # 자체 스캔(같은 프로세스 스캔과 충돌 → BlueZ InProgress)을 건너뛴다.
-            known = blebus.get_device(target, adapter)
-            new_client = BleakClient(
-                known or target, timeout=self.timeout_sec, **client_kwargs
-            )
-            await new_client.connect()
+            # 가능하면 스캔 없이 연결한다 — bleak 의 자체 스캔은 같은 프로세스의
+            # 조끼 스캐너와 충돌하기 쉽다 (BlueZ InProgress, 장치 못 찾음).
+            new_client = await self._connect_any(target, adapter, client_kwargs)
             self.link_connected = True
             self.last_error = None
             print(f"[killswitch] BLE 연결 유지 시작: {target}")
