@@ -94,7 +94,26 @@ find_demo_server() {
     | awk '$1==200 {print $2; exit}'
 }
 
-if [ -z "$VPASS_DEMO_SERVER_URL" ]; then
+# ── 관제 서버 통신 방식 ───────────────────────────────────────────────────
+#   http (기본): Wi-Fi 로 관제 서버에 직접 연결 — 아래 주소 탐색
+#   lora       : VPASS_DEMO_TRANSPORT=lora ~/vpass-start.sh
+#                E220 ~LoRa~ E220 ─ ESP8266 게이트웨이 ─ Wi-Fi ─ 관제 서버
+#                서버 주소는 게이트웨이가 알고 있으므로 탐색하지 않는다.
+# LoRa 포트는 VPASS_LORA_PORT 로 지정하거나, USB-TTL(/dev/ttyUSB0) → GPIO UART(/dev/serial0)
+# 순서로 있는 것을 쓴다. /dev/serial0 은 GPS 기본 포트이기도 하니 겹치지 않게 주의.
+export VPASS_DEMO_TRANSPORT=${VPASS_DEMO_TRANSPORT:-http}
+
+if [ "$VPASS_DEMO_TRANSPORT" = "lora" ]; then
+  if [ -z "$VPASS_LORA_PORT" ]; then
+    for dev in /dev/ttyUSB0 /dev/serial0; do
+      [ -e "$dev" ] && { VPASS_LORA_PORT=$dev; break; }
+    done
+  fi
+  export VPASS_LORA_PORT=${VPASS_LORA_PORT:-/dev/serial0}
+  export VPASS_LORA_BAUDRATE=${VPASS_LORA_BAUDRATE:-9600}
+  unset VPASS_DEMO_SERVER_URL
+  echo "demo transport: lora ($VPASS_LORA_PORT @ $VPASS_LORA_BAUDRATE)"
+elif [ -z "$VPASS_DEMO_SERVER_URL" ]; then
   host=$(find_demo_server)
   if [ -n "$host" ]; then
     export VPASS_DEMO_SERVER_URL="http://$host:$DEMO_PORT"
