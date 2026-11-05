@@ -13,6 +13,42 @@ export VPASS_KILLSWITCH_BLE_ADAPTER=usb
 export VPASS_KILLSWITCH_BLE_ADDRESS=${VPASS_KILLSWITCH_BLE_ADDRESS:-D4:05:92:E7:B3:4A}
 export DISPLAY=:0
 
+# ── bluetoothd 자동 재시작 보강 ───────────────────────────────────────────
+# 파이 OS 기본 설정은 bluetoothd 가 10초 안에 5번 죽으면 재시작을 포기한다. 그러면
+# 다음 D-Bus 요청이 깨울 때까지(실측 ~25초) 블루투스가 꺼져 조끼 신호 두절 경고가
+# 오경보로 울린다 (2026-11-05 — BlueZ 5.82 제조사 데이터 패턴 버그, jacketble.py 참고).
+# 어떤 이유로 죽든 1초 뒤 횟수 제한 없이 다시 띄우도록 systemd drop-in 을 깔아 둔다.
+# 최초 1회만 sudo 비밀번호를 묻고, 이후에는 내용이 같으면 건너뛴다.
+BT_GUARD=/etc/systemd/system/bluetooth.service.d/vpass-restart.conf
+BT_GUARD_CONF='# V-PASS (tools/pi/vpass-start.sh 가 설치): bluetoothd 가 죽어도 항상 1초 뒤 재시작
+[Unit]
+StartLimitIntervalSec=0
+
+[Service]
+Restart=always
+RestartSec=1'
+if [ "$(cat "$BT_GUARD" 2>/dev/null)" = "$BT_GUARD_CONF" ]; then
+  echo "bluetooth: 자동 재시작 설정 확인됨"
+else
+  SUDO=""
+  if sudo -n true 2>/dev/null; then
+    SUDO="sudo -n"
+  elif [ -t 0 ]; then
+    echo "bluetooth: 자동 재시작 설정을 설치합니다 (최초 1회 sudo 비밀번호 필요)"
+    SUDO="sudo"
+  fi
+  if [ -n "$SUDO" ] && $SUDO mkdir -p "${BT_GUARD%/*}" \
+     && printf '%s\n' "$BT_GUARD_CONF" | $SUDO tee "$BT_GUARD" >/dev/null \
+     && $SUDO systemctl daemon-reload; then
+    # 이미 재시작 한도에 걸려 꺼져 있었다면 풀고 다시 띄운다 (실행 중이면 무시됨)
+    $SUDO systemctl reset-failed bluetooth 2>/dev/null
+    $SUDO systemctl start bluetooth 2>/dev/null
+    echo "bluetooth: 자동 재시작 설정 설치됨 ($BT_GUARD)"
+  else
+    echo "bluetooth: [경고] 자동 재시작 설정 미설치 — 터미널에서 ~/vpass-start.sh 를 실행해 sudo 비밀번호를 한 번 입력하세요"
+  fi
+fi
+
 # ── 효과음 출력 고정 ──────────────────────────────────────────────────────
 # 효과음은 키오스크 chromium 이 PipeWire "기본 출력"으로 재생한다. 기본 출력이
 # 모니터가 안 꽂힌 HDMI 포트나 사라진 장치로 남아 있거나 볼륨이 0 근처면 소리가

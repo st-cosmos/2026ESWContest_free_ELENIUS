@@ -709,6 +709,23 @@ def main():
     check("초기화 후 재시작: 시동 잠금", fresh.engine.snapshot()["locked"])
     fresh.stop()
 
+    print("\n== 11) BLE 패시브 스캔 패턴: bluetoothd 크래시 경로 회피 ==")
+    # BlueZ 5.82 는 제조사 데이터 패턴이 하나라도 등록돼 있으면, 주변 장치의 긴
+    # 제조사 데이터(확장 광고)를 31바이트 버퍼에 복사하다 bluetoothd 가 죽는다.
+    try:
+        from bleak.assigned_numbers import AdvertisementDataType as ADT
+        from vpass.jacketble import BleJacketScanner
+        patterns = BleJacketScanner._passive_patterns()
+    except ImportError as e:
+        print(f"  [SKIP] bleak 미설치: {e}")
+    else:
+        types = [p.ad_data_type for p in patterns]
+        check("제조사 데이터 패턴 미사용",
+              ADT.MANUFACTURER_SPECIFIC_DATA not in types, str(types))
+        check("조끼 Flags(0x04) 패턴 등록",
+              any(p.ad_data_type == ADT.FLAGS and p.content_of_pattern == b"\x04"
+                  for p in patterns), str(patterns))
+
     print(f"\n결과: PASS {PASS} / FAIL {FAIL}")
     sys.exit(1 if FAIL else 0)
 

@@ -33,7 +33,10 @@ bleak 미설치·블루투스 어댑터 부재 시에는 상태만 남기고 조
   bluetoothd 가 죽었다 재시작하면(앱 시작 직후 "buffer overflow detected" 로
   세 번 확인) 우리가 등록한 패시브 광고 모니터는 죽은 데몬과 함께 사라지는데
   bleak 은 아무 예외도 내지 않아 "scanning" 인 채로 조끼를 전혀 못 듣는다.
-  그러면 착용 중 10초 두절 → 신호 두절 경고가 오경보로 울린다. 그래서
+  그러면 착용 중 10초 두절 → 신호 두절 경고가 오경보로 울린다.
+  (데몬이 죽던 원인은 우리 제조사 데이터 패턴이 건드린 BlueZ 5.82 버그였다 — 2026-11-05
+  확인, _passive_patterns 참고. 패턴을 바꿔 원인은 없앴고 아래 복구는 다른 이유로
+  죽는 경우를 위한 안전망으로 남긴다.) 그래서
     1) org.bluez 의 D-Bus 소유자를 주기적으로 확인해 바뀌면(데몬 재시작) 즉시,
     2) 착용 장치가 있는데 ADV_STALL_SEC 동안 조끼 광고가 하나도 없으면 보조로
   스캐너를 멈추고 다시 등록한다. 레지스트리(마지막 수신 시각·경고 상태)는
@@ -141,7 +144,7 @@ class BleJacketScanner:
     def _passive_patterns() -> list:
         """BlueZ 패시브 스캔(AdvertisementMonitor)용 광고 패턴.
 
-        패턴에 걸린 광고만 올라오므로 조끼(회사 ID + "VJ" 매직)와, 같은 프로세스의
+        패턴에 걸린 광고만 올라오므로 조끼(Flags 0x04 — 아래 주석 참고)와, 같은 프로세스의
         킬 스위치가 스캔 없이 연결할 수 있도록(blebus.note_device) 킬 스위치의
         128비트 서비스 UUID 도 함께 등록한다. 킬 스위치 이름은 스캔 응답에 있어
         패시브로는 안 보이니 UUID 로 잡는다.
@@ -153,8 +156,15 @@ class BleJacketScanner:
         except ImportError:  # bleak < 1.0
             from bleak.backends.bluezdbus.advertisement_monitor import OrPattern
 
-        company = BLE_COMPANY_ID.to_bytes(2, "little")
-        patterns = [OrPattern(0, ADT.MANUFACTURER_SPECIFIC_DATA, company + MAGIC)]
+        # 조끼는 Flags(0x04, LE 전용·비발견) 로 잡는다. 제조사 데이터 패턴은 쓰지 않는다:
+        # BlueZ 5.82 의 match_manufacturer() 는 주변 장치의 제조사 데이터를 31바이트
+        # 스택 버퍼에 길이 확인 없이 복사해서, 확장 광고로 29바이트를 넘는 제조사
+        # 데이터가 하나만 들어와도 bluetoothd 가 "buffer overflow detected" 로 죽는다
+        # (5.83 에서 수정, upstream 1be17107d2. 파이 OS 패키지 5.82-1.1+rpt2 에도 미포함).
+        # 2026-11-05 파이에서 30초마다 3~5회씩 죽고 systemd 가 재시작을 포기해 25초간
+        # 블루투스가 꺼짐 → 조끼 신호 두절 경고가 반복되던 원인. Flags 는 일반 AD 경로로
+        # 비교되어 안전하고, 조끼 판별은 _on_adv 가 회사 ID + "VJ" 매직으로 다시 한다.
+        patterns = [OrPattern(0, ADT.FLAGS, b"\x04")]
         if KILLSWITCH_BLE_ENABLED:
             ks = uuid.UUID(KILLSWITCH_BLE_SERVICE_UUID).bytes[::-1]  # AD 는 LE 순서
             patterns.append(OrPattern(0, ADT.COMPLETE_LIST_SERVICE_UUID128, ks))
