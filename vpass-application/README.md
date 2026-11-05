@@ -218,6 +218,16 @@ LoRa 프로토콜은 UTF-8 JSON 1줄 요청/응답이며, 기존 HTTP API와 같
 모달이 뜹니다 — 해당 장치를 탈의(배터리 교체)하면 자동으로 사라집니다.
 시뮬레이터의 `배터리 부족`/`배터리 정상` 버튼으로 하드웨어 없이 시연할 수 있습니다.
 
+**bluetoothd 크래시 주의 (BlueZ 5.82).** 라즈베리파이 OS(trixie)의 BlueZ 5.82 는
+패시브 스캔에 제조사 데이터 패턴이 등록돼 있으면, 주변 기기의 긴 제조사 데이터(확장
+광고)를 받는 순간 `*** buffer overflow detected ***` 로 bluetoothd 가 죽습니다
+(BlueZ 5.83 에서 수정, 파이 OS 패키지 `5.82-1.1+rpt2` 에는 미포함). 그래서 스캐너는
+조끼를 Flags(`0x04`) 패턴으로 받고 제조사 데이터는 콜백에서 확인합니다 — 패턴에
+제조사 데이터 타입을 다시 넣지 마세요. 또 `tools/pi/vpass-start.sh` 는 bluetoothd 가
+어떤 이유로 죽어도 1초 뒤 횟수 제한 없이 재시작되도록 systemd drop-in
+(`/etc/systemd/system/bluetooth.service.d/vpass-restart.conf`)을 최초 실행 때 설치합니다
+(sudo 비밀번호 1회).
+
 ### HTTP (레거시 ESP8266 / 외부 연동용)
 
 구 펌웨어(`smart-vpass-example/life-jacket`)와의 호환 경로도 그대로 동작합니다.
